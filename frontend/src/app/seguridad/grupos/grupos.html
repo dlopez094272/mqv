@@ -1,0 +1,88 @@
+<div class="page-header">
+  <h2>🛡️ Grupos y Permisos</h2>
+  <button class="btn btn-primary" style="width:auto;" (click)="abrirNuevo()">+ Nuevo grupo</button>
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<!-- Modal formulario -->
+@if (showForm()) {
+  <div class="modal-overlay" (click)="cancelar()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editando() ? 'Editar grupo' : 'Nuevo grupo' }}</h3>
+        <button class="btn-close" (click)="cancelar()">✕</button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="form-group">
+          <label>Nombre del grupo *</label>
+          <input formControlName="label" type="text" placeholder="Ej: Digitadores" />
+          @if (form.get('label')?.invalid && form.get('label')?.touched) {
+            <span class="error-msg">Campo requerido</span>
+          }
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <input formControlName="comment" type="text" placeholder="Descripción del grupo (opcional)" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" style="width:auto;" (click)="cancelar()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="width:auto;" [disabled]="saving()">
+            @if (saving()) { <span class="spinner"></span> }
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (cargando()) {
+  <div class="loading-state">Cargando grupos...</div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre del grupo</th>
+          <th>Descripción</th>
+          <th>Miembros</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (g of grupos(); track g.GroupID) {
+          <tr>
+            <td>
+              @if (g.GroupID === -1) {
+                <span class="badge badge-super">SUPER</span>
+              } @else {
+                <strong>{{ g.GroupID }}</strong>
+              }
+            </td>
+            <td><strong>{{ g.Label }}</strong></td>
+            <td>{{ g.Comment || '—' }}</td>
+            <td>
+              <span class="badge badge-active">{{ g.total_miembros || 0 }} usuario(s)</span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <a [routerLink]="['/seguridad/grupos', g.GroupID]"
+                   class="btn btn-outline-blue btn-sm" title="Ver detalle y permisos">🔍 Gestionar</a>
+
+                @if (g.GroupID !== -1) {
+                  <button class="btn btn-outline btn-sm" (click)="abrirEditar(g)" title="Editar">✏️</button>
+                  <button class="btn btn-danger btn-sm" (click)="eliminar(g)" title="Eliminar">🗑️</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">No hay grupos registrados</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

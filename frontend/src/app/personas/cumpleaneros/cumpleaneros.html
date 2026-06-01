@@ -1,0 +1,218 @@
+<div class="page-header">
+  <div class="header-left">
+    <a routerLink="/personas" class="btn btn-outline btn-sm">← Volver</a>
+    <h2>🎂 Cumpleañeros</h2>
+  </div>
+  <div class="vista-tabs">
+    <button [class.active]="vista()==='mes'"    (click)="vista.set('mes')">   Mes    </button>
+    <button [class.active]="vista()==='semana'" (click)="vista.set('semana')">Semana </button>
+    <button [class.active]="vista()==='anio'"   (click)="vista.set('anio')">  Año    </button>
+  </div>
+</div>
+
+@if (error())    { <div class="alert alert-error">{{ error() }}</div> }
+@if (msgExito()) { <div class="alert alert-success">{{ msgExito() }}</div> }
+
+<!-- Navegación -->
+<div class="nav-bar">
+  @if (vista() === 'mes') {
+    <button class="nav-btn" (click)="mesAnterior()">‹</button>
+    <span class="nav-title">{{ nombreMes }} {{ anioActual }}</span>
+    <button class="nav-btn" (click)="mesSiguiente()">›</button>
+    <button class="btn btn-outline btn-sm hoy-btn" (click)="irHoy()">Hoy</button>
+    @if (!cargando()) { <span class="nav-count">{{ cumpleaneros().length }} cumpleañero(s)</span> }
+  }
+  @if (vista() === 'semana') {
+    <button class="nav-btn" (click)="semanaAnterior()">‹</button>
+    <span class="nav-title">{{ rangoSemana }}</span>
+    <button class="nav-btn" (click)="semanaSiguiente()">›</button>
+    <button class="btn btn-outline btn-sm hoy-btn" (click)="semanaOffset=0">Hoy</button>
+  }
+  @if (vista() === 'anio') {
+    <button class="nav-btn" (click)="anioAnterior()">‹</button>
+    <span class="nav-title">{{ anioActual }}</span>
+    <button class="nav-btn" (click)="anioSiguiente()">›</button>
+    <button class="btn btn-outline btn-sm hoy-btn" (click)="irHoy()">Hoy</button>
+  }
+</div>
+
+@if (cargando()) {
+  <div class="loading-state"><div class="spinner-lg"></div> Cargando...</div>
+}
+
+<!-- ═══════════════ VISTA MES ═══════════════════ -->
+@if (!cargando() && vista() === 'mes') {
+  <div class="calendario">
+    <div class="cal-header">
+      @for (d of DIAS; track d) { <div class="cal-dia-nombre">{{ d }}</div> }
+    </div>
+    <div class="cal-grid">
+      @for (dia of diasCalendario; track dia.fecha.toISOString()) {
+        <div class="cal-celda" [class.hoy]="dia.esHoy" [class.otro-mes]="!dia.esMesActual"
+             [class.con-cumple]="dia.cumpleaneros.length>0">
+          <div class="cal-num">{{ dia.fecha.getDate() }}</div>
+          @if (dia.cumpleaneros.length) {
+            <div class="cal-cumples">
+              @for (c of dia.cumpleaneros.slice(0,3); track c.idpersonas) {
+                <div class="cal-cumple-item" [class.hoy-item]="cumpleHoy(c)"
+                     (click)="abrirTarjeta(c)" title="Generar tarjeta">
+                  @if (c.foto) {
+                    <img [src]="fotoUrl(c)" class="cal-foto" [alt]="c.nombre_completo" />
+                  } @else {
+                    <span class="cal-avatar">{{ c.nombre_completo[0] }}</span>
+                  }
+                  <span class="cal-nombre">{{ c.nombre_completo.split(' ')[0] }}</span>
+                </div>
+              }
+              @if (dia.cumpleaneros.length > 3) {
+                <div class="cal-mas">+{{ dia.cumpleaneros.length-3 }} más</div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (cumpleaneros().length) {
+    <div class="lista-mes">
+      <h3>Lista de cumpleañeros — {{ nombreMes }}</h3>
+      <div class="tabla-cumples">
+        @for (c of cumpleaneros(); track c.idpersonas) {
+          <div class="cumple-row" [class.hoy-row]="cumpleHoy(c)">
+            <div class="cumple-fecha">
+              <span class="dia-num">{{ c.dia_nac }}</span>
+              <span class="mes-abr">{{ MESES[c.mes_nac-1].slice(0,3) }}</span>
+            </div>
+            <div class="cumple-foto">
+              @if (c.foto) {
+                <img [src]="fotoUrl(c)" class="lista-foto" [alt]="c.nombre_completo" />
+              } @else {
+                <div class="lista-avatar">{{ c.nombre_completo[0] }}</div>
+              }
+            </div>
+            <div class="cumple-info">
+              <strong>{{ c.nombre_completo }}</strong>
+              <span>Cumple {{ c.edad+1 }} años</span>
+              @if (c.celular) { <span>📱 {{ c.celular }}</span> }
+            </div>
+            @if (cumpleHoy(c)) { <span class="hoy-badge">🎉 ¡Hoy!</span> }
+            <button class="btn-tarjeta" (click)="abrirTarjeta(c)" title="Generar tarjeta">
+              🎂 Tarjeta
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon">🎂</span>
+      <p>No hay cumpleañeros en {{ nombreMes }}</p>
+    </div>
+  }
+}
+
+<!-- ═══════════════ VISTA SEMANA ═════════════════ -->
+@if (!cargando() && vista() === 'semana') {
+  <div class="semana-grid">
+    @for (dia of diasSemana; track dia.fecha.toISOString()) {
+      <div class="semana-col" [class.hoy-col]="dia.esHoy">
+        <div class="semana-header">
+          <span class="semana-dia-nombre">{{ DIAS[dia.fecha.getDay()] }}</span>
+          <span class="semana-dia-num" [class.hoy-num]="dia.esHoy">{{ dia.fecha.getDate() }}</span>
+        </div>
+        <div class="semana-body">
+          @for (c of dia.cumpleaneros; track c.idpersonas) {
+            <div class="semana-cumple" [class.hoy-item]="cumpleHoy(c)" (click)="abrirTarjeta(c)">
+              @if (c.foto) {
+                <img [src]="fotoUrl(c)" class="lista-foto" [alt]="c.nombre_completo" />
+              } @else {
+                <div class="lista-avatar sm">{{ c.nombre_completo[0] }}</div>
+              }
+              <div class="semana-info">
+                <strong>{{ c.nombre_completo }}</strong>
+                <span>{{ c.edad+1 }} años</span>
+              </div>
+            </div>
+          } @empty {
+            <div class="semana-vacio">—</div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- ═══════════════ VISTA AÑO ════════════════════ -->
+@if (!cargando() && vista() === 'anio') {
+  <div class="anio-grid">
+    @for (item of cumpleanerosByMes(); track item.mes) {
+      <div class="anio-card" [class.mes-actual]="item.mes===mesActual">
+        <div class="anio-mes-header" (click)="mesActual=item.mes; vista.set('mes'); cargar()">
+          <span class="anio-mes-nombre">{{ item.nombre }}</span>
+          @if (item.personas.length) { <span class="anio-count">{{ item.personas.length }}</span> }
+        </div>
+        @if (item.personas.length) {
+          <div class="anio-personas">
+            @for (c of item.personas.slice(0,5); track c.idpersonas) {
+              <div class="anio-persona" (click)="abrirTarjeta(c)">
+                <span class="anio-dia">{{ c.dia_nac }}</span>
+                <span class="anio-nombre">{{ c.nombre_completo.split(' ')[0] }} {{ c.nombre_completo.split(' ')[2] }}</span>
+              </div>
+            }
+            @if (item.personas.length>5) {
+              <div class="anio-mas">
+                +{{ item.personas.length-5 }} más —
+                <a (click)="mesActual=item.mes; vista.set('mes'); cargar()">ver todos</a>
+              </div>
+            }
+          </div>
+        } @else { <div class="anio-vacio">Sin cumpleañeros</div> }
+      </div>
+    }
+  </div>
+}
+
+<!-- ══════════════ MODAL TARJETA ═════════════════ -->
+@if (personaSelec) {
+  <div class="modal-overlay" (click)="cerrarTarjeta()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>🎂 Tarjeta de Cumpleaños</h3>
+        <button class="modal-close" (click)="cerrarTarjeta()">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (cardCargando()) {
+          <div class="card-loading">
+            <div class="spinner-lg"></div>
+            <span>Generando tarjeta...</span>
+          </div>
+        } @else if (cardDataUrl()) {
+          <img [src]="cardDataUrl()!" class="card-preview" alt="Tarjeta" />
+        }
+      </div>
+      @if (!cardCargando() && cardDataUrl()) {
+        <div class="modal-footer">
+          <div class="share-label">Compartir tarjeta:</div>
+          <div class="share-btns">
+            <button class="btn-share btn-share-email" (click)="enviarEmail()" [disabled]="enviandoEmail()">
+              @if (enviandoEmail()) { <span class="spinner"></span> } @else { 📧 }
+              Email
+            </button>
+            <button class="btn-share btn-share-whatsapp" (click)="compartirWhatsapp()">
+              💬 WhatsApp
+            </button>
+            <button class="btn-share btn-share-download" (click)="descargarTarjeta()">
+              ⬇️ Descargar
+            </button>
+          </div>
+          @if (msgWhatsapp()) {
+            <div class="alert alert-success" style="margin-top:10px;font-size:13px;">{{ msgWhatsapp() }}</div>
+          } @else {
+            <p class="share-hint">WhatsApp: descarga la imagen y la abre en WhatsApp Web para compartir.</p>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

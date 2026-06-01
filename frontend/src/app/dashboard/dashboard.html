@@ -1,0 +1,22 @@
+<div class="page-header">
+  <h2>Dashboard</h2>
+</div>
+
+<div class="welcome-card">
+  <img src="/logo-white.png" class="welcome-logo" alt=""
+       onerror="this.style.display='none';document.getElementById('wicon').style.display='block'" />
+  <span id="wicon" class="welcome-icon" style="display:none">✝</span>
+  <div class="welcome-text">
+    <h3>Bienvenido, {{ auth.usuarioNombre() }}</h3>
+    <p>{{ now | date:'EEEE, d \'de\' MMMM yyyy':'':'es' }}</p>
+    <p class="church-name">Iglesia del Nazareno · Más que Vencedores</p>
+    <div style="margin-top:16px;">
+      <button class="btn-mi-perfil" (click)="irAMiPerfil()">
+        👤 Mi Perfil
+      </button>
+    </div>
+    @if (errorPerfil()) {
+      <p class="perfil-error">{{ errorPerfil() }}</p>
+    }
+  </div>
+</div>

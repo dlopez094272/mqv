@@ -1,0 +1,71 @@
+<div class="page-header">
+  <h2>{{ esNuevo ? 'Nuevo Usuario' : 'Editar Usuario' }}</h2>
+  <a routerLink="/seguridad/usuarios" class="btn btn-outline" style="width:auto;">← Volver</a>
+</div>
+
+@if (cargando()) {
+  <div class="alert alert-info">Cargando datos...</div>
+}
+
+@if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+@if (success()) { <div class="alert alert-success">{{ success() }}</div> }
+
+@if (!cargando()) {
+  <div class="form-card">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-fields">
+        <div class="form-group">
+          <label>Código de usuario *</label>
+          <input formControlName="usuario" type="text" placeholder="Ej: JPEREZ" [class.readonly]="!esNuevo" />
+          @if (form.get('usuario')?.errors?.['required'] && form.get('usuario')?.touched) {
+            <span class="error-msg">Campo requerido</span>
+          }
+          @if (form.get('usuario')?.errors?.['pattern']) {
+            <span class="error-msg">Sin espacios</span>
+          }
+          @if (!esNuevo) {
+            <span class="error-msg" style="color:var(--text-muted);">El código no puede modificarse</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input formControlName="nombre_completo" type="text" placeholder="Nombre y apellidos" />
+          @if (form.get('nombre_completo')?.invalid && form.get('nombre_completo')?.touched) {
+            <span class="error-msg">Campo requerido</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Correo electrónico *</label>
+          <input formControlName="email" type="email" placeholder="correo@ejemplo.com" />
+          @if (form.get('email')?.errors?.['required'] && form.get('email')?.touched) {
+            <span class="error-msg">Campo requerido</span>
+          }
+          @if (form.get('email')?.errors?.['email']) {
+            <span class="error-msg">Correo inválido</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input formControlName="telefono" type="tel" placeholder="Ej: +502 5555-1234" />
+        </div>
+      </div>
+
+      @if (esNuevo) {
+        <div class="alert alert-info" style="margin-top:16px;">
+          ℹ Al crear el usuario se enviará un correo a su dirección para que complete su registro y establezca su contraseña.
+        </div>
+      }
+
+      <div class="form-actions">
+        <a routerLink="/seguridad/usuarios" class="btn btn-outline" style="width:auto;">Cancelar</a>
+        <button type="submit" class="btn btn-primary" style="width:auto;" [disabled]="loading()">
+          @if (loading()) { <span class="spinner" style="border-top-color:#ffd700;"></span> }
+          {{ loading() ? 'Guardando...' : (esNuevo ? 'Crear usuario y enviar correo' : 'Guardar cambios') }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

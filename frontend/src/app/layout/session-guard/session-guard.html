@@ -1,0 +1,74 @@
+<!-- ── Aviso de inactividad (15 min sin actividad) ───────────── -->
+@if (inactividad.estado() === 'advertencia') {
+  <div class="sg-overlay" role="dialog" aria-modal="true" aria-labelledby="sg-advertencia-title">
+    <div class="sg-dialog sg-advertencia">
+      <div class="sg-icon">⏰</div>
+      <h2 id="sg-advertencia-title">¿Sigues ahí?</h2>
+      <p>Tu sesión se cerrará por inactividad en</p>
+
+      <div class="sg-countdown">
+        <svg viewBox="0 0 48 48" class="sg-ring">
+          <circle cx="24" cy="24" r="20" class="sg-ring-bg" />
+          <circle cx="24" cy="24" r="20" class="sg-ring-fill"
+                  [style.stroke-dashoffset]="125.66 - (porcentajeRestante / 100) * 125.66" />
+        </svg>
+        <span class="sg-seg">{{ inactividad.segundosRestantes() }}</span>
+        <span class="sg-seg-label">seg</span>
+      </div>
+
+      <div class="sg-actions">
+        <button class="btn btn-primary sg-btn-lg" (click)="continuar()">
+          Continuar sesión
+        </button>
+        <button class="btn btn-outline sg-btn-sm" (click)="cerrarSesion()">
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Modal de reautenticación (venció el aviso) ────────────── -->
+@if (inactividad.estado() === 'bloqueado') {
+  <div class="sg-overlay" role="dialog" aria-modal="true" aria-labelledby="sg-reauth-title">
+    <div class="sg-dialog sg-reauth">
+      <div class="sg-icon">🔒</div>
+      <h2 id="sg-reauth-title">Sesión bloqueada</h2>
+      <p>Tu sesión fue bloqueada por inactividad.<br>
+         Ingresa tu contraseña para continuar donde dejaste.</p>
+
+      <div class="sg-usuario">
+        <div class="sg-avatar">{{ (auth.usuarioNombre() || '?')[0].toUpperCase() }}</div>
+        <div>
+          <div class="sg-nombre">{{ auth.usuarioNombre() }}</div>
+          <div class="sg-codigo">{{ auth.usuarioCodigo() }}</div>
+        </div>
+      </div>
+
+      @if (errorMsg()) {
+        <div class="sg-error">{{ errorMsg() }}</div>
+      }
+
+      <div class="sg-field">
+        <label for="sg-password">Contraseña</label>
+        <input id="sg-password"
+               type="password"
+               class="sg-input"
+               [(ngModel)]="password"
+               (keydown)="onKeydown($event)"
+               placeholder="••••••••"
+               [disabled]="cargando()"
+               autocomplete="current-password" />
+      </div>
+
+      <div class="sg-actions">
+        <button class="btn btn-primary sg-btn-lg" (click)="reautenticar()" [disabled]="cargando()">
+          {{ cargando() ? 'Verificando...' : 'Reanudar sesión' }}
+        </button>
+        <button class="btn btn-outline sg-btn-sm" (click)="cerrarSesion()" [disabled]="cargando()">
+          Cerrar sesión e ir al inicio
+        </button>
+      </div>
+    </div>
+  </div>
+}

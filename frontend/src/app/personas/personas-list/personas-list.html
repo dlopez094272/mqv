@@ -1,0 +1,222 @@
+<div class="page-header">
+  <div class="header-left">
+    <h2>👤 Personas</h2>
+    <span class="total-badge">{{ personas().length }} registros</span>
+  </div>
+  <div class="header-actions">
+    @if (permisos.puede('personas', 'S')) {
+      <button class="btn btn-outline-blue btn-sm" (click)="exportar()" [disabled]="exportando()">
+        @if (exportando()) { <span class="spinner"></span> } @else { 📊 }
+        Exportar Excel
+      </button>
+    }
+    <a routerLink="/personas/cumpleaneros" class="btn btn-birthday btn-sm">🎂 Cumpleañeros</a>
+    @if (permisos.puede('personas', 'A')) {
+      <a routerLink="/personas/nuevo" class="btn btn-primary" style="width:auto;">+ Nueva persona</a>
+    }
+  </div>
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<!-- Filtros -->
+<div class="filtros-bar">
+  <div class="filtros-row">
+    <div class="filtro-item filtro-nombre">
+      <input type="text" [(ngModel)]="filtros.nombre" (keyup.enter)="cargar()"
+             placeholder="🔍 Buscar por nombre..." />
+    </div>
+    <div class="filtro-item">
+      <select [(ngModel)]="filtros.sexo">
+        <option value="">Todos los sexos</option>
+        <option value="M">Masculino</option>
+        <option value="F">Femenino</option>
+      </select>
+    </div>
+    <div class="filtro-item">
+      <select [(ngModel)]="filtros.estado_civil">
+        <option value="">Todos los estados civiles</option>
+        @for (ec of ESTADOS_CIVIL; track ec) { <option [value]="ec">{{ ec }}</option> }
+      </select>
+    </div>
+    <div class="filtro-item">
+      <select [(ngModel)]="filtros.grupo">
+        <option value="">Todos los grupos</option>
+        @for (g of grupos; track g.id) { <option [value]="g.id">{{ g.nombre }}</option> }
+      </select>
+    </div>
+    <div class="filtro-item filtro-edad">
+      <label>Edad</label>
+      <div class="edad-range">
+        <input type="number" [(ngModel)]="edadMin" min="0" max="120" placeholder="Min" />
+        <span>—</span>
+        <input type="number" [(ngModel)]="edadMax" min="0" max="120" placeholder="Máx" />
+      </div>
+    </div>
+    <div class="filtro-actions">
+      <button class="btn btn-secondary btn-sm" (click)="cargar()">Buscar</button>
+      <button class="btn btn-outline btn-sm"   (click)="limpiarFiltros()">Limpiar</button>
+    </div>
+  </div>
+</div>
+
+@if (cargando()) {
+  <div class="loading-state"><div class="spinner-lg"></div><span>Cargando personas...</span></div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px;"></th>
+          <th>Nombre</th>
+          <th>Edad</th>
+          <th>Sexo</th>
+          <th>Estado Civil</th>
+          <th>Celular</th>
+          <th>Email</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of personas(); track p.idpersonas) {
+          <tr>
+            <td>
+              @if (p.foto) {
+                <img [src]="fotoUrl(p.foto)" class="avatar-foto" [alt]="p.nombre_completo"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                <div class="avatar" style="display:none">{{ p.primer_nombre[0] }}{{ p.primer_apellido[0] }}</div>
+              } @else {
+                <div class="avatar">{{ p.primer_nombre[0] }}{{ p.primer_apellido[0] }}</div>
+              }
+            </td>
+            <td><strong>{{ p.nombre_completo }}</strong></td>
+            <td>{{ edadLabel(p.edad) }}</td>
+            <td>
+              <span class="sexo-badge" [class.masculino]="p.sexo==='M'" [class.femenino]="p.sexo==='F'">
+                {{ p.sexo === 'M' ? '♂' : '♀' }} {{ sexoLabel(p.sexo) }}
+              </span>
+            </td>
+            <td>{{ p.estado_civil }}</td>
+            <td>{{ p.celular || '—' }}</td>
+            <td>{{ p.email || '—' }}</td>
+            <td>
+              <div class="action-buttons">
+                @if (permisos.puede('personas','E')) {
+                  <a [routerLink]="['/personas', p.idpersonas, 'editar']"
+                     class="btn btn-outline btn-sm" title="Editar">✏️</a>
+                }
+                @if (auth.isSuperadmin() || permisos.puede('usuarios','A')) {
+                  <button class="btn btn-outline-blue btn-sm" (click)="abrirModalCrearUsuario(p)" title="Crear usuario de sistema">👤+</button>
+                }
+                @if (permisos.puede('personas','D')) {
+                  <button class="btn btn-danger btn-sm" (click)="eliminar(p)" title="Eliminar">🗑️</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="empty-row">No se encontraron personas con los filtros aplicados</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">{{ personas().length }} persona(s) encontrada(s)</div>
+}
+
+<!-- ═══════ MODAL CREAR USUARIO ═══════ -->
+@if (modalCrearUsuario() && personaParaUsuario) {
+  <div class="modal-backdrop" (click)="cerrarModal()"></div>
+  <div class="modal-crear-usuario">
+    <div class="modal-header">
+      <h3>👤 Crear Usuario de Acceso</h3>
+      <button class="btn-close-modal" (click)="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      @if (errorCrearUsuario()) {
+        <div class="alert alert-error">{{ errorCrearUsuario() }}</div>
+      }
+
+      <!-- Info de la persona -->
+      <div class="persona-info-card">
+        <div class="persona-avatar">{{ personaParaUsuario.primer_nombre[0] }}{{ personaParaUsuario.primer_apellido[0] }}</div>
+        <div>
+          <strong>{{ personaParaUsuario.nombre_completo }}</strong>
+          <div style="font-size:13px;color:var(--text-muted);">
+            {{ personaParaUsuario.email || 'Sin correo' }} · {{ personaParaUsuario.celular || 'Sin celular' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nombre completo en el sistema *</label>
+        <input type="text" [(ngModel)]="nuevoUsuario.nombre_completo" placeholder="Nombre completo" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Código de usuario *</label>
+          <input type="text" [(ngModel)]="nuevoUsuario.usuario"
+                 (ngModelChange)="codigoDisponible.set(null)"
+                 (blur)="verificarCodigo()"
+                 placeholder="Máx. 10 caracteres" maxlength="20" />
+          @if (verificandoCodigo()) {
+            <small style="color:var(--text-muted);">Verificando...</small>
+          } @else if (codigoDisponible() === true) {
+            <small style="color:var(--success);">✅ Código disponible</small>
+          } @else if (codigoDisponible() === false) {
+            <small style="color:var(--danger);">❌ Código ya en uso, elige otro</small>
+          }
+          <small style="color:var(--text-muted);">Sugerencia: {{ nuevoUsuario.usuario }}</small>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Correo electrónico *</label>
+          <input type="email" [(ngModel)]="nuevoUsuario.email" placeholder="correo@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" [(ngModel)]="nuevoUsuario.telefono" placeholder="Teléfono" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Grupo de permisos</label>
+        <select [(ngModel)]="nuevoUsuario.grupo_id">
+          <option [ngValue]="0">Sin grupo (sin permisos)</option>
+          @for (g of gruposPermiso; track g.GroupID) {
+            <option [value]="g.GroupID">{{ g.Label }}</option>
+          }
+        </select>
+        <small style="color:var(--text-muted);">Define qué puede hacer el usuario en el sistema</small>
+      </div>
+
+      <div class="form-group">
+        <label>¿Será encargado de algún grupo?</label>
+        <select [(ngModel)]="nuevoUsuario.encargado_grupo_id">
+          <option [ngValue]="0">No, no será encargado</option>
+          @for (g of gruposCongregacion; track g.id) {
+            <option [value]="g.id">{{ g.nombre }}</option>
+          }
+        </select>
+        <small style="color:var(--text-muted);">Si es encargado, podrá ver los miembros de ese grupo</small>
+      </div>
+
+      <div class="alert alert-info" style="font-size:13px;">
+        ℹ Se enviará un correo de activación a <strong>{{ nuevoUsuario.email }}</strong> para que el usuario complete su registro y establezca su contraseña.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto;" (click)="crearUsuario()" [disabled]="creandoUsuario() || codigoDisponible() === false">
+        @if (creandoUsuario()) { <span class="spinner"></span> }
+        {{ creandoUsuario() ? 'Creando...' : '✓ Crear usuario y enviar invitación' }}
+      </button>
+    </div>
+  </div>
+}

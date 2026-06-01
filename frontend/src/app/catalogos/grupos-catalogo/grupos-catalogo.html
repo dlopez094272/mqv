@@ -1,0 +1,161 @@
+<div class="page-header">
+  <h2>👥 Grupos</h2>
+  @if (permisos.puede('grupos', 'A')) {
+    <button class="btn btn-primary" (click)="abrirNuevo()">+ Nuevo grupo</button>
+  }
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<div class="search-bar">
+  <input type="text" [(ngModel)]="busqueda" (ngModelChange)="filtrar()" placeholder="🔍  Buscar grupos..." />
+</div>
+
+@if (cargando()) {
+  <div class="loading-state">Cargando grupos...</div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Grupo</th>
+          <th>Estado</th>
+          <th>Encargados</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (g of filtrados(); track g.idgrupos) {
+          <tr>
+            <td><strong>{{ g.grupo }}</strong></td>
+            <td>
+              @if (g.activo) {
+                <span class="badge badge-active">Activo</span>
+              } @else {
+                <span class="badge badge-inactive">Inactivo</span>
+              }
+            </td>
+            <td>
+              <button class="btn btn-outline-enc btn-sm" (click)="abrirEncargados(g)" title="Gestionar encargados">
+                🏅 Encargados
+              </button>
+            </td>
+            <td>
+              <div class="action-buttons">
+                @if (permisos.puede('grupos', 'E')) {
+                  <button class="btn btn-outline btn-sm" (click)="abrirEditar(g)" title="Editar">✏️</button>
+                  @if (g.activo) {
+                    <button class="btn btn-danger btn-sm" (click)="toggleActivo(g)" title="Desactivar">🚫</button>
+                  } @else {
+                    <button class="btn btn-success btn-sm" (click)="toggleActivo(g)" title="Activar">✅</button>
+                  }
+                }
+                @if (permisos.puede('grupos', 'D')) {
+                  <button class="btn btn-danger btn-sm" (click)="eliminar(g)" title="Eliminar">🗑️</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4" style="text-align:center;color:var(--text-muted);padding:32px;">
+              No se encontraron grupos
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">{{ filtrados().length }} grupo(s) de {{ grupos().length }} total</div>
+}
+
+<!-- Panel CRUD grupo -->
+@if (mostrarForm()) {
+  <div class="form-backdrop" (click)="cerrarForm()"></div>
+  <aside class="form-panel">
+    <div class="form-panel-header">
+      <h3>{{ modoEdicion() ? 'Editar' : 'Nuevo' }} Grupo</h3>
+      <button class="btn-close" (click)="cerrarForm()">✕</button>
+    </div>
+    <div class="form-panel-body">
+      @if (errorForm()) { <div class="alert alert-error" style="margin-bottom:16px;">{{ errorForm() }}</div> }
+      <div class="form-group">
+        <label>Nombre del grupo <span class="req">*</span></label>
+        <input type="text" class="form-control" [(ngModel)]="formGrupo.grupo" placeholder="Ej: Jóvenes, Damas..." />
+      </div>
+    </div>
+    <div class="form-panel-footer">
+      <button class="btn btn-outline" (click)="cerrarForm()" [disabled]="guardando()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </aside>
+}
+
+<!-- Panel encargados -->
+@if (grupoSeleccionado(); as g) {
+  <div class="form-backdrop" (click)="cerrarEncargados()"></div>
+  <aside class="form-panel encargados-panel">
+    <div class="form-panel-header">
+      <div>
+        <h3>🏅 Encargados</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin:2px 0 0;">{{ g.grupo }}</p>
+      </div>
+      <button class="btn-close" (click)="cerrarEncargados()">✕</button>
+    </div>
+    <div class="form-panel-body">
+      <p class="enc-nota">
+        Los encargados de un grupo podrán ver en el módulo de Personas a todos los miembros de este grupo.
+      </p>
+
+      <!-- Encargados actuales -->
+      <div class="enc-section-title">Encargados asignados</div>
+      @if (cargandoEncargados()) {
+        <div class="empty-state">Cargando...</div>
+      } @else if (!encargados().length) {
+        <div class="empty-state">Sin encargados asignados</div>
+      } @else {
+        <ul class="enc-list">
+          @for (e of encargados(); track e.idpersonas) {
+            <li class="enc-item">
+              <div class="enc-avatar">{{ e.nombre_completo[0] }}</div>
+              <div class="enc-info">
+                <strong>{{ e.nombre_completo }}</strong>
+                <span>{{ e.celular || e.email || '—' }}</span>
+              </div>
+              @if (permisos.puede('grupos', 'E')) {
+                <button class="btn btn-danger btn-sm btn-icon" (click)="quitarEncargado(e)" title="Quitar">✕</button>
+              }
+            </li>
+          }
+        </ul>
+      }
+
+      <!-- Agregar encargado -->
+      @if (permisos.puede('grupos', 'E')) {
+        <div class="enc-section-title" style="margin-top:20px;">Asignar encargado</div>
+        <div class="form-group">
+          <input type="text" [(ngModel)]="busquedaPersona" (ngModelChange)="filtrarPersonas()"
+                 placeholder="🔍 Buscar persona..." />
+        </div>
+        @if (!todasPersonas.length) {
+          <div class="empty-state">Cargando personas...</div>
+        } @else if (!personasFiltradas.length) {
+          <div class="empty-state">No hay más personas disponibles</div>
+        } @else {
+          <ul class="enc-avail-list">
+            @for (p of personasFiltradas; track p.id) {
+              <li class="enc-avail-item">
+                <div class="enc-avatar" style="background:var(--secondary)">{{ p.nombre[0] }}</div>
+                <span>{{ p.nombre }}</span>
+                <button class="btn btn-success btn-sm" (click)="agregarEncargado(p)">+ Asignar</button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  </aside>
+}

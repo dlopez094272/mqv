@@ -1,0 +1,144 @@
+<div class="page-header">
+  <h2>{{ config.titulo }}</h2>
+  @if (permisos.puede(config.tablaPermiso, 'A')) {
+    <button class="btn btn-primary" (click)="abrirNuevo()">+ Nuevo</button>
+  }
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<div class="search-bar">
+  <input type="text" [(ngModel)]="busqueda" (ngModelChange)="filtrar()"
+         [placeholder]="'🔍  Buscar ' + config.titulo.toLowerCase() + '...'" />
+</div>
+
+@if (cargando()) {
+  <div class="loading-state">Cargando {{ config.titulo.toLowerCase() }}...</div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          @for (campo of config.campos; track campo.nombre) {
+            <th>{{ campo.label }}</th>
+          }
+          @if (config.tieneActivo) {
+            <th>Estado</th>
+          }
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of filtrados(); track item[config.pk]) {
+          <tr>
+            @for (campo of config.campos; track campo.nombre) {
+              <td>
+                @if (campo.tipo === 'color') {
+                  <span class="color-swatch" [style.background]="item[campo.nombre] || '#3788d8'"></span>
+                  {{ item[campo.nombre] || '—' }}
+                } @else {
+                  {{ getDisplayValue(item, campo) }}
+                }
+              </td>
+            }
+            @if (config.tieneActivo) {
+              <td>
+                @if (item.activo) {
+                  <span class="badge badge-active">Activo</span>
+                } @else {
+                  <span class="badge badge-inactive">Inactivo</span>
+                }
+              </td>
+            }
+            <td>
+              <div class="action-buttons">
+                @if (permisos.puede(config.tablaPermiso, 'E')) {
+                  <button class="btn btn-outline btn-sm" (click)="abrirEditar(item)" title="Editar">✏️</button>
+                  @if (config.tieneActivo) {
+                    @if (item.activo) {
+                      <button class="btn btn-danger btn-sm" (click)="toggleActivo(item)" title="Desactivar">🚫</button>
+                    } @else {
+                      <button class="btn btn-success btn-sm" (click)="toggleActivo(item)" title="Activar">✅</button>
+                    }
+                  }
+                }
+                @if (permisos.puede(config.tablaPermiso, 'D')) {
+                  <button class="btn btn-danger btn-sm" (click)="eliminar(item)" title="Eliminar">🗑️</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td [colSpan]="colSpan()" style="text-align:center;color:var(--text-muted);padding:32px;">
+              No se encontraron registros
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    {{ filtrados().length }} registro(s) de {{ items().length }} total
+  </div>
+}
+
+<!-- Panel de formulario -->
+@if (mostrarForm()) {
+  <div class="form-backdrop" (click)="cerrarForm()"></div>
+  <aside class="form-panel">
+    <div class="form-panel-header">
+      <h3>{{ modoEdicion() ? 'Editar' : 'Nuevo' }} {{ config.titulo }}</h3>
+      <button class="btn-close" (click)="cerrarForm()" title="Cerrar">✕</button>
+    </div>
+
+    <div class="form-panel-body">
+      @if (errorForm()) {
+        <div class="alert alert-error" style="margin-bottom:16px;">{{ errorForm() }}</div>
+      }
+
+      @for (campo of config.campos; track campo.nombre) {
+        <div class="form-group">
+          <label>
+            {{ campo.label }}
+            @if (campo.requerido) { <span class="req">*</span> }
+          </label>
+
+          @if (campo.tipo === 'select') {
+            <select class="form-control" [(ngModel)]="formData[campo.nombre]">
+              <option value="">-- Seleccionar --</option>
+              @for (opt of lookups[campo.fuente!] ?? []; track opt.id) {
+                <option [value]="opt.id">{{ opt.nombre }}</option>
+              }
+            </select>
+          } @else if (campo.tipo === 'decimal') {
+            <input type="number" step="0.01" class="form-control"
+                   [(ngModel)]="formData[campo.nombre]" />
+          } @else if (campo.tipo === 'datetime-local') {
+            <input type="datetime-local" class="form-control"
+                   [(ngModel)]="formData[campo.nombre]" />
+          } @else if (campo.tipo === 'color') {
+            <div class="color-input-row">
+              <input type="color" class="color-picker-input"
+                     [(ngModel)]="formData[campo.nombre]" />
+              <input type="text" class="form-control color-text-input"
+                     [(ngModel)]="formData[campo.nombre]"
+                     placeholder="#rrggbb" maxlength="7" />
+            </div>
+          } @else {
+            <input type="text" class="form-control"
+                   [(ngModel)]="formData[campo.nombre]" />
+          }
+        </div>
+      }
+    </div>
+
+    <div class="form-panel-footer">
+      <button class="btn btn-outline" (click)="cerrarForm()" [disabled]="guardando()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </aside>
+}

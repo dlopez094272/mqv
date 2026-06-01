@@ -1,0 +1,85 @@
+.welcome-card {
+  background: var(--grad-brand);
+  border-radius: var(--radius);
+  padding: 36px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: -20px;
+    width: 160px;
+    height: 160px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+  }
+
+  .welcome-logo {
+    width: 90px;
+    height: auto;
+    flex-shrink: 0;
+    filter: brightness(0) invert(1);
+    opacity: .9;
+  }
+
+  .welcome-icon {
+    font-size: 64px;
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: .85;
+  }
+
+  .welcome-text {
+    h3 { font-size: 24px; font-weight: 800; color: #83D3EB; margin-bottom: 6px; }
+    p  { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 2px; }
+    .church-name { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 8px; letter-spacing: .8px; text-transform: uppercase; }
+  }
+}
+
+.btn-mi-perfil {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,.4);
+  border-radius: 24px;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, transform .15s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255,255,255,.25);
+    border-color: rgba(255,255,255,.7);
+    transform: translateY(-1px);
+  }
+
+  &:disabled { opacity: .6; cursor: not-allowed; }
+}
+
+.spinner-sm {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+.perfil-error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #ffcdd2;
+  background: rgba(244,67,54,.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid #ef9a9a;
+}

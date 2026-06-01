@@ -1,0 +1,367 @@
+<!-- ── Cabecera ────────────────────────────────────────────── -->
+<div class="page-header">
+  <h2>Actividades</h2>
+  <div class="view-toggle">
+    <button class="btn-view" [class.active]="vista() === 'calendar'" (click)="vista.set('calendar')">
+      📅 Calendario
+    </button>
+    <button class="btn-view" [class.active]="vista() === 'gantt'" (click)="vista.set('gantt')">
+      📊 Gantt
+    </button>
+    <button class="btn-view" [class.active]="vista() === 'tabla'" (click)="vista.set('tabla')">
+      📋 Tabla
+    </button>
+  </div>
+  @if (permisos.puede('actividades', 'A')) {
+    <button class="btn btn-primary" style="width:auto" (click)="abrirNuevo()">
+      + Nueva Actividad
+    </button>
+  }
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+@if (cargando()) {
+  <div class="loading-state">Cargando actividades...</div>
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  VISTA: CALENDARIO                                          -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (!cargando() && vista() === 'calendar') {
+  <div class="calendar-nav">
+    <button class="btn-nav" (click)="prevMes()" title="Mes anterior">◀</button>
+    <h3 class="mes-label">{{ mesNombre() }}</h3>
+    <button class="btn-nav" (click)="nextMes()" title="Mes siguiente">▶</button>
+    <button class="btn-today" (click)="hoyMes()">Hoy</button>
+  </div>
+
+  <div class="calendar-grid">
+    <div class="calendar-weekdays">
+      @for (d of ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; track d) {
+        <div class="weekday-header">{{ d }}</div>
+      }
+    </div>
+    <div class="calendar-days">
+      @for (dia of diasCalendario(); track dia.fecha.getTime()) {
+        <div class="day-cell"
+             [class.other-month]="!dia.esMesActual"
+             [class.today]="dia.esHoy"
+             [class.drag-over]="diaArrastreSobre() === dia.fecha.getTime()"
+             [class.dragging-active]="arrastrando() !== null"
+             (click)="permisos.puede('actividades','A') && abrirNuevoEnFecha(dia.fecha)"
+             (dragover)="onDragOver($event, dia.fecha)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event, dia.fecha)">
+          <div class="day-number">{{ dia.fecha.getDate() }}</div>
+          <div class="day-events">
+            @for (act of dia.actividades.slice(0, 3); track act.idactividades) {
+              <div class="event-chip"
+                   [style.background]="act.categoria_color || '#3788d8'"
+                   [class.is-dragging]="arrastrando()?.idactividades === act.idactividades"
+                   draggable="true"
+                   (dragstart)="onDragStart($event, act)"
+                   (dragend)="onDragEnd()"
+                   (click)="$event.stopPropagation(); abrirEditar(act)"
+                   [title]="act.nombre + ' — arrastrar para mover'">
+                @if (act.logo) {
+                  <img [src]="urlLogo(act.logo)" class="event-logo" [alt]="act.nombre" />
+                }
+                <span class="event-name">{{ act.nombre }}</span>
+              </div>
+            }
+            @if (dia.actividades.length > 3) {
+              <div class="more-badge" (click)="$event.stopPropagation()">
+                +{{ dia.actividades.length - 3 }} más
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  VISTA: GANTT                                               -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (!cargando() && vista() === 'gantt') {
+  @if (actividades().length === 0) {
+    <div class="empty-state">No hay actividades para mostrar en el Gantt.</div>
+  } @else {
+    <div class="gantt-outer">
+      <!-- Columna de nombres (fija) -->
+      <div class="gantt-names-col">
+        <div class="gantt-header-cell"></div>
+        <div class="gantt-header-cell gantt-header-days-spacer"></div>
+        @for (act of actividadesConGantt(); track act.idactividades) {
+          <div class="gantt-name-row" (click)="abrirEditar(act)" [title]="act.nombre">
+            @if (act.logo) {
+              <img [src]="urlLogo(act.logo)" class="gantt-logo" [alt]="act.nombre" />
+            }
+            <span class="gantt-act-name">{{ act.nombre }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Columna de tracks (scrollable) -->
+      <div class="gantt-tracks-col">
+        <div class="gantt-timeline" [style.width.px]="ganttTotalWidth()">
+          <!-- Meses -->
+          <div class="gantt-months-row">
+            @for (mes of ganttMeses(); track mes.label) {
+              <div class="gantt-month-label" [style.width.px]="mes.dias * DAY_WIDTH">
+                {{ mes.label }}
+              </div>
+            }
+          </div>
+          <!-- Días -->
+          <div class="gantt-days-row">
+            @for (dia of ganttRango().dias; track dia.getTime()) {
+              <div class="gantt-day-label"
+                   [style.width.px]="DAY_WIDTH"
+                   [class.weekend]="dia.getDay() === 0 || dia.getDay() === 6">
+                {{ dia.getDate() }}
+              </div>
+            }
+          </div>
+          <!-- Barras -->
+          @for (act of actividadesConGantt(); track act.idactividades) {
+            <div class="gantt-track-row" [style.width.px]="ganttTotalWidth()">
+              <div class="gantt-bar"
+                   [style.left.px]="act.leftPx"
+                   [style.width.px]="act.widthPx"
+                   [style.background]="act.categoria_color || '#3788d8'"
+                   (click)="abrirEditar(act)"
+                   [title]="act.nombre + ' (' + formatFecha(act.fecha_inicio) + ' – ' + formatFecha(act.fecha_fin) + ')'">
+                <span class="gantt-bar-label">{{ act.nombre }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  VISTA: TABLA                                               -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (!cargando() && vista() === 'tabla') {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Logo</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Lugar</th>
+          <th>Fecha inicio</th>
+          <th>Fecha fin</th>
+          <th>Adjuntos</th>
+          <th>Creado por</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (act of actividades(); track act.idactividades) {
+          <tr>
+            <td>
+              @if (act.logo) {
+                <img [src]="urlLogo(act.logo)" class="table-logo" [alt]="act.nombre" />
+              } @else { <span style="color:var(--text-muted)">—</span> }
+            </td>
+            <td>
+              <div class="act-nombre-row">
+                <span class="cat-dot" [style.background]="act.categoria_color || '#ccc'"></span>
+                <span>{{ act.nombre }}</span>
+              </div>
+              @if (act.descripcion) {
+                <div class="act-desc">
+                  {{ act.descripcion.length > 70 ? (act.descripcion | slice:0:70) + '…' : act.descripcion }}
+                </div>
+              }
+            </td>
+            <td>{{ act.categoria || '—' }}</td>
+            <td>{{ act.lugar    || '—' }}</td>
+            <td>{{ formatFecha(act.fecha_inicio) }}</td>
+            <td>{{ formatFecha(act.fecha_fin) }}</td>
+            <td>
+              @if (parseAdjuntos(act.adjuntos).length > 0) {
+                <span class="badge-adjunto" [title]="'Archivos adjuntos: ' + parseAdjuntos(act.adjuntos).length">
+                  📎 {{ parseAdjuntos(act.adjuntos).length }}
+                </span>
+              } @else { — }
+            </td>
+            <td>{{ act.usuario || '—' }}</td>
+            <td>
+              <div class="action-buttons">
+                @if (permisos.puede('actividades', 'E')) {
+                  <button class="btn btn-outline btn-sm" (click)="abrirEditar(act)" title="Editar">✏️</button>
+                }
+                @if (permisos.puede('actividades', 'D')) {
+                  <button class="btn btn-danger btn-sm" (click)="eliminar(act)" title="Eliminar">🗑️</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px">
+              No hay actividades registradas
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">{{ actividades().length }} actividad(es)</div>
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  PANEL FORMULARIO                                           -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (mostrarForm()) {
+  <div class="form-backdrop" (click)="cerrarForm()"></div>
+  <aside class="form-panel">
+    <div class="form-panel-header">
+      <h3>{{ modoEdicion() ? 'Editar' : 'Nueva' }} Actividad</h3>
+      <button class="btn-close" (click)="cerrarForm()" title="Cerrar">✕</button>
+    </div>
+
+    <div class="form-panel-body">
+      @if (errorForm()) {
+        <div class="alert alert-error" style="margin-bottom:16px">{{ errorForm() }}</div>
+      }
+
+      <!-- Logo -->
+      <div class="form-group">
+        <label>Logo (solo imágenes)</label>
+        @if (logoPreview || logoActual) {
+          <div class="logo-preview-wrap">
+            <img [src]="logoPreview ?? urlLogo(logoActual!)" class="logo-preview" alt="Logo" />
+            <button class="btn btn-danger btn-sm" (click)="quitarLogo()" type="button">Quitar logo</button>
+          </div>
+        } @else {
+          <input type="file" accept="image/*" (change)="onLogoChange($event)" class="file-input" />
+        }
+      </div>
+
+      <!-- Categoría -->
+      <div class="form-group">
+        <label>Categoría</label>
+        <div class="select-color-row">
+          <select class="form-control" [(ngModel)]="form.idcategorias">
+            <option value="">-- Sin categoría --</option>
+            @for (cat of categorias(); track cat.id) {
+              <option [value]="cat.id">{{ cat.nombre }}</option>
+            }
+          </select>
+          @if (form.idcategorias) {
+            <span class="cat-color-indicator"
+                  [style.background]="categoriaColor(form.idcategorias)"></span>
+          }
+        </div>
+      </div>
+
+      <!-- Nombre -->
+      <div class="form-group">
+        <label>Nombre <span class="req">*</span></label>
+        <input type="text" class="form-control" [(ngModel)]="form.nombre"
+               placeholder="Nombre de la actividad" />
+      </div>
+
+      <!-- Descripción -->
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea class="form-control" [(ngModel)]="form.descripcion"
+                  rows="4" placeholder="Descripción detallada..."></textarea>
+      </div>
+
+      <!-- Fechas -->
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Fecha inicio <span class="req">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="form.fecha_inicio" />
+        </div>
+        <div class="form-group">
+          <label>Fecha fin <span class="req">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="form.fecha_fin" />
+        </div>
+      </div>
+
+      <!-- Horas -->
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Hora inicio <span class="req">*</span></label>
+          <input type="time" class="form-control" [(ngModel)]="form.hora_inicio" />
+        </div>
+        <div class="form-group">
+          <label>Hora fin <span class="req">*</span></label>
+          <input type="time" class="form-control" [(ngModel)]="form.hora_fin" />
+        </div>
+      </div>
+
+      <!-- Lugar -->
+      <div class="form-group">
+        <label>Lugar</label>
+        <select class="form-control" [(ngModel)]="form.idlugares">
+          <option value="">-- Sin lugar --</option>
+          @for (lug of lugares(); track lug.id) {
+            <option [value]="lug.id">{{ lug.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Adjuntos existentes -->
+      @if (adjuntosActuales.length > 0) {
+        <div class="form-group">
+          <label>Archivos adjuntos</label>
+          <div class="adjuntos-list">
+            @for (adj of adjuntosActuales; track adj.filename; let i = $index) {
+              <div class="adjunto-item">
+                <button class="adjunto-link-btn" type="button" (click)="descargar(adj)">
+                  📎 {{ adj.originalname }}
+                  <span class="adj-size">({{ formatBytes(adj.size) }})</span>
+                </button>
+                <button class="btn-remove-adj" type="button" (click)="quitarAdjuntoActual(i)"
+                        title="Quitar adjunto">✕</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Nuevos adjuntos a subir -->
+      @if (adjuntosNuevos.length > 0) {
+        <div class="form-group">
+          <label>Archivos a subir</label>
+          <div class="adjuntos-list">
+            @for (f of adjuntosNuevos; track f.name; let i = $index) {
+              <div class="adjunto-item">
+                <span>📄 {{ f.name }} <span class="adj-size">({{ formatBytes(f.size) }})</span></span>
+                <button class="btn-remove-adj" type="button" (click)="quitarAdjuntoNuevo(i)">✕</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Subir adjuntos -->
+      <div class="form-group">
+        <label>Adjuntar archivos (máx. 200 MB por archivo)</label>
+        <input type="file" multiple (change)="onAdjuntosChange($event)" class="file-input" />
+      </div>
+    </div>
+
+    <div class="form-panel-footer">
+      <button class="btn btn-outline" (click)="cerrarForm()" [disabled]="guardando()">
+        Cancelar
+      </button>
+      <button class="btn btn-primary" style="width:auto" (click)="guardar()" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </aside>
+}

@@ -1,0 +1,53 @@
+<div class="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-header">
+      <img src="/logo-white.png" class="logo-white" alt="Iglesia del Nazareno Más que Vencedores" />
+      <div class="church-name">Iglesia del Nazareno<br>Más que Vencedores</div>
+      <div class="church-sub">Sistema de Gestión</div>
+    </div>
+
+    <div class="auth-body">
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-group">
+          <label for="usuario">Código de usuario</label>
+          <input id="usuario" formControlName="usuario" type="text"
+                 placeholder="Ingrese su código" autocomplete="username" />
+          @if (form.get('usuario')?.invalid && form.get('usuario')?.touched) {
+            <span class="error-msg">Campo requerido</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <div class="input-pass">
+            <input id="password" formControlName="password"
+                   [type]="showPass() ? 'text' : 'password'"
+                   placeholder="Ingrese su contraseña" autocomplete="current-password" />
+            <button type="button" class="toggle-pass" (click)="showPass.set(!showPass())"
+                    [title]="showPass() ? 'Ocultar' : 'Mostrar'">
+              {{ showPass() ? '🙈' : '👁' }}
+            </button>
+          </div>
+          @if (form.get('password')?.invalid && form.get('password')?.touched) {
+            <span class="error-msg">Campo requerido</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="loading()">
+          @if (loading()) { <span class="spinner"></span> }
+          {{ loading() ? 'Iniciando sesión...' : 'Iniciar Sesión' }}
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <a routerLink="/olvide-mi-password">¿Olvidó su contraseña?</a>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,372 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
+/* ── Church Brand Palette ──────────────────────────────────── */
+:root {
+  /* Púrpura */
+  --purple:        #57446C;
+  --purple-light:  #836AA3;
+  --purple-lighter:#A688BF;
+  --purple-dark:   #332940;
+
+  /* Azul */
+  --blue:          #53819A;
+  --blue-light:    #50B8D4;
+  --blue-lighter:  #83D3EB;
+  --blue-dark:     #214351;
+
+  /* Verde */
+  --green:         #40996D;
+  --green-light:   #84CBA0;
+
+  /* Gris */
+  --gray-dark:     #414042;
+  --gray:          #7D7E81;
+  --gray-light:    #ABADB0;
+  --gray-lighter:  #DEDFE0;
+
+  /* Semánticos UI */
+  --primary:       #57446C;
+  --primary-light: #836AA3;
+  --primary-dark:  #332940;
+  --secondary:     #53819A;
+  --secondary-light:#50B8D4;
+
+  --success:       #40996D;
+  --success-light: #84CBA0;
+  --danger:        #c62828;
+  --danger-light:  #ef5350;
+  --warning:       #f57f17;
+
+  --text:          #414042;
+  --text-muted:    #7D7E81;
+  --bg:            #f4f5f7;
+  --card:          #ffffff;
+  --border:        #DEDFE0;
+
+  --shadow:        0 2px 12px rgba(87,68,108,.08);
+  --shadow-lg:     0 8px 32px rgba(87,68,108,.18);
+  --radius:        10px;
+  --radius-sm:     6px;
+
+  /* Gradients */
+  --grad-brand:    linear-gradient(135deg, #53819A 0%, #57446C 100%);
+  --grad-dark:     linear-gradient(160deg, #214351 0%, #332940 100%);
+  --grad-sidebar:  linear-gradient(180deg, #1d3a47 0%, #2d1f3e 100%);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Nunito', Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Auth pages ─────────────────────────────────────────────── */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--grad-brand);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/logo-white.png') center / 600px no-repeat;
+    opacity: .04;
+    pointer-events: none;
+  }
+}
+
+.auth-card {
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  animation: fadeUp .4s ease;
+  overflow: hidden; /* contiene el banner superior */
+}
+
+.auth-header {
+  background: var(--grad-brand);
+  padding: 32px 32px 28px;
+  text-align: center;
+  position: relative;
+
+  /* watermark sutil */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 70% 30%, rgba(255,255,255,.08) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .logo-white {
+    width: 130px;
+    height: auto;
+    display: block;
+    margin: 0 auto 14px;
+    filter: brightness(0) invert(1);  /* fuerza blanco */
+    opacity: .95;
+  }
+
+  .church-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: rgba(255,255,255,.95);
+    letter-spacing: .8px;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+
+  .church-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,.55);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+}
+
+.auth-body {
+  padding: 28px 36px 32px;
+}
+
+/* ── Forms ──────────────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 18px;
+
+  label {
+    display: block;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--text);
+    background: #fafafa;
+    transition: border-color .2s, box-shadow .2s;
+    outline: none;
+
+    &:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(83,129,154,.15);
+      background: #fff;
+    }
+
+    &.ng-invalid.ng-touched { border-color: var(--danger-light); }
+  }
+
+  .error-msg { font-size: 12px; color: var(--danger-light); margin-top: 4px; display: block; }
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+
+  &:disabled { opacity: .55; cursor: not-allowed; }
+
+  &.btn-primary {
+    background: var(--grad-brand);
+    color: #fff;
+    width: 100%;
+    letter-spacing: .3px;
+    &:hover:not(:disabled) { box-shadow: 0 4px 18px rgba(87,68,108,.35); transform: translateY(-1px); }
+    &:active { transform: translateY(0); }
+  }
+
+  &.btn-secondary { background: var(--secondary); color: #fff; &:hover:not(:disabled) { background: var(--blue-dark); } }
+  &.btn-danger    { background: var(--danger);    color: #fff; &:hover:not(:disabled) { background: var(--danger-light); } }
+  &.btn-success   { background: var(--success);   color: #fff; &:hover:not(:disabled) { background: var(--green-light); color: var(--gray-dark); } }
+  &.btn-warning   { background: var(--warning);   color: #fff; }
+
+  &.btn-outline {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    &:hover:not(:disabled) { background: var(--primary); color: #fff; }
+  }
+
+  &.btn-outline-blue {
+    background: transparent;
+    border: 2px solid var(--secondary);
+    color: var(--secondary);
+    &:hover:not(:disabled) { background: var(--secondary); color: #fff; }
+  }
+
+  &.btn-sm { padding: 7px 14px; font-size: 13px; }
+  &.btn-icon { padding: 7px; border-radius: 50%; min-width: 34px; height: 34px; }
+}
+
+/* ── Alerts ─────────────────────────────────────────────────── */
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  margin-bottom: 18px;
+  line-height: 1.6;
+
+  &.alert-error   { background: #ffebee; color: var(--danger);   border-left: 4px solid var(--danger);   }
+  &.alert-success { background: #e8f5f0; color: var(--success);  border-left: 4px solid var(--success);  }
+  &.alert-info    { background: #e8f4f8; color: var(--blue-dark); border-left: 4px solid var(--blue);   }
+  &.alert-warning { background: #fff8e1; color: var(--warning);  border-left: 4px solid var(--warning); }
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--text-muted);
+  a { color: var(--blue); font-weight: 700; }
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+.table-container { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    background: var(--grad-brand);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    padding: 13px 16px;
+    text-align: left;
+  }
+
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8f5fc; }
+}
+
+/* ── Badges ─────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+
+  &.badge-active   { background: #e8f5f0; color: var(--success); }
+  &.badge-inactive { background: #ffebee; color: var(--danger);  }
+  &.badge-pending  { background: #fff8e1; color: var(--warning); }
+  &.badge-super    { background: linear-gradient(135deg, var(--blue-lighter), var(--purple-lighter)); color: var(--purple-dark); }
+}
+
+/* ── Avatar ─────────────────────────────────────────────────── */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--grad-brand);
+  color: white;
+  font-weight: 800;
+  font-size: 14px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ── Page layout ─────────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  h2 { font-size: 22px; font-weight: 800; color: var(--primary); }
+}
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+
+  .tab {
+    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+
+    &:hover { color: var(--primary); }
+    &.active { color: var(--primary); border-bottom-color: var(--primary); }
+  }
+}
+
+/* ── Permissions grid ────────────────────────────────────────── */
+.perms-grid {
+  th, td { padding: 10px 14px; text-align: center; }
+  th:first-child, td:first-child { text-align: left; }
+
+  .perm-check {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+}
+
+/* ── Animations ──────────────────────────────────────────────── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin   { to { transform: rotate(360deg); } }
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: rgba(255,255,255,.9);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}

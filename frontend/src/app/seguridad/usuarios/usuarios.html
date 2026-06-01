@@ -1,0 +1,88 @@
+<div class="page-header">
+  <h2>Gestión de Usuarios</h2>
+  @if (permisos.puede('usuarios', 'A')) {
+    <a routerLink="/seguridad/usuarios/nuevo" class="btn btn-primary" style="width:auto;">
+      + Nuevo usuario
+    </a>
+  }
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<!-- Buscador -->
+<div class="search-bar">
+  <input type="text" [(ngModel)]="busqueda" (ngModelChange)="filtrar()"
+         placeholder="🔍  Buscar por código, nombre o correo..." />
+</div>
+
+@if (cargando()) {
+  <div class="loading-state">Cargando usuarios...</div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Código</th>
+          <th>Nombre completo</th>
+          <th>Correo electrónico</th>
+          <th>Teléfono</th>
+          <th>Estado</th>
+          @if (permisos.puede('usuarios', 'E') || permisos.puede('usuarios', 'A')) {
+            <th>Acciones</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of filtrados(); track u.usuario) {
+          <tr>
+            <td><div class="avatar">{{ iniciales(u.nombre_completo) }}</div></td>
+            <td><strong>{{ u.usuario }}</strong></td>
+            <td>{{ u.nombre_completo }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.telefono || '—' }}</td>
+            <td>
+              @if (u.activo) {
+                <span class="badge badge-active">Activo</span>
+              } @else {
+                <span class="badge badge-inactive">Inactivo</span>
+              }
+              @if (u.primer_ingreso) {
+                <span class="badge badge-pending" style="margin-left:4px;" title="Pendiente de completar registro">Pendiente</span>
+              }
+            </td>
+            @if (permisos.puede('usuarios', 'E') || permisos.puede('usuarios', 'A')) {
+              <td>
+                <div class="action-buttons">
+                  @if (permisos.puede('usuarios', 'E')) {
+                    <a [routerLink]="['/seguridad/usuarios', u.usuario, 'editar']"
+                       class="btn btn-outline btn-sm" title="Editar">✏️</a>
+
+                    @if (u.activo) {
+                      <button class="btn btn-danger btn-sm" (click)="toggleEstado(u)" title="Desactivar">🚫</button>
+                    } @else {
+                      <button class="btn btn-success btn-sm" (click)="toggleEstado(u)" title="Activar">✅</button>
+                    }
+                  }
+                  @if (permisos.puede('usuarios', 'A') && u.primer_ingreso) {
+                    <button class="btn btn-warning btn-sm" (click)="reenviarInvitacion(u)" title="Reenviar invitación">📧</button>
+                  }
+                </div>
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px;">
+              No se encontraron usuarios
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    {{ filtrados().length }} usuario(s) encontrado(s) de {{ usuarios().length }} total
+  </div>
+}

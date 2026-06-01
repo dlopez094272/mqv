@@ -1,0 +1,218 @@
+<div class="shell" [class.sidebar-closed]="!sidebarOpen()">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a routerLink="/dashboard" class="sidebar-header sidebar-header-link">
+      <img src="/logo-white.png" class="logo-sidebar"
+           onerror="this.src='/logo.png';this.style.filter='none'"
+           alt="MQV" />
+      <div class="logo-text">
+        <strong>MÁS QUE VENCEDORES</strong>
+        <span>Sistema de Gestión</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+
+      <!-- Seguridad -->
+      @if (tieneSeguridad()) {
+        <div class="nav-group">
+        <button class="nav-item nav-group-toggle" (click)="seguridadOpen.set(!seguridadOpen())">
+          <span class="nav-icon">🔐</span>
+          <span class="nav-label">Seguridad</span>
+          <span class="nav-arrow" [class.open]="seguridadOpen()">▶</span>
+        </button>
+        @if (seguridadOpen()) {
+          <div class="nav-children">
+            @if (permisos.puede('usuarios', 'S')) {
+              <a routerLink="/seguridad/usuarios" class="nav-item nav-child"
+                 [class.active]="isActive('/seguridad/usuarios')">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Usuarios</span>
+              </a>
+            }
+
+            @if (auth.isSuperadmin()) {
+              <a routerLink="/seguridad/grupos" class="nav-item nav-child"
+                 [class.active]="isActive('/seguridad/grupos')">
+                <span class="nav-icon">🛡️</span>
+                <span class="nav-label">Grupos y Permisos</span>
+              </a>
+            }
+          </div>
+        }
+        </div>
+      }
+
+      <!-- Catálogos -->
+      @if (tieneCatalogos()) {
+      <div class="nav-group">
+        <button class="nav-item nav-group-toggle" (click)="catalogosOpen.set(!catalogosOpen())">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Catálogos</span>
+          <span class="nav-arrow" [class.open]="catalogosOpen()">▶</span>
+        </button>
+        @if (catalogosOpen()) {
+          <div class="nav-children">
+            @if (permisos.puede('departamentos', 'S')) {
+              <a routerLink="/catalogos/departamentos" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/departamentos')">
+                <span class="nav-icon">🗺️</span>
+                <span class="nav-label">Departamentos</span>
+              </a>
+            }
+            @if (permisos.puede('municipios', 'S')) {
+              <a routerLink="/catalogos/municipios" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/municipios')">
+                <span class="nav-icon">🏙️</span>
+                <span class="nav-label">Municipios</span>
+              </a>
+            }
+            @if (permisos.puede('iglesias', 'S')) {
+              <a routerLink="/catalogos/iglesias" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/iglesias')">
+                <span class="nav-icon">⛪</span>
+                <span class="nav-label">Iglesias</span>
+              </a>
+            }
+            @if (permisos.puede('lugares', 'S')) {
+              <a routerLink="/catalogos/lugares" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/lugares')">
+                <span class="nav-icon">📍</span>
+                <span class="nav-label">Lugares</span>
+              </a>
+            }
+            @if (permisos.puede('nacionalidades', 'S')) {
+              <a routerLink="/catalogos/nacionalidades" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/nacionalidades')">
+                <span class="nav-icon">🌐</span>
+                <span class="nav-label">Nacionalidades</span>
+              </a>
+            }
+            @if (permisos.puede('profesiones', 'S')) {
+              <a routerLink="/catalogos/profesiones" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/profesiones')">
+                <span class="nav-icon">💼</span>
+                <span class="nav-label">Profesiones</span>
+              </a>
+            }
+            @if (permisos.puede('roles', 'S')) {
+              <a routerLink="/catalogos/roles" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/roles')">
+                <span class="nav-icon">🎭</span>
+                <span class="nav-label">Roles</span>
+              </a>
+            }
+            @if (permisos.puede('grupos', 'S')) {
+              <a routerLink="/catalogos/grupos" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/grupos')">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Grupos</span>
+              </a>
+            }
+            @if (permisos.puede('tipos_documento', 'S')) {
+              <a routerLink="/catalogos/tipos-documento" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/tipos-documento')">
+                <span class="nav-icon">📄</span>
+                <span class="nav-label">Tipos de Documento</span>
+              </a>
+            }
+            @if (permisos.puede('experiencia_ministerial', 'S')) {
+              <a routerLink="/catalogos/experiencia-ministerial" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/experiencia-ministerial')">
+                <span class="nav-icon">✝️</span>
+                <span class="nav-label">Exp. Ministerial</span>
+              </a>
+            }
+            @if (permisos.puede('experiencia_laboral', 'S')) {
+              <a routerLink="/catalogos/experiencia-laboral" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/experiencia-laboral')">
+                <span class="nav-icon">🏢</span>
+                <span class="nav-label">Exp. Laboral</span>
+              </a>
+            }
+            @if (permisos.puede('actividades_categorias', 'S')) {
+              <a routerLink="/catalogos/actividades-categorias" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/actividades-categorias')">
+                <span class="nav-icon">🏷️</span>
+                <span class="nav-label">Cat. Actividades</span>
+              </a>
+            }
+            @if (permisos.puede('actividades_grupos', 'S')) {
+              <a routerLink="/catalogos/actividades-grupos" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/actividades-grupos')">
+                <span class="nav-icon">🔗</span>
+                <span class="nav-label">Act. - Grupos</span>
+              </a>
+            }
+            @if (permisos.puede('estados_crecimiento', 'S')) {
+              <a routerLink="/catalogos/estados-crecimiento" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/estados-crecimiento')">
+                <span class="nav-icon">🌱</span>
+                <span class="nav-label">Estados Crecimiento</span>
+              </a>
+            }
+          </div>
+        }
+        </div>
+      }
+
+      <!-- Personas -->
+      @if (tienePersonas()) {
+        <a routerLink="/personas" class="nav-item" [class.active]="isActive('/personas')">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">Personas</span>
+        </a>
+      }
+
+      <!-- Actividades -->
+      @if (tieneActividades()) {
+        <a routerLink="/actividades" class="nav-item" [class.active]="isActive('/actividades')">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Actividades</span>
+        </a>
+      }
+
+      <!-- Tesorería -->
+      @if (tieneTesoreria()) {
+        <a routerLink="/tesoreria" class="nav-item" [class.active]="isActive('/tesoreria')">
+          <span class="nav-icon">💰</span>
+          <span class="nav-label">Tesorería</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">v1.0.0 · 2026</div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-wrapper">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="topbar-toggle" (click)="sidebarOpen.set(!sidebarOpen())" title="Toggle menú">☰</button>
+
+      <div class="topbar-brand">
+        <span>Iglesia del Nazareno · <strong>Más que Vencedores</strong></span>
+      </div>
+
+      <div class="topbar-user">
+        <div class="user-info">
+          <div class="user-avatar">{{ (auth.usuarioNombre() || '?')[0].toUpperCase() }}</div>
+          <div>
+            <div class="user-name">{{ auth.usuarioNombre() }}</div>
+            @if (auth.isSuperadmin()) {
+              <div class="user-role">Superadministrador</div>
+            }
+          </div>
+        </div>
+        <button class="btn-logout" (click)="logout()" title="Cerrar sesión">⏻</button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="main-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<app-session-guard />

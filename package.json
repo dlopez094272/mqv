@@ -1,0 +1,11 @@
+{
+  "name": "mqv",
+  "version": "1.0.0",
+  "description": "MQV - Backend + Frontend monorepo",
+  "scripts": {
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm start --prefix frontend",
+    "dev": "start cmd /k \"npm run backend\" && start cmd /k \"npm run frontend\""
+  },
+  "private": true
+}

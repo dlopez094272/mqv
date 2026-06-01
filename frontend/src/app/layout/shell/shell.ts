@@ -1,0 +1,67 @@
+import { Component, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { AuthService } from '../../core/services/auth.service';
+import { PermisosService } from '../../core/services/permisos.service';
+import { InactividadService } from '../../core/services/inactividad.service';
+import { SessionGuardComponent } from '../session-guard/session-guard';
+
+@Component({
+  selector: 'app-shell',
+  standalone: true,
+  imports: [CommonModule, RouterModule, SessionGuardComponent],
+  templateUrl: './shell.html',
+  styleUrl: './shell.scss',
+})
+export class ShellComponent {
+  sidebarOpen      = signal(true);
+  seguridadOpen    = signal(false);
+  catalogosOpen    = signal(false);
+  actividadesOpen  = signal(false);
+
+  constructor(
+    public auth: AuthService,
+    public permisos: PermisosService,
+    public router: Router,
+    private inactividad: InactividadService,
+  ) {
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe((e: any) => {
+      if (e.url.startsWith('/seguridad'))   this.seguridadOpen.set(true);
+      if (e.url.startsWith('/catalogos'))   this.catalogosOpen.set(true);
+      if (e.url.startsWith('/actividades')) this.actividadesOpen.set(true);
+    });
+  }
+
+  logout() { this.inactividad.detener(); this.permisos.limpiar(); this.auth.logout(); }
+
+  isActive(path: string): boolean {
+    return this.router.url === path || this.router.url.startsWith(path + '/');
+  }
+
+  tieneSeguridad(): boolean {
+    return this.auth.isSuperadmin() || this.permisos.puede('usuarios', 'S');
+  }
+
+  tieneCatalogos(): boolean {
+    const tablas = [
+      'iglesias', 'lugares', 'nacionalidades', 'departamentos', 'municipios',
+      'profesiones', 'roles', 'grupos', 'tipos_documento',
+      'experiencia_ministerial', 'experiencia_laboral',
+      'actividades_categorias', 'actividades_grupos', 'estados_crecimiento',
+    ];
+    return tablas.some(t => this.permisos.puede(t, 'S'));
+  }
+
+  tieneActividades(): boolean {
+    return this.permisos.puede('actividades', 'S');
+  }
+
+  tieneTesoreria(): boolean {
+    return this.permisos.puede('tesoreria', 'S');
+  }
+
+  tienePersonas(): boolean {
+    return this.permisos.puede('personas', 'S');
+  }
+}

@@ -1,0 +1,66 @@
+<div class="auth-page">
+  <div class="auth-card" style="max-width:500px;">
+
+    <div class="auth-header">
+      <img src="/logo-white.png" class="logo-white" alt="Iglesia del Nazareno Más que Vencedores" />
+      <div class="church-name">Iglesia del Nazareno<br>Más que Vencedores</div>
+      <div class="church-sub">Completar registro</div>
+    </div>
+
+    <div class="auth-body">
+      @if (verificando()) { <div class="alert alert-info">Verificando enlace...</div> }
+      @if (error())       { <div class="alert alert-error">{{ error() }}</div> }
+      @if (success())     { <div class="alert alert-success">{{ success() }}<br><small>Redirigiendo al login...</small></div> }
+
+      @if (!verificando() && !error() && !success()) {
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;text-align:center;line-height:1.6;">
+          Bienvenido <strong>{{ nombre() }}</strong>. Configure su contraseña y foto de perfil.
+        </p>
+
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <div class="form-group">
+            <label>Nueva contraseña</label>
+            <input formControlName="password" [type]="showPass() ? 'text' : 'password'"
+                   placeholder="Mínimo 8 caracteres" />
+            @if (form.get('password')?.errors?.['required'] && form.get('password')?.touched) {
+              <span class="error-msg">Campo requerido</span>
+            }
+            @if (form.get('password')?.errors?.['minlength']) {
+              <span class="error-msg">Mínimo 8 caracteres</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Confirmar contraseña</label>
+            <input formControlName="confirmar" [type]="showPass2() ? 'text' : 'password'"
+                   placeholder="Repita la contraseña" />
+            @if (form.errors?.['mismatch'] && form.get('confirmar')?.touched) {
+              <span class="error-msg">Las contraseñas no coinciden</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Foto de perfil <span style="font-weight:400;color:var(--text-muted)">(opcional · máx. 3 MB)</span></label>
+            <div class="foto-upload">
+              @if (fotoPreview()) {
+                <img [src]="fotoPreview()!" class="foto-preview" alt="Vista previa" />
+              } @else {
+                <div class="foto-placeholder">📷</div>
+              }
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;width:auto;">
+                Seleccionar imagen
+                <input type="file" accept="image/*" (change)="onFotoChange($event)" style="display:none;" />
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" [disabled]="loading()">
+            @if (loading()) { <span class="spinner"></span> }
+            {{ loading() ? 'Guardando...' : 'Completar registro' }}
+          </button>
+        </form>
+      }
+    </div>
+
+  </div>
+</div>

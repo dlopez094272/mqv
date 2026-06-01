@@ -1,0 +1,605 @@
+<div class="page-header">
+  <h2>{{ modoPerfil ? '👤 Mi Perfil' : (esEdicion ? '✏️ Editar Persona' : '➕ Nueva Persona') }}</h2>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-outline btn-sm" (click)="cancelar()">Cancelar</button>
+    <button class="btn btn-primary" style="width:auto;" (click)="guardar()" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> }
+      {{ guardando() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </div>
+</div>
+
+@if (modoPerfil) {
+  <div class="asistente-banner">
+    <div class="asistente-progress">
+      @for (t of TABS; track t.key; let i = $index) {
+        <div class="paso" [class.activo]="tabActivo() === t.key" [class.hecho]="i < tabActualIndex()">
+          <div class="paso-num">{{ i + 1 }}</div>
+          <div class="paso-label">{{ t.label }}</div>
+        </div>
+        @if (i < TABS.length - 1) { <div class="paso-linea" [class.hecha]="i < tabActualIndex()"></div> }
+      }
+    </div>
+    <div class="asistente-tip">
+      💡 {{ GUIA_TABS[tabActivo()] }}
+    </div>
+  </div>
+}
+
+@if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+@if (exito()) { <div class="alert alert-success">{{ exito() }}</div> }
+
+@if (cargando()) {
+  <div class="loading-state"><div class="spinner-lg"></div> Cargando...</div>
+} @else {
+
+<div class="tabs">
+  @for (t of TABS; track t.key) {
+    <button class="tab" [class.active]="tabActivo()===t.key" (click)="cambiarTab(t.key)">
+      {{ t.icon }} {{ t.label }}
+    </button>
+  }
+</div>
+
+<div class="form-card">
+
+  <!-- ═══════════════════════ PERSONALES ═══════════════════════ -->
+  @if (tabActivo() === 'personales') {
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Primer Nombre <span class="req">*</span></label>
+          <input type="text" [ngModel]="modelo.primer_nombre"
+                 (ngModelChange)="toUpper('primer_nombre', $event)" maxlength="145" />
+        </div>
+        <div class="form-group">
+          <label>Segundo Nombre</label>
+          <input type="text" [ngModel]="modelo.segundo_nombre"
+                 (ngModelChange)="toUpper('segundo_nombre', $event)" maxlength="145" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Primer Apellido <span class="req">*</span></label>
+          <input type="text" [ngModel]="modelo.primer_apellido"
+                 (ngModelChange)="toUpper('primer_apellido', $event)" maxlength="145" />
+        </div>
+        <div class="form-group">
+          <label>Segundo Apellido</label>
+          <input type="text" [ngModel]="modelo.segundo_apellido"
+                 (ngModelChange)="toUpper('segundo_apellido', $event)" maxlength="145" />
+        </div>
+        <div class="form-group">
+          <label>Apellido Casada</label>
+          <input type="text" [ngModel]="modelo.apellidocasada"
+                 (ngModelChange)="toUpper('apellidocasada', $event)" maxlength="145" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de Nacimiento <span class="req">*</span></label>
+          <input type="date" [(ngModel)]="modelo.fechanacimiento" />
+        </div>
+        <div class="form-group">
+          <label>Lugar de Nacimiento</label>
+          <input type="text" [(ngModel)]="modelo.lugarnacimiento" maxlength="145" />
+        </div>
+        <div class="form-group">
+          <label>Nacionalidad</label>
+          <select [(ngModel)]="modelo.idnacionalidades">
+            <option [ngValue]="null">Por favor seleccione</option>
+            @for (n of nacionalidades; track n.id) { <option [value]="n.id">{{ n.nombre }}</option> }
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sexo <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" [(ngModel)]="modelo.sexo" value="F" /> Femenino</label>
+            <label class="radio-item"><input type="radio" [(ngModel)]="modelo.sexo" value="M" /> Masculino</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Estado Civil <span class="req">*</span></label>
+          <div class="radio-group wrap">
+            @for (ec of ESTADOS_CIVIL; track ec) {
+              <label class="radio-item"><input type="radio" [(ngModel)]="modelo.estado_civil" [value]="ec" /> {{ ec }}</label>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de Documento</label>
+          <select [(ngModel)]="modelo.idtipos_documento">
+            <option [ngValue]="null">Por favor seleccione</option>
+            @for (td of tiposDocumento; track td.idtipos_documento) {
+              <option [value]="td.idtipos_documento">{{ td.documento }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>No. Documento</label>
+          <input type="text" [(ngModel)]="modelo.nodocumento" maxlength="145" />
+        </div>
+      </div>
+
+      <div class="foto-section">
+        <label class="form-label-foto">Foto de perfil</label>
+        <div class="foto-container">
+
+          <!-- Preview circular -->
+          <div class="foto-preview">
+            @if (fotoStatus() === 'cargando') {
+              <div class="foto-loading"><div class="spinner-lg"></div></div>
+            } @else if (fotoPreview()) {
+              <img [src]="fotoPreview()!" alt="Foto" />
+              <button class="foto-quitar" (click)="quitarFoto()" title="Quitar foto">✕</button>
+            } @else {
+              <div class="foto-placeholder">👤</div>
+            }
+          </div>
+
+          <!-- Controles y status -->
+          <div class="foto-actions">
+            <label class="btn btn-outline btn-sm foto-btn" style="cursor:pointer;">
+              📷 {{ fotoPreview() ? 'Cambiar foto' : 'Seleccionar foto' }}
+              <input type="file" accept="image/*"
+                     style="display:none" (change)="onFotoSeleccionada($event)" />
+            </label>
+
+            @if (fotoStatus() === 'cargando') {
+              <span class="foto-status cargando">⏳ Procesando imagen...</span>
+            } @else if (fotoStatus() === 'lista') {
+              <span class="foto-status ok">✅ {{ fotoNombre() }}</span>
+              <span class="foto-hint">Lista para guardar · se subirá al guardar</span>
+            } @else if (fotoStatus() === 'error') {
+              <span class="foto-status err">❌ Error al leer la imagen</span>
+            } @else {
+              <span class="foto-hint">JPG, PNG o WEBP · Máx. 5 MB</span>
+            }
+          </div>
+
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════ CONTACTO ═════════════════════════ -->
+  @if (tabActivo() === 'contacto') {
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <div class="input-phone">
+            <span class="phone-prefix">🇬🇹 +502</span>
+            <input type="tel" [(ngModel)]="modelo.telefono" maxlength="45" placeholder="XXXX-XXXX" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Celular</label>
+          <div class="input-phone">
+            <span class="phone-prefix">🇬🇹 +502</span>
+            <input type="tel" [(ngModel)]="modelo.celular" maxlength="45" placeholder="XXXX-XXXX" />
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full"><label>Correo Electrónico</label>
+          <input type="email" [(ngModel)]="modelo.email" maxlength="245" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full"><label>Perfil Social / Redes Sociales</label>
+          <textarea [(ngModel)]="modelo.perfil_social" rows="4" placeholder="Facebook, Instagram..."></textarea></div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════ ECLESIÁSTICO ════════════════════════ -->
+  @if (tabActivo() === 'eclesiastico') {
+    <div class="form-section">
+      <div class="section-title">Historial en esta iglesia</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha inicio de asistencia</label>
+          <input type="date" [(ngModel)]="modelo.fecha_inicio_asistencia" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de Conversión</label>
+          <input type="date" [(ngModel)]="modelo.fechaconversion" />
+          <small>Fecha de su decisión por Cristo</small>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de Bautizo</label>
+          <input type="date" [(ngModel)]="modelo.fechabautiso" />
+          <small>Fecha de su bautizo en agua</small>
+        </div>
+        <div class="form-group">
+          <label>Iglesia donde se Bautizó</label>
+          <select [(ngModel)]="modelo.idiglesias_bautizo">
+            <option [ngValue]="null">Por favor seleccione</option>
+            @for (ig of iglesias; track ig.id) { <option [value]="ig.id">{{ ig.nombre }}</option> }
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:20px;">Iglesia Anterior</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Iglesia Anterior</label>
+          <select [(ngModel)]="modelo.idiglesias">
+            <option [ngValue]="null">Por favor seleccione</option>
+            @for (ig of iglesias; track ig.id) { <option [value]="ig.id">{{ ig.nombre }}</option> }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado de asistencia en Iglesia Anterior</label>
+          <select [(ngModel)]="modelo.estado_iglesia_anterior">
+            <option [ngValue]="null">Por favor seleccione</option>
+            @for (ea of ESTADOS_ASISTENCIA; track ea) { <option [value]="ea">{{ ea }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tiempo que asistió iglesia anterior</label>
+          <input type="text" [(ngModel)]="modelo.iglesia_tiempo_anterior" maxlength="145" placeholder="Ej: 3 años" />
+        </div>
+        <div class="form-group">
+          <label>Nombre del pastor anterior</label>
+          <input type="text" [(ngModel)]="modelo.iglesia_pastor_anterior" maxlength="345" />
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:20px;">Ministerio</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Experiencia Ministerial</label>
+          <small>Áreas que sirvió en iglesias anteriores</small>
+          <div class="chip-box">
+            <div class="chips">
+              @for (item of expMinSelec; track item.id) {
+                <span class="chip">{{ item.nombre }}<button (click)="quitarExpMin(item.id)">✕</button></span>
+              }
+            </div>
+            <div class="autocomplete-wrap">
+              <input type="text" [(ngModel)]="expMinQuery"
+                     (focus)="onExpMinFocus()" (blur)="onExpMinBlur()"
+                     (ngModelChange)="buscarExpMin($event)"
+                     placeholder="Clic para ver opciones..." />
+              @if (expMinSugest.length) {
+                <ul class="autocomplete-list">
+                  @for (s of expMinSugest; track s.id) { <li (click)="agregarExpMin(s)">{{ s.nombre }}</li> }
+                </ul>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Áreas que desea servir</label>
+          <small>En qué áreas le gustaría servir en esta congregación</small>
+          <div class="chip-box">
+            <div class="chips">
+              @for (item of areasServSelec; track item.id) {
+                <span class="chip chip-green">{{ item.nombre }}<button (click)="quitarAreaServ(item.id)">✕</button></span>
+              }
+            </div>
+            <div class="autocomplete-wrap">
+              <input type="text" [(ngModel)]="areasServQuery"
+                     (focus)="onAreasServFocus()" (blur)="onAreasServBlur()"
+                     (ngModelChange)="buscarAreasServ($event)"
+                     placeholder="Clic para ver opciones..." />
+              @if (areasServSugest.length) {
+                <ul class="autocomplete-list">
+                  @for (s of areasServSugest; track s.id) { <li (click)="agregarAreaServ(s)">{{ s.nombre }}</li> }
+                </ul>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Maestro Escuela Dominical actual</label>
+          <input type="text" [(ngModel)]="modelo.maestro_escuela_dominical" maxlength="345" />
+        </div>
+        <div class="form-group">
+          <label>Motivo para servir a Dios</label>
+          <textarea [(ngModel)]="modelo.motivo_ministerio" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════ DIRECCIONES ═══════════════════════ -->
+  @if (tabActivo() === 'direcciones') {
+    <div class="form-section dir-layout">
+
+      <!-- Columna izquierda: campos -->
+      <div class="dir-campos">
+        <div class="section-title">Lugar de Nacimiento</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Departamento</label>
+            <select [(ngModel)]="modelo.iddepartamentos_nacimiento" (ngModelChange)="onDeptNacChange()">
+              <option [ngValue]="null">Por favor seleccione</option>
+              @for (d of departamentos; track d.id) { <option [value]="d.id">{{ d.nombre }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Municipio</label>
+            <select [(ngModel)]="modelo.idmunicipios_nacimiento" [disabled]="!modelo.iddepartamentos_nacimiento">
+              <option [ngValue]="null">Por favor seleccione</option>
+              @for (m of municipiosNac; track m.id) { <option [value]="m.id">{{ m.nombre }}</option> }
+            </select>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px;">Domicilio</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Departamento</label>
+            <select [(ngModel)]="modelo.iddepartamentos_domicilio" (ngModelChange)="onDeptDomChange()">
+              <option [ngValue]="null">Por favor seleccione</option>
+              @for (d of departamentos; track d.id) { <option [value]="d.id">{{ d.nombre }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Municipio</label>
+            <select [(ngModel)]="modelo.idmunicipios_domicilio" [disabled]="!modelo.iddepartamentos_domicilio">
+              <option [ngValue]="null">Por favor seleccione</option>
+              @for (m of municipiosDom; track m.id) { <option [value]="m.id">{{ m.nombre }}</option> }
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="max-width:100px;">
+            <label>Zona</label>
+            <input type="text" [(ngModel)]="modelo.zona_domicilio" maxlength="45" placeholder="1" />
+          </div>
+          <div class="form-group">
+            <label>Dirección</label>
+            <input type="text" [(ngModel)]="modelo.direccion_domicilio" maxlength="345" />
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px;">Coordenadas GPS</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Latitud</label>
+            <input type="text" [(ngModel)]="modelo.latitud"
+                   (blur)="onCoordenadaChange()"
+                   (keyup.enter)="onCoordenadaChange()"
+                   placeholder="Ej: 14.6349149" />
+          </div>
+          <div class="form-group">
+            <label>Longitud</label>
+            <input type="text" [(ngModel)]="modelo.longitud"
+                   (blur)="onCoordenadaChange()"
+                   (keyup.enter)="onCoordenadaChange()"
+                   placeholder="Ej: -90.5068824" />
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="btn btn-secondary btn-sm" (click)="onCoordenadaChange()" style="white-space:nowrap;">
+              🗺️ Ver en mapa
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-gps" (click)="usarGPS()">📍 Obtener mi ubicación GPS actual</button>
+        <p class="map-hint">Ingresa las coordenadas y presiona "Ver en mapa" (o Enter), o usa el botón GPS para capturar tu ubicación actual. El mapa se mostrará a la derecha.</p>
+      </div>
+
+      <!-- Columna derecha: mapa iframe -->
+      <div class="dir-mapa">
+        @if (mapaUrl()) {
+          <iframe [src]="mapaUrl()!" class="mapa-iframe"
+                  frameborder="0" scrolling="no" loading="lazy">
+          </iframe>
+          <a [href]="mapaExternoUrl()" target="_blank" class="mapa-abrir">
+            🗺️ Abrir en OpenStreetMap ↗
+          </a>
+        } @else {
+          <div class="mapa-placeholder">
+            <div class="mapa-icon">📍</div>
+            <p>Usa el botón GPS o ingresa las<br/>coordenadas para ver el mapa</p>
+          </div>
+        }
+      </div>
+
+    </div>
+  }
+
+  <!-- ════════════════════ LABORAL ════════════════════════════ -->
+  @if (tabActivo() === 'laboral') {
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Profesión</label>
+          <select [(ngModel)]="modelo.idprofesiones">
+            <option [ngValue]="null">Por favor seleccione</option>
+            @for (p of profesiones; track p.id) { <option [value]="p.id">{{ p.nombre }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Lugar de Trabajo</label>
+          <input type="text" [(ngModel)]="modelo.lugartrabajo" maxlength="345" />
+        </div>
+        <div class="form-group">
+          <label>Puesto / Cargo</label>
+          <input type="text" [(ngModel)]="modelo.puesto_trabajo" maxlength="145" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Dirección de Trabajo</label>
+          <input type="text" [(ngModel)]="modelo.direcciontrabajo" maxlength="345" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Experiencia Laboral</label>
+          <small>Áreas de experiencia laboral del miembro</small>
+          <div class="chip-box">
+            <div class="chips">
+              @for (item of expLabSelec; track item.id) {
+                <span class="chip chip-blue">{{ item.nombre }}<button (click)="quitarExpLab(item.id)">✕</button></span>
+              }
+            </div>
+            <div class="autocomplete-wrap">
+              <input type="text" [(ngModel)]="expLabQuery"
+                     (focus)="onExpLabFocus()" (blur)="onExpLabBlur()"
+                     (ngModelChange)="buscarExpLab($event)"
+                     placeholder="Clic para ver opciones..." />
+              @if (expLabSugest.length) {
+                <ul class="autocomplete-list">
+                  @for (s of expLabSugest; track s.id) { <li (click)="agregarExpLab(s)">{{ s.nombre }}</li> }
+                </ul>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════ GRUPOS ══════════════════════════ -->
+  @if (tabActivo() === 'grupos') {
+    <div class="form-section">
+      <div class="grupos-header">
+        <span>Grupos a los que asiste esta persona</span>
+        <div class="grupos-add">
+          <select #grupoSelect>
+            <option value="">Seleccionar grupo...</option>
+            @for (g of grupos; track g.id) {
+              @if (!grupoYaAsignado(g.id)) { <option [value]="g.id">{{ g.nombre }}</option> }
+            }
+          </select>
+          <button class="btn btn-secondary btn-sm"
+                  (click)="agregarGrupo(+grupoSelect.value); grupoSelect.value=''">+ Agregar</button>
+        </div>
+      </div>
+      <div class="table-container" style="margin-top:14px;">
+        <table>
+          <thead><tr><th>Grupo</th><th style="width:80px;text-align:center;">Quitar</th></tr></thead>
+          <tbody>
+            @for (g of gruposPersona; track g.idgrupos) {
+              <tr>
+                <td>{{ g.grupo }}</td>
+                <td style="text-align:center;">
+                  <button class="btn btn-danger btn-sm" (click)="quitarGrupo(g.idgrupos)">✕</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:28px;">
+                Esta persona no pertenece a ningún grupo todavía
+              </td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+
+  <!-- ════════════════════ CRECIMIENTO ════════════════════════ -->
+  @if (tabActivo() === 'crecimiento') {
+    <div class="form-section">
+      @if (!esEdicion) {
+        <div class="alert alert-info">Guarda la persona primero para poder registrar su crecimiento.</div>
+      } @else {
+        <!-- Formulario nuevo registro -->
+        <div class="crecimiento-form">
+          <div class="section-title">Nuevo Registro de Crecimiento</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado de Crecimiento <span class="req">*</span></label>
+              <select [(ngModel)]="nuevoCrecimiento.idestados_crecimiento">
+                <option [ngValue]="0">Seleccionar estado...</option>
+                @for (e of estadosCrecimiento; track e.id) {
+                  <option [value]="e.id">{{ e.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Fecha</label>
+              <input type="date" [(ngModel)]="nuevoCrecimiento.fecha" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full">
+              <label>Comentario <small>(máx. 245 caracteres)</small></label>
+              <textarea [(ngModel)]="nuevoCrecimiento.comentario" rows="2"
+                        maxlength="245" placeholder="Nota o comentario adicional..."></textarea>
+              <small style="color:var(--text-muted);">{{ nuevoCrecimiento.comentario.length }}/245</small>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:auto;" (click)="agregarCrecimiento()" [disabled]="guardandoCrecimiento()">
+            @if (guardandoCrecimiento()) { <span class="spinner"></span> }
+            + Agregar registro
+          </button>
+        </div>
+
+        <!-- Listado de registros -->
+        <div class="section-title" style="margin-top:24px;">Historial de Crecimiento</div>
+        @if (cargandoCrecimiento()) {
+          <div class="loading-state"><div class="spinner-lg"></div><span>Cargando...</span></div>
+        } @else {
+          <div class="table-container" style="margin-top:10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Comentario</th>
+                  <th style="width:70px;text-align:center;">Quitar</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of registrosCrecimiento(); track r.idpersonas_crecimiento) {
+                  <tr>
+                    <td>{{ r.fecha | date:'dd/MM/yyyy' }}</td>
+                    <td><span class="badge-crecimiento">{{ r.estado }}</span></td>
+                    <td>{{ r.comentario || '—' }}</td>
+                    <td style="text-align:center;">
+                      <button class="btn btn-danger btn-sm" (click)="eliminarCrecimiento(r.idpersonas_crecimiento)">✕</button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:28px;">
+                    No hay registros de crecimiento todavía
+                  </td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  }
+
+</div>
+}
+
+<div class="form-footer">
+  <button class="btn btn-outline" (click)="cancelar()">
+    {{ modoPerfil ? '← Volver al inicio' : 'Cancelar' }}
+  </button>
+  @if (modoPerfil && tabActualIndex() < TABS.length - 1) {
+    <button class="btn btn-secondary" style="width:auto;" (click)="siguienteTab()">
+      Siguiente sección →
+    </button>
+  }
+  <button class="btn btn-primary" style="width:auto;" (click)="guardar()" [disabled]="guardando()">
+    @if (guardando()) { <span class="spinner"></span> }
+    {{ guardando() ? 'Guardando...' : (esEdicion ? 'Guardar cambios' : 'Crear persona') }}
+  </button>
+</div>

@@ -1,0 +1,132 @@
+@if (cargando()) {
+  <div class="alert alert-info">Cargando grupo...</div>
+} @else if (grupo(); as g) {
+  <div class="page-header">
+    <div>
+      <a routerLink="/seguridad/grupos" style="font-size:14px;color:var(--blue)">← Volver a grupos</a>
+      <h2 style="margin-top:6px;">
+        🛡️ {{ g.Label }}
+        @if (g.GroupID === -1) { <span class="badge badge-super" style="font-size:14px;margin-left:8px;">SUPERADMIN</span> }
+      </h2>
+      @if (g.Comment) { <p style="color:var(--text-muted);font-size:14px;margin-top:2px;">{{ g.Comment }}</p> }
+    </div>
+  </div>
+
+  @if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+  @if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+  @if (esSuperAdmin()) {
+    <div class="alert alert-info">
+      El grupo <strong>Superadministrador</strong> tiene acceso total al sistema y no requiere configuración de permisos.
+      Solo puede gestionar sus miembros.
+    </div>
+  }
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.active]="tab() === 'miembros'" (click)="setTab('miembros')">
+      👥 Miembros ({{ g.miembros.length }})
+    </button>
+    @if (!esSuperAdmin()) {
+      <button class="tab" [class.active]="tab() === 'derechos'" (click)="setTab('derechos')">
+        🔑 Permisos
+      </button>
+    }
+  </div>
+
+  <!-- TAB: MIEMBROS -->
+  @if (tab() === 'miembros') {
+    <div class="tab-content">
+      <div class="members-layout">
+        <!-- Miembros actuales -->
+        <div class="members-current">
+          <h3 class="section-title">Miembros del grupo</h3>
+          @if (!g.miembros.length) {
+            <div class="empty-state">Sin miembros aún</div>
+          } @else {
+            <ul class="member-list">
+              @for (m of g.miembros; track m.UserName) {
+                <li class="member-item">
+                  <div class="avatar" style="flex-shrink:0">{{ m.nombre_completo[0] }}</div>
+                  <div class="member-info">
+                    <strong>{{ m.nombre_completo }}</strong>
+                    <span>{{ m.UserName }} · {{ m.email }}</span>
+                  </div>
+                  <button class="btn btn-danger btn-sm btn-icon" (click)="quitar(m.UserName)" title="Quitar del grupo">✕</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <!-- Agregar miembros -->
+        <div class="members-add">
+          <h3 class="section-title">Agregar usuario</h3>
+          <div class="form-group">
+            <input type="text" [(ngModel)]="busquedaUsuario" (ngModelChange)="filtrarDisp()"
+                   placeholder="🔍 Buscar usuario..." (focus)="cargarDisponibles()" />
+          </div>
+
+          @if (cargandoDisp()) {
+            <div class="empty-state">Cargando...</div>
+          } @else {
+            <ul class="avail-list">
+              @for (u of filtradosDisp(); track u.usuario) {
+                <li class="avail-item">
+                  <div class="avatar" style="flex-shrink:0;background:var(--secondary)">{{ u.nombre_completo[0] }}</div>
+                  <div class="member-info">
+                    <strong>{{ u.nombre_completo }}</strong>
+                    <span>{{ u.usuario }}</span>
+                  </div>
+                  <button class="btn btn-success btn-sm" (click)="agregar(u.usuario)">+ Agregar</button>
+                </li>
+              } @empty {
+                <li class="empty-state">Sin usuarios disponibles</li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB: DERECHOS -->
+  @if (tab() === 'derechos' && !esSuperAdmin()) {
+    <div class="tab-content">
+      <div class="table-container">
+        <table class="perms-grid">
+          <thead>
+            <tr>
+              <th>Funcionalidad / Tabla</th>
+              <th title="Agregar">A – Agregar</th>
+              <th title="Eliminar">D – Eliminar</th>
+              <th title="Editar">E – Editar</th>
+              <th title="Consultar">S – Consultar</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of g.features; track f.name) {
+              <tr>
+                <td><strong>{{ f.label }}</strong><br><span style="font-size:11px;color:var(--text-muted)">{{ f.name }}</span></td>
+                @for (p of PERMS; track p) {
+                  <td>
+                    <input type="checkbox" class="perm-check"
+                           [checked]="hasPerm(f.name, p)"
+                           (change)="togglePerm(f.name, p)" />
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:16px;display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" style="width:auto;" (click)="guardarDerechos()" [disabled]="savingDerechos()">
+          @if (savingDerechos()) { <span class="spinner"></span> }
+          {{ savingDerechos() ? 'Guardando...' : '💾 Guardar permisos' }}
+        </button>
+      </div>
+    </div>
+  }
+}
