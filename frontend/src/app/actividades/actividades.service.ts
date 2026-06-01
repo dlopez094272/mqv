@@ -39,6 +39,39 @@ export interface LugarLookup {
   nombre: string;
 }
 
+export interface AsistenciaPersona {
+  idpersonas:                number;
+  nombre_completo:           string;
+  foto:                      string | null;
+  idactividades_asistentes:  number | null;
+  comentarios:               string | null;
+  asiste:                    boolean;
+  grupos_nombres:            string | null;
+}
+
+export interface Visitante {
+  idactividades_asistentes: number;
+  nombre_completo:          string;
+  telefono:                 string | null;
+  comentarios:              string | null;
+}
+
+export interface ContadorGrupo {
+  grupo: string;
+  count: number;
+}
+
+export interface AsistenciaResumen {
+  personas:   AsistenciaPersona[];
+  visitantes: Visitante[];
+  contadores: {
+    personas:   number;
+    visitantes: number;
+    total:      number;
+    porGrupo:   ContadorGrupo[];
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ActividadesService {
   private http = inject(HttpClient);
@@ -64,6 +97,10 @@ export class ActividadesService {
     return `${environment.apiUrl}/files/actividades/logos/${filename}`;
   }
 
+  urlFotoPersona(filename: string): string {
+    return `${environment.apiUrl}/uploads/personas/${filename}`;
+  }
+
   descargarAdjunto(filename: string, originalname: string) {
     this.http.get(`${this.base}/adjuntos/${filename}`, { responseType: 'blob' }).subscribe({
       next: blob => {
@@ -77,5 +114,22 @@ export class ActividadesService {
         URL.revokeObjectURL(url);
       },
     });
+  }
+
+  listarAsistencia(idActividad: number) {
+    return this.http.get<AsistenciaResumen>(`${this.base}/${idActividad}/asistentes`);
+  }
+
+  agregarAsistente(idActividad: number, data: {
+    idpersonas?: number;
+    nombre_completo?: string;
+    telefono?: string;
+    comentarios?: string;
+  }) {
+    return this.http.post<{ id: number }>(`${this.base}/${idActividad}/asistentes`, data);
+  }
+
+  eliminarAsistente(idActividad: number, idAsistente: number) {
+    return this.http.delete<{ ok: boolean }>(`${this.base}/${idActividad}/asistentes/${idAsistente}`);
   }
 }

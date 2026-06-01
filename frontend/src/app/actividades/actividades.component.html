@@ -64,11 +64,16 @@
                    (dragstart)="onDragStart($event, act)"
                    (dragend)="onDragEnd()"
                    (click)="$event.stopPropagation(); abrirEditar(act)"
-                   [title]="act.nombre + ' — arrastrar para mover'">
+                   [title]="act.nombre">
                 @if (act.logo) {
                   <img [src]="urlLogo(act.logo)" class="event-logo" [alt]="act.nombre" />
                 }
                 <span class="event-name">{{ act.nombre }}</span>
+                @if (permisos.puede('actividades_asistentes', 'S')) {
+                  <button class="event-asistencia-btn"
+                          (click)="abrirAsistencia(act, $event)"
+                          title="Registrar asistencia">👥</button>
+                }
               </div>
             }
             @if (dia.actividades.length > 3) {
@@ -96,11 +101,16 @@
         <div class="gantt-header-cell"></div>
         <div class="gantt-header-cell gantt-header-days-spacer"></div>
         @for (act of actividadesConGantt(); track act.idactividades) {
-          <div class="gantt-name-row" (click)="abrirEditar(act)" [title]="act.nombre">
+          <div class="gantt-name-row" [title]="act.nombre">
             @if (act.logo) {
               <img [src]="urlLogo(act.logo)" class="gantt-logo" [alt]="act.nombre" />
             }
-            <span class="gantt-act-name">{{ act.nombre }}</span>
+            <span class="gantt-act-name" (click)="abrirEditar(act)">{{ act.nombre }}</span>
+            @if (permisos.puede('actividades_asistentes', 'S')) {
+              <button class="gantt-asistencia-btn"
+                      (click)="abrirAsistencia(act)"
+                      title="Registrar asistencia">👥</button>
+            }
           </div>
         }
       </div>
@@ -197,6 +207,13 @@
             <td>{{ act.usuario || '—' }}</td>
             <td>
               <div class="action-buttons">
+                @if (permisos.puede('actividades_asistentes', 'S')) {
+                  <button class="btn btn-outline btn-sm btn-asistencia"
+                          (click)="abrirAsistencia(act)"
+                          title="Registrar asistencia">
+                    👥 Asistencia
+                  </button>
+                }
                 @if (permisos.puede('actividades', 'E')) {
                   <button class="btn btn-outline btn-sm" (click)="abrirEditar(act)" title="Editar">✏️</button>
                 }
@@ -364,4 +381,262 @@
       </button>
     </div>
   </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  MODAL ASISTENCIA                                           -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (mostrarAsistencia()) {
+  <div class="asistencia-backdrop" (click)="cerrarAsistencia()"></div>
+  <div class="asistencia-modal" role="dialog">
+
+    <!-- Header -->
+    <div class="asistencia-header">
+      <div class="asistencia-header-info">
+        <span class="asistencia-titulo">Registro de Asistencia</span>
+        <span class="asistencia-act-nombre">{{ actividadAsistencia()?.nombre }}</span>
+      </div>
+      <button class="btn-close" (click)="cerrarAsistencia()" title="Cerrar">✕</button>
+    </div>
+
+    <!-- Contadores -->
+    @if (asistenciaData() && !cargandoAsistencia()) {
+      <div class="asistencia-counters">
+        <div class="counter-badge counter-total">
+          👥 Total: {{ asistenciaData()!.contadores.total }}
+        </div>
+        <div class="counter-badge counter-personas">
+          🧑 Miembros: {{ asistenciaData()!.contadores.personas }}
+        </div>
+        @if (asistenciaData()!.contadores.visitantes > 0) {
+          <div class="counter-badge counter-visitantes">
+            🌟 Visitantes: {{ asistenciaData()!.contadores.visitantes }}
+          </div>
+        }
+        @for (g of asistenciaData()!.contadores.porGrupo; track g.grupo) {
+          <div class="counter-badge counter-grupo">
+            {{ g.grupo }}: {{ g.count }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Buscador -->
+    <div class="asistencia-search">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text"
+               class="search-input"
+               placeholder="Buscar persona por nombre..."
+               [ngModel]="busquedaAsistencia()"
+               (ngModelChange)="busquedaAsistencia.set($event)" />
+        @if (busquedaAsistencia()) {
+          <button class="search-clear" (click)="busquedaAsistencia.set('')">✕</button>
+        }
+      </div>
+    </div>
+
+    <!-- Cuerpo -->
+    <div class="asistencia-body">
+
+      @if (errorAsistencia()) {
+        <div class="alert alert-error" style="margin-bottom:12px">{{ errorAsistencia() }}</div>
+      }
+
+      @if (cargandoAsistencia()) {
+        <div class="loading-state">Cargando personas...</div>
+      } @else if (asistenciaData()) {
+
+        <!-- ══ Sección Asistentes ══════════════════════════════ -->
+        <div class="personas-seccion"
+             [class.drop-zona-activa]="sobreZonaAsistentes()"
+             (dragover)="onZonaDragOver($event, 'asistentes')"
+             (dragleave)="sobreZonaAsistentes.set(false)"
+             (drop)="onZonaDrop($event, 'asistentes')">
+
+          <div class="seccion-label">
+            <span class="seccion-titulo seccion-titulo--asiste">
+              ✅ Asistentes confirmados
+            </span>
+            <span class="seccion-count">{{ personasAsistentes().length }}</span>
+            @if (sobreZonaAsistentes()) {
+              <span class="drop-hint">Suelta aquí para confirmar asistencia</span>
+            }
+          </div>
+
+          @if (personasAsistentes().length === 0 && !busquedaAsistencia()) {
+            <div class="seccion-vacia">Aún no hay asistentes confirmados. Haz clic en una persona para agregarla.</div>
+          }
+
+          <div class="personas-grid">
+            @for (p of personasAsistentes(); track p.idpersonas) {
+              <div class="persona-card persona-card--asiste"
+                   draggable="true"
+                   (dragstart)="onPersonaDragStart($event, p)"
+                   (dragend)="onPersonaDragEnd()"
+                   [class.dragging]="arrastandoPersona()?.idpersonas === p.idpersonas"
+                   (click)="toggleAsistente(p)"
+                   [title]="'Quitar: ' + p.nombre_completo">
+                <div class="persona-foto-wrap">
+                  @if (p.foto) {
+                    <img [src]="urlFotoPersona(p.foto)"
+                         class="persona-foto"
+                         [alt]="p.nombre_completo"
+                         (error)="$any($event.target).style.display='none'" />
+                  } @else {
+                    <div class="persona-foto persona-foto-placeholder">
+                      {{ inicialAsistencia(p.nombre_completo) }}
+                    </div>
+                  }
+                  <div class="persona-check">✓</div>
+                </div>
+                <span class="persona-nombre">{{ p.nombre_completo }}</span>
+                @if (p.grupos_nombres) {
+                  <span class="persona-grupo">{{ p.grupos_nombres }}</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- ══ Sección Disponibles ════════════════════════════ -->
+        <div class="personas-seccion personas-seccion--disponibles"
+             [class.drop-zona-activa]="sobreZonaDisponibles()"
+             (dragover)="onZonaDragOver($event, 'disponibles')"
+             (dragleave)="sobreZonaDisponibles.set(false)"
+             (drop)="onZonaDrop($event, 'disponibles')">
+
+          <div class="seccion-label">
+            <span class="seccion-titulo">👤 Personas disponibles</span>
+            <span class="seccion-count">{{ personasDisponibles().length }}</span>
+            @if (sobreZonaDisponibles()) {
+              <span class="drop-hint">Suelta aquí para quitar de asistentes</span>
+            }
+          </div>
+
+          @if (personasDisponibles().length === 0 && !busquedaAsistencia()) {
+            <div class="seccion-vacia">Todas las personas están marcadas como asistentes.</div>
+          }
+          @if (personasDisponibles().length === 0 && busquedaAsistencia()) {
+            <div class="seccion-vacia">Sin resultados para "{{ busquedaAsistencia() }}".</div>
+          }
+
+          <div class="personas-grid">
+            @for (p of personasDisponibles(); track p.idpersonas) {
+              <div class="persona-card"
+                   draggable="true"
+                   (dragstart)="onPersonaDragStart($event, p)"
+                   (dragend)="onPersonaDragEnd()"
+                   [class.dragging]="arrastandoPersona()?.idpersonas === p.idpersonas"
+                   (click)="toggleAsistente(p)"
+                   [title]="'Marcar asistencia: ' + p.nombre_completo">
+                <div class="persona-foto-wrap">
+                  @if (p.foto) {
+                    <img [src]="urlFotoPersona(p.foto)"
+                         class="persona-foto"
+                         [alt]="p.nombre_completo"
+                         (error)="$any($event.target).style.display='none'" />
+                  } @else {
+                    <div class="persona-foto persona-foto-placeholder">
+                      {{ inicialAsistencia(p.nombre_completo) }}
+                    </div>
+                  }
+                </div>
+                <span class="persona-nombre">{{ p.nombre_completo }}</span>
+                @if (p.grupos_nombres) {
+                  <span class="persona-grupo">{{ p.grupos_nombres }}</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- ══ Sección Visitantes ════════════════════════════ -->
+        <div class="visitantes-seccion">
+          <div class="seccion-label">
+            <span class="seccion-titulo">🌟 Visitantes</span>
+            <span class="seccion-count">{{ asistenciaData()!.visitantes.length }}</span>
+          </div>
+
+          <div class="visitantes-lista">
+            @for (v of asistenciaData()!.visitantes; track v.idactividades_asistentes) {
+              <div class="visitante-item" [class.visitante-item--expandido]="visitanteExpandido() === v.idactividades_asistentes">
+                <div class="visitante-avatar">{{ inicialAsistencia(v.nombre_completo) }}</div>
+                <div class="visitante-info">
+                  <span class="visitante-nombre">{{ v.nombre_completo }}</span>
+                  @if (visitanteExpandido() === v.idactividades_asistentes) {
+                    <div class="visitante-detalles">
+                      @if (v.telefono) {
+                        <span class="visitante-detalle-item">📞 {{ v.telefono }}</span>
+                      }
+                      @if (v.comentarios) {
+                        <span class="visitante-detalle-item">💬 {{ v.comentarios }}</span>
+                      }
+                      @if (!v.telefono && !v.comentarios) {
+                        <span class="visitante-detalle-item visitante-sin-datos">Sin datos adicionales</span>
+                      }
+                    </div>
+                  }
+                </div>
+                <div class="visitante-acciones">
+                  <button class="btn-detalle-visitante"
+                          (click)="toggleDetalleVisitante(v.idactividades_asistentes)"
+                          [title]="visitanteExpandido() === v.idactividades_asistentes ? 'Ocultar detalles' : 'Ver detalles'">
+                    {{ visitanteExpandido() === v.idactividades_asistentes ? '▲' : '▼' }}
+                  </button>
+                  @if (permisos.puede('actividades_asistentes', 'D')) {
+                    <button class="btn-remove-adj"
+                            (click)="eliminarVisitante(v.idactividades_asistentes)"
+                            title="Eliminar visitante">✕</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (mostrarFormVisitante()) {
+            <div class="form-visitante">
+              <div class="form-group" style="margin-bottom:10px">
+                <label>Nombre completo <span class="req">*</span></label>
+                <input type="text" class="form-control"
+                       [(ngModel)]="formVisitante.nombre_completo"
+                       placeholder="Nombre del visitante" />
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>Teléfono</label>
+                <input type="tel" class="form-control"
+                       [(ngModel)]="formVisitante.telefono"
+                       placeholder="Número de teléfono (opcional)" />
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>Comentarios</label>
+                <input type="text" class="form-control"
+                       [(ngModel)]="formVisitante.comentarios"
+                       placeholder="Observaciones (opcional)" />
+              </div>
+              <div class="form-visitante-btns">
+                <button class="btn btn-outline btn-sm"
+                        (click)="mostrarFormVisitante.set(false)"
+                        [disabled]="guardandoVisitante()">
+                  Cancelar
+                </button>
+                <button class="btn btn-primary btn-sm"
+                        style="width:auto"
+                        (click)="agregarVisitante()"
+                        [disabled]="guardandoVisitante() || !formVisitante.nombre_completo.trim()">
+                  {{ guardandoVisitante() ? 'Guardando...' : 'Agregar visitante' }}
+                </button>
+              </div>
+            </div>
+          } @else if (permisos.puede('actividades_asistentes', 'A')) {
+            <button class="btn-agregar-visitante"
+                    (click)="mostrarFormVisitante.set(true)">
+              + Agregar visitante
+            </button>
+          }
+        </div>
+
+      }
+    </div><!-- /asistencia-body -->
+  </div><!-- /asistencia-modal -->
 }

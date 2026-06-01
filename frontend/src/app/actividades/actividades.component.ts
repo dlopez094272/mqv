@@ -6,6 +6,7 @@ import { Observable }     from 'rxjs';
 import {
   ActividadesService, Actividad, AdjuntoInfo,
   CategoriaLookup, LugarLookup,
+  AsistenciaPersona, Visitante, AsistenciaResumen,
 } from './actividades.service';
 import { PermisosService } from '../core/services/permisos.service';
 import { environment }     from '../../environments/environment';
@@ -41,9 +42,9 @@ export class ActividadesComponent implements OnInit {
   cargando   = signal(false);
   error      = signal('');
 
-  // ── Drag & Drop ───────────────────────────────────────────────
+  // ── Drag & Drop (calendario) ──────────────────────────────────
   arrastrando      = signal<Actividad | null>(null);
-  diaArrastreSobre = signal<number | null>(null); // timestamp del día destino
+  diaArrastreSobre = signal<number | null>(null);
   guardandoDrag    = signal(false);
   successMsg = signal('');
 
@@ -55,7 +56,7 @@ export class ActividadesComponent implements OnInit {
   // ── Calendar ─────────────────────────────────────────────────
   mesActual = signal(new Date());
 
-  // ── Form ─────────────────────────────────────────────────────
+  // ── Form actividad ────────────────────────────────────────────
   mostrarForm = signal(false);
   modoEdicion = signal(false);
   editandoId  = signal<number | null>(null);
@@ -80,6 +81,24 @@ export class ActividadesComponent implements OnInit {
 
   adjuntosNuevos:   File[]        = [];
   adjuntosActuales: AdjuntoInfo[] = [];
+
+  // ── Asistencia ────────────────────────────────────────────────
+  mostrarAsistencia    = signal(false);
+  actividadAsistencia  = signal<Actividad | null>(null);
+  cargandoAsistencia   = signal(false);
+  asistenciaData       = signal<AsistenciaResumen | null>(null);
+  busquedaAsistencia   = signal('');
+  mostrarFormVisitante = signal(false);
+  guardandoVisitante    = signal(false);
+  errorAsistencia       = signal('');
+  visitanteExpandido    = signal<number | null>(null);
+
+  formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
+
+  // Drag & Drop dentro del modal de asistencia
+  arrastandoPersona    = signal<AsistenciaPersona | null>(null);
+  sobreZonaAsistentes  = signal(false);
+  sobreZonaDisponibles = signal(false);
 
   // ── Computed: calendario ──────────────────────────────────────
   diasCalendario = computed<DiaCalendario[]>(() => {
@@ -109,7 +128,7 @@ export class ActividadesComponent implements OnInit {
     return dias;
   });
 
-  // ── Computed: gantt rango ─────────────────────────────────────
+  // ── Computed: gantt ───────────────────────────────────────────
   ganttRango = computed<{ inicio: Date; fin: Date; dias: Date[] }>(() => {
     const acts = this.actividades();
     let inicio: Date;
@@ -160,6 +179,23 @@ export class ActividadesComponent implements OnInit {
     });
   });
 
+  // ── Computed: asistencia ──────────────────────────────────────
+  personasFiltradas = computed<AsistenciaPersona[]>(() => {
+    const data = this.asistenciaData();
+    if (!data) return [];
+    const q = this.busquedaAsistencia().toLowerCase().trim();
+    if (!q) return data.personas;
+    return data.personas.filter(p => p.nombre_completo.toLowerCase().includes(q));
+  });
+
+  personasAsistentes = computed<AsistenciaPersona[]>(() =>
+    this.personasFiltradas().filter(p => p.asiste)
+  );
+
+  personasDisponibles = computed<AsistenciaPersona[]>(() =>
+    this.personasFiltradas().filter(p => !p.asiste)
+  );
+
   // ── Lifecycle ─────────────────────────────────────────────────
   ngOnInit() {
     this.cargarLookups();
@@ -190,13 +226,13 @@ export class ActividadesComponent implements OnInit {
   nextMes() { const m = this.mesActual(); this.mesActual.set(new Date(m.getFullYear(), m.getMonth() + 1, 1)); }
   hoyMes()  { this.mesActual.set(new Date()); }
 
-  // ── Formulario ────────────────────────────────────────────────
+  // ── Formulario actividad ──────────────────────────────────────
   abrirNuevo() {
     this._resetForm('', '');
   }
 
   abrirNuevoEnFecha(fecha: Date) {
-    if (this.mostrarForm()) return; // ya hay un form abierto
+    if (this.mostrarForm()) return;
     const iso = fecha.toISOString().slice(0, 10);
     this._resetForm(iso, iso);
   }
@@ -323,8 +359,132 @@ export class ActividadesComponent implements OnInit {
     this.svc.descargarAdjunto(adj.filename, adj.originalname);
   }
 
+  // ── Asistencia ────────────────────────────────────────────────
+  abrirAsistencia(act: Actividad, event?: Event) {
+    event?.stopPropagation();
+    this.actividadAsistencia.set(act);
+    this.mostrarAsistencia.set(true);
+    this.busquedaAsistencia.set('');
+    this.mostrarFormVisitante.set(false);
+    this.formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
+    this.errorAsistencia.set('');
+    this.visitanteExpandido.set(null);
+    this._cargarAsistencia(act.idactividades);
+  }
+
+  cerrarAsistencia() {
+    this.mostrarAsistencia.set(false);
+    this.actividadAsistencia.set(null);
+    this.asistenciaData.set(null);
+    this.busquedaAsistencia.set('');
+    this.mostrarFormVisitante.set(false);
+    this.visitanteExpandido.set(null);
+  }
+
+  toggleDetalleVisitante(id: number) {
+    this.visitanteExpandido.set(this.visitanteExpandido() === id ? null : id);
+  }
+
+  private _cargarAsistencia(idActividad: number) {
+    this.cargandoAsistencia.set(true);
+    this.errorAsistencia.set('');
+    this.svc.listarAsistencia(idActividad).subscribe({
+      next:  d => { this.asistenciaData.set(d); this.cargandoAsistencia.set(false); },
+      error: (e: any) => {
+        this.errorAsistencia.set(e.message || 'Error al cargar asistencia');
+        this.cargandoAsistencia.set(false);
+      },
+    });
+  }
+
+  toggleAsistente(persona: AsistenciaPersona) {
+    const act = this.actividadAsistencia();
+    if (!act) return;
+
+    if (persona.asiste) {
+      if (!this.permisos.puede('actividades_asistentes', 'D')) return;
+      this.svc.eliminarAsistente(act.idactividades, persona.idactividades_asistentes!).subscribe({
+        next:  () => this._cargarAsistencia(act.idactividades),
+        error: (e: any) => this.errorAsistencia.set(e.message || 'Error al quitar asistente'),
+      });
+    } else {
+      if (!this.permisos.puede('actividades_asistentes', 'A')) return;
+      this.svc.agregarAsistente(act.idactividades, { idpersonas: persona.idpersonas }).subscribe({
+        next:  () => this._cargarAsistencia(act.idactividades),
+        error: (e: any) => this.errorAsistencia.set(e.message || 'Error al agregar asistente'),
+      });
+    }
+  }
+
+  agregarVisitante() {
+    const act = this.actividadAsistencia();
+    if (!act || !this.formVisitante.nombre_completo.trim()) return;
+    this.guardandoVisitante.set(true);
+    this.svc.agregarAsistente(act.idactividades, {
+      nombre_completo: this.formVisitante.nombre_completo.trim(),
+      telefono:        this.formVisitante.telefono || undefined,
+      comentarios:     this.formVisitante.comentarios || undefined,
+    }).subscribe({
+      next: () => {
+        this.guardandoVisitante.set(false);
+        this.formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
+        this.mostrarFormVisitante.set(false);
+        this._cargarAsistencia(act.idactividades);
+      },
+      error: (e: any) => {
+        this.guardandoVisitante.set(false);
+        this.errorAsistencia.set(e.message || 'Error al agregar visitante');
+      },
+    });
+  }
+
+  eliminarVisitante(idAsistente: number) {
+    const act = this.actividadAsistencia();
+    if (!act) return;
+    this.svc.eliminarAsistente(act.idactividades, idAsistente).subscribe({
+      next:  () => this._cargarAsistencia(act.idactividades),
+      error: (e: any) => this.errorAsistencia.set(e.message || 'Error al eliminar visitante'),
+    });
+  }
+
+  // Drag & Drop dentro del modal de asistencia
+  onPersonaDragStart(event: DragEvent, p: AsistenciaPersona) {
+    event.dataTransfer!.effectAllowed = 'move';
+    this.arrastandoPersona.set(p);
+  }
+
+  onPersonaDragEnd() {
+    this.arrastandoPersona.set(null);
+    this.sobreZonaAsistentes.set(false);
+    this.sobreZonaDisponibles.set(false);
+  }
+
+  onZonaDragOver(event: DragEvent, zona: 'asistentes' | 'disponibles') {
+    if (!this.arrastandoPersona()) return;
+    event.preventDefault();
+    this.sobreZonaAsistentes.set(zona === 'asistentes');
+    this.sobreZonaDisponibles.set(zona === 'disponibles');
+  }
+
+  onZonaDrop(event: DragEvent, zona: 'asistentes' | 'disponibles') {
+    event.preventDefault();
+    const p = this.arrastandoPersona();
+    this.arrastandoPersona.set(null);
+    this.sobreZonaAsistentes.set(false);
+    this.sobreZonaDisponibles.set(false);
+    if (!p) return;
+    // Solo actuar si se está moviendo a la zona contraria
+    if (zona === 'asistentes' && !p.asiste) this.toggleAsistente(p);
+    if (zona === 'disponibles' && p.asiste)  this.toggleAsistente(p);
+  }
+
+  inicialAsistencia(nombre: string): string {
+    return nombre?.charAt(0)?.toUpperCase() || '?';
+  }
+
   // ── Helpers ───────────────────────────────────────────────────
-  urlLogo(filename: string)   { return this.svc.urlLogo(filename); }
+  urlLogo(filename: string)        { return this.svc.urlLogo(filename); }
+  urlFotoPersona(filename: string) { return this.svc.urlFotoPersona(filename); }
 
   parseAdjuntos(raw: any): AdjuntoInfo[] {
     if (!raw) return [];
@@ -350,7 +510,7 @@ export class ActividadesComponent implements OnInit {
     return cat?.color || '#9e9e9e';
   }
 
-  // ── Drag & Drop ───────────────────────────────────────────────
+  // ── Drag & Drop (calendario) ──────────────────────────────────
   onDragStart(event: DragEvent, act: Actividad) {
     if (!this.permisos.puede('actividades', 'E')) {
       event.preventDefault();
@@ -373,7 +533,6 @@ export class ActividadesComponent implements OnInit {
   }
 
   onDragLeave(event: DragEvent) {
-    // Solo limpia si el cursor sale realmente de la celda (no a un hijo)
     const related = event.relatedTarget as Element | null;
     if (!related || !(event.currentTarget as Element).contains(related)) {
       this.diaArrastreSobre.set(null);
@@ -388,10 +547,9 @@ export class ActividadesComponent implements OnInit {
     this.diaArrastreSobre.set(null);
     if (!act || this.guardandoDrag()) return;
 
-    // Calcular nuevas fechas manteniendo la duración
     const isoInicioAnterior = String(act.fecha_inicio).slice(0, 10);
     const isoFinAnterior    = String(act.fecha_fin).slice(0, 10);
-    if (diaDestino.toISOString().slice(0, 10) === isoInicioAnterior) return; // sin cambio
+    if (diaDestino.toISOString().slice(0, 10) === isoInicioAnterior) return;
 
     const msInicio  = new Date(isoInicioAnterior + 'T00:00:00').getTime();
     const msFin     = new Date(isoFinAnterior    + 'T00:00:00').getTime();

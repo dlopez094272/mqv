@@ -26,7 +26,8 @@ const FEATURES = [
   { name: 'actividades_grupos',      label: 'Catálogo: Actividades-Grupos' },
 
   // Actividades
-  { name: 'actividades', label: 'Actividades' },
+  { name: 'actividades',           label: 'Actividades' },
+  { name: 'actividades_asistentes', label: 'Actividades: Registro de Asistencia' },
 ];
 
 async function listar(req, res, next) {

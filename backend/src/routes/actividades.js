@@ -217,6 +217,118 @@ router.put('/:id', checkPermission('actividades', 'E'), (req, res, next) => {
   });
 });
 
+/* ── Asistentes: resumen completo para el modal ──────────────── */
+router.get('/:id/asistentes', checkPermission('actividades_asistentes', 'S'), async (req, res, next) => {
+  try {
+    const idActividad = req.params.id;
+
+    // Todas las personas con su estado de asistencia en esta actividad
+    const [personas] = await pool.query(`
+      SELECT
+        p.idpersonas,
+        TRIM(CONCAT_WS(' ',
+          p.primer_nombre, NULLIF(p.segundo_nombre,''),
+          p.primer_apellido, NULLIF(p.segundo_apellido,''),
+          NULLIF(p.apellidocasada,'')
+        )) AS nombre_completo,
+        p.foto,
+        aa.idactividades_asistentes,
+        aa.comentarios,
+        (aa.idactividades_asistentes IS NOT NULL) AS asiste,
+        GROUP_CONCAT(DISTINCT g.grupo ORDER BY g.grupo SEPARATOR ', ') AS grupos_nombres
+      FROM personas p
+      LEFT JOIN actividades_asistentes aa
+        ON aa.idpersonas = p.idpersonas AND aa.idactividades = ?
+      LEFT JOIN grupos_personas gp ON gp.idpersonas = p.idpersonas
+      LEFT JOIN grupos g           ON g.idgrupos = gp.idgrupos
+      GROUP BY p.idpersonas
+      ORDER BY asiste DESC, p.primer_apellido, p.primer_nombre
+    `, [idActividad]);
+
+    // Visitantes sin registro en personas
+    const [visitantes] = await pool.query(`
+      SELECT idactividades_asistentes, nombre_completo, telefono, comentarios
+      FROM actividades_asistentes
+      WHERE idactividades = ? AND idpersonas IS NULL
+      ORDER BY idactividades_asistentes
+    `, [idActividad]);
+
+    // Contadores por grupo de los asistentes con registro
+    const [porGrupo] = await pool.query(`
+      SELECT g.grupo, COUNT(DISTINCT aa.idpersonas) AS count
+      FROM actividades_asistentes aa
+      JOIN grupos_personas gp ON gp.idpersonas = aa.idpersonas
+      JOIN grupos g           ON g.idgrupos = gp.idgrupos
+      WHERE aa.idactividades = ?
+      GROUP BY g.idgrupos, g.grupo
+      ORDER BY count DESC, g.grupo
+    `, [idActividad]);
+
+    const totalPersonas   = personas.filter(p => p.asiste).length;
+    const totalVisitantes = visitantes.length;
+
+    res.json({
+      personas,
+      visitantes,
+      contadores: {
+        personas:   totalPersonas,
+        visitantes: totalVisitantes,
+        total:      totalPersonas + totalVisitantes,
+        porGrupo,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+/* ── Asistentes: agregar persona o visitante ─────────────────── */
+router.post('/:id/asistentes', checkPermission('actividades_asistentes', 'A'), async (req, res, next) => {
+  try {
+    const idActividad = req.params.id;
+    const { idpersonas, nombre_completo, comentarios } = req.body;
+
+    const [[act]] = await pool.query(
+      'SELECT idactividades FROM actividades WHERE idactividades = ?', [idActividad]
+    );
+    if (!act) return res.status(404).json({ error: 'Actividad no encontrada' });
+
+    if (idpersonas) {
+      const [[existe]] = await pool.query(
+        'SELECT idactividades_asistentes FROM actividades_asistentes WHERE idactividades = ? AND idpersonas = ?',
+        [idActividad, idpersonas]
+      );
+      if (existe) return res.status(409).json({ error: 'La persona ya está registrada como asistente' });
+
+      const [r] = await pool.query(
+        'INSERT INTO actividades_asistentes (idactividades, idpersonas, comentarios) VALUES (?, ?, ?)',
+        [idActividad, idpersonas, comentarios || null]
+      );
+      res.status(201).json({ id: r.insertId });
+    } else {
+      if (!nombre_completo?.trim())
+        return res.status(400).json({ error: 'El nombre del visitante es requerido' });
+
+      const { telefono } = req.body;
+      const [r] = await pool.query(
+        'INSERT INTO actividades_asistentes (idactividades, nombre_completo, telefono, comentarios) VALUES (?, ?, ?, ?)',
+        [idActividad, nombre_completo.trim(), telefono || null, comentarios || null]
+      );
+      res.status(201).json({ id: r.insertId });
+    }
+  } catch (err) { next(err); }
+});
+
+/* ── Asistentes: eliminar ────────────────────────────────────── */
+router.delete('/:id/asistentes/:idasistente', checkPermission('actividades_asistentes', 'D'), async (req, res, next) => {
+  try {
+    const [r] = await pool.query(
+      'DELETE FROM actividades_asistentes WHERE idactividades_asistentes = ? AND idactividades = ?',
+      [req.params.idasistente, req.params.id]
+    );
+    if (!r.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 /* ── Eliminar ────────────────────────────────────────────────── */
 router.delete('/:id', checkPermission('actividades', 'D'), async (req, res, next) => {
   try {

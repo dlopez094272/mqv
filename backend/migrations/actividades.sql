@@ -34,3 +34,25 @@ CREATE TABLE IF NOT EXISTS `actividades` (
 -- 3. Permiso para grupo Superadmin (GroupID = -1)
 INSERT IGNORE INTO `mqv_ugrights` (`TableName`, `GroupID`, `AccessMask`) VALUES
   ('actividades', -1, 'SAED');
+
+-- 4. Tabla de asistentes de actividades
+CREATE TABLE IF NOT EXISTS `actividades_asistentes` (
+  `idactividades_asistentes` INT          NOT NULL AUTO_INCREMENT,
+  `idactividades`            INT          NOT NULL,
+  `idpersonas`               INT          NULL COMMENT 'NULL cuando es visitante',
+  `nombre_completo`          VARCHAR(255) NULL COMMENT 'Solo para visitantes sin registro en personas',
+  `telefono`                 VARCHAR(30)  NULL,
+  `comentarios`              TEXT         NULL,
+  `created_at`               TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`idactividades_asistentes`),
+  KEY `fk_aasis_act` (`idactividades`),
+  KEY `fk_aasis_per` (`idpersonas`),
+  CONSTRAINT `fk_aasis_act` FOREIGN KEY (`idactividades`)
+    REFERENCES `actividades` (`idactividades`) ON DELETE CASCADE,
+  CONSTRAINT `fk_aasis_per` FOREIGN KEY (`idpersonas`)
+    REFERENCES `personas` (`idpersonas`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5. Permiso actividades_asistentes para Superadmin
+INSERT IGNORE INTO `mqv_ugrights` (`TableName`, `GroupID`, `AccessMask`) VALUES
+  ('actividades_asistentes', -1, 'SAED');
