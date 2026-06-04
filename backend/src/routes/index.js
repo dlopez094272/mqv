@@ -16,5 +16,7 @@ router.use('/seguridad', require('./seguridad'));
 router.use('/catalogos',   require('./catalogos'));
 router.use('/actividades', require('./actividades'));
 router.use('/personas',    require('./personas'));
+router.use('/reportes',    require('./reportes'));
+router.use('/tesoreria',   require('./tesoreria'));
 
 module.exports = router;

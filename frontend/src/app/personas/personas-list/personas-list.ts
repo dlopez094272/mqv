@@ -8,6 +8,7 @@ import { PermisosService } from '../../core/services/permisos.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogosService, LookupItem } from '../../core/services/catalogos.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
+import { confirmar } from '../../shared/confirmar.util';
 
 @Component({
   selector: 'app-personas-list',
@@ -98,8 +99,8 @@ export class PersonasListComponent implements OnInit {
     this.cargar();
   }
 
-  eliminar(p: PersonaLista) {
-    if (!confirm(`¿Eliminar a ${p.nombre_completo}? Esta acción no se puede deshacer.`)) return;
+  async eliminar(p: PersonaLista) {
+    if (!await confirmar(`¿Eliminar a <b>${p.nombre_completo}</b>?<br>Esta acción no se puede deshacer.`, { peligro: true })) return;
     this.svc.eliminar(p.idpersonas).subscribe({
       next: (r) => { this.successMsg.set(r.message); this.cargar(); setTimeout(() => this.successMsg.set(''), 3000); },
       error: (err) => this.error.set(err.message || 'Error al eliminar'),

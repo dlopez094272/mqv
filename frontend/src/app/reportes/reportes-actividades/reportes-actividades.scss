@@ -1,0 +1,294 @@
+/* ── Filtros ─────────────────────────────────────────────── */
+.filtros-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+
+.filtros-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+
+  .form-group {
+    flex: 1;
+    min-width: 160px;
+    margin-bottom: 0;
+  }
+}
+
+.btn-print {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Secciones del reporte ───────────────────────────────── */
+.reporte-seccion {
+  margin-bottom: 40px;
+}
+
+.seccion-titulo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seccion-nota {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* ── Tabla ───────────────────────────────────────────────── */
+.table-container {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 600px;
+
+  th, td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  th {
+    background: var(--bg);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    white-space: nowrap;
+  }
+
+  td { color: var(--text); vertical-align: middle; }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td      { background: var(--bg); }
+}
+
+.logo-col { width: 48px; padding-right: 4px !important; }
+
+.num-col { text-align: right !important; }
+
+.total-col {
+  background: rgba(87,68,108,.06);
+  color: var(--primary) !important;
+}
+
+tfoot td {
+  background: var(--bg);
+  border-top: 2px solid var(--border) !important;
+  font-size: 13px;
+}
+
+.totales-row td { padding: 10px 12px; }
+
+/* ── Logo ────────────────────────────────────────────────── */
+.reporte-logo {
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
+}
+
+.reporte-logo-placeholder {
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+}
+
+.subtexto {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.cat-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Género ──────────────────────────────────────────────── */
+.genero-f { color: #c2185b !important; }
+.genero-m { color: #1565c0 !important; }
+
+/* ── Rango nota ──────────────────────────────────────────── */
+.rango-nota {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* ── Empty ───────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 60px 20px;
+  font-size: 15px;
+}
+
+/* ── Encabezado de impresión (oculto en pantalla) ────────── */
+.print-header {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ESTILOS DE IMPRESIÓN / PDF
+   ═══════════════════════════════════════════════════════════ */
+@media print {
+  /* Ocultar elementos de UI */
+  .no-print { display: none !important; }
+
+  /* Mostrar elementos solo para impresión */
+  .print-only { display: flex !important; }
+
+  /* Encabezado del documento impreso */
+  .print-header {
+    align-items: center;
+    gap: 18px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #57446c;
+    margin-bottom: 24px;
+    page-break-inside: avoid;
+  }
+
+  .print-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+
+  .print-titulo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    strong {
+      font-size: 11px;
+      color: #57446c;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #1d3a47;
+    }
+  }
+
+  .print-rango {
+    font-size: 12px;
+    color: #666;
+  }
+
+  /* Secciones: evitar corte de página en medio de tabla pequeña */
+  .reporte-seccion {
+    page-break-inside: avoid;
+    margin-bottom: 24px;
+  }
+
+  /* Si una sección es larga, permitir el salto pero mantener el encabezado */
+  .reporte-seccion:not(:first-child) {
+    page-break-before: auto;
+  }
+
+  /* Estilos de tabla para impresión */
+  .table-container {
+    overflow: visible !important;
+    border: none;
+    border-radius: 0;
+  }
+
+  table {
+    font-size: 10px;
+    min-width: unset;
+    width: 100%;
+
+    th, td {
+      padding: 5px 7px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #f0eaf7 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color: #57446c !important;
+      font-size: 9px;
+    }
+
+    tbody tr:hover td { background: transparent !important; }
+
+    tfoot td {
+      background: #f8f5ff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border-top: 2px solid #57446c !important;
+    }
+  }
+
+  .reporte-logo {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .reporte-logo-placeholder {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 12px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .total-col {
+    background: #f0eaf7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: #57446c !important;
+  }
+
+  .cat-badge {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .seccion-titulo {
+    font-size: 13px;
+    color: #57446c !important;
+    border-bottom: 1px solid #57446c;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+  }
+
+  .genero-f { color: #c2185b !important; }
+  .genero-m { color: #1565c0 !important; }
+
+  /* Configuración de página */
+  @page {
+    margin: 18mm 14mm;
+    size: A4 landscape;
+  }
+}

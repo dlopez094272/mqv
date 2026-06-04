@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { GruposService } from '../../core/services/grupos.service';
 import { GrupoPermiso } from '../../core/models/usuario.model';
+import { confirmar } from '../../shared/confirmar.util';
 
 @Component({
   selector: 'app-grupos',
@@ -74,9 +75,9 @@ export class GruposComponent implements OnInit {
     });
   }
 
-  eliminar(g: GrupoPermiso) {
+  async eliminar(g: GrupoPermiso) {
     if (g.GroupID === -1) return;
-    if (!confirm(`¿Eliminar el grupo "${g.Label}"? Se eliminarán también sus miembros y permisos.`)) return;
+    if (!await confirmar(`¿Eliminar el grupo <b>"${g.Label}"</b>?<br>Se eliminarán también sus miembros y permisos.`, { peligro: true })) return;
     this.svc.eliminar(g.GroupID).subscribe({
       next: (r) => { this.successMsg.set(r.message); this.cargar(); setTimeout(() => this.successMsg.set(''), 3000); },
       error: (e) => this.error.set(e.message),

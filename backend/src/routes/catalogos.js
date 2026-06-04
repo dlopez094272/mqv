@@ -86,6 +86,11 @@ const CATALOGS = {
     campos: ['estado'],
     ordenar: 'estado', tieneActivo: true,
   },
+  tesoreria_tipomov: {
+    tabla: 'tesoreria_tipomov', pk: 'idtesoreria_tipomov',
+    campos: ['tipo_movimiento'],
+    ordenar: 'tipo_movimiento', tieneActivo: true,
+  },
 };
 
 // Lookups para selects

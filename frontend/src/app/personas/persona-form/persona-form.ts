@@ -8,6 +8,7 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PersonasService, PersonaDetalle, RegistroCrecimiento } from '../personas.service';
 import { CatalogosService } from '../../core/services/catalogos.service';
+import { confirmar } from '../../shared/confirmar.util';
 import { AuthService } from '../../core/services/auth.service';
 
 type Tab = 'personales' | 'contacto' | 'eclesiastico' | 'direcciones' | 'laboral' | 'grupos' | 'crecimiento';
@@ -357,8 +358,8 @@ export class PersonaFormComponent implements OnInit {
     });
   }
 
-  eliminarCrecimiento(id: number) {
-    if (!confirm('¿Eliminar este registro de crecimiento?')) return;
+  async eliminarCrecimiento(id: number) {
+    if (!await confirmar('¿Eliminar este registro de crecimiento?', { peligro: true })) return;
     this.svc.eliminarCrecimiento(this.idpersonas, id).subscribe({
       next: () => this.cargarCrecimiento(),
       error: (err) => this.error.set(err.message || 'Error al eliminar'),

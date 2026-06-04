@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CatalogosService } from '../../core/services/catalogos.service';
 import { PermisosService } from '../../core/services/permisos.service';
+import { confirmar } from '../../shared/confirmar.util';
 
 interface Grupo { idgrupos: number; grupo: string; activo: number; }
 interface Encargado { idpersonas: number; nombre_completo: string; celular: string; email: string; }
@@ -105,17 +106,17 @@ export class GruposCatalogoComponent implements OnInit {
     });
   }
 
-  toggleActivo(g: Grupo) {
+  async toggleActivo(g: Grupo) {
     const accion = g.activo ? 'desactivar' : 'activar';
-    if (!confirm(`¿Deseas ${accion} el grupo "${g.grupo}"?`)) return;
+    if (!await confirmar(`¿Deseas <b>${accion}</b> el grupo "<b>${g.grupo}</b>"?`, { btnConfirmar: `Sí, ${accion}` })) return;
     this.svc.toggle('grupos', g.idgrupos).subscribe({
       next: () => this.cargar(),
       error: (err: any) => this.error.set(err.message || 'Error'),
     });
   }
 
-  eliminar(g: Grupo) {
-    if (!confirm(`¿Eliminar el grupo "${g.grupo}"? Esta acción no se puede deshacer.`)) return;
+  async eliminar(g: Grupo) {
+    if (!await confirmar(`¿Eliminar el grupo <b>"${g.grupo}"</b>?<br>Esta acción no se puede deshacer.`, { peligro: true })) return;
     this.svc.eliminar('grupos', g.idgrupos).subscribe({
       next: () => { this.successMsg.set('Grupo eliminado'); setTimeout(() => this.successMsg.set(''), 3000); this.cargar(); },
       error: (err: any) => this.error.set(err.message || 'Error al eliminar'),
@@ -162,9 +163,10 @@ export class GruposCatalogoComponent implements OnInit {
     });
   }
 
-  quitarEncargado(e: Encargado) {
+  async quitarEncargado(e: Encargado) {
     const g = this.grupoSeleccionado();
-    if (!g || !confirm(`¿Quitar a "${e.nombre_completo}" como encargado?`)) return;
+    if (!g) return;
+    if (!await confirmar(`¿Quitar a <b>"${e.nombre_completo}"</b> como encargado?`, { btnConfirmar: 'Sí, quitar' })) return;
     this.http.delete<{ message: string }>(`/api/catalogos/grupos/${g.idgrupos}/encargados/${e.idpersonas}`).subscribe({
       next: (r) => { this.successMsg.set(r.message); this.cargarEncargados(); setTimeout(() => this.successMsg.set(''), 2500); },
       error: (err: any) => this.error.set(err.message || 'Error al quitar'),

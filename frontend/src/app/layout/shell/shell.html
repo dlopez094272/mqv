@@ -151,6 +151,13 @@
                 <span class="nav-label">Estados Crecimiento</span>
               </a>
             }
+            @if (permisos.puede('tesoreria_tipomov', 'S')) {
+              <a routerLink="/catalogos/tesoreria-tipomov" class="nav-item nav-child"
+                 [class.active]="isActive('/catalogos/tesoreria-tipomov')">
+                <span class="nav-icon">💳</span>
+                <span class="nav-label">Tipos de Movimiento</span>
+              </a>
+            }
           </div>
         }
         </div>
@@ -162,6 +169,35 @@
           <span class="nav-icon">👤</span>
           <span class="nav-label">Personas</span>
         </a>
+      }
+
+      <!-- Reportes -->
+      @if (tieneReportes()) {
+        <div class="nav-group">
+          <button class="nav-item nav-group-toggle" (click)="reportesOpen.set(!reportesOpen())">
+            <span class="nav-icon">📈</span>
+            <span class="nav-label">Reportes</span>
+            <span class="nav-arrow" [class.open]="reportesOpen()">▶</span>
+          </button>
+          @if (reportesOpen()) {
+            <div class="nav-children">
+              @if (permisos.puede('personas', 'S')) {
+                <a routerLink="/reportes/cumpleaneros" class="nav-item nav-child"
+                   [class.active]="isActive('/reportes/cumpleaneros')">
+                  <span class="nav-icon">🎂</span>
+                  <span class="nav-label">Cumpleañeros</span>
+                </a>
+              }
+              @if (permisos.puede('actividades', 'S')) {
+                <a routerLink="/reportes/actividades" class="nav-item nav-child"
+                   [class.active]="isActive('/reportes/actividades')">
+                  <span class="nav-icon">📊</span>
+                  <span class="nav-label">Actividades</span>
+                </a>
+              }
+            </div>
+          }
+        </div>
       }
 
       <!-- Actividades -->

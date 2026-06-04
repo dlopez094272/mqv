@@ -1,0 +1,245 @@
+<!-- ── Encabezado ─────────────────────────────────────────────── -->
+<div class="mov-header">
+  <button class="btn btn-outline btn-sm" (click)="volver()">← Volver</button>
+  @if (tesoreria()) {
+    <div class="header-info">
+      <h2>📊 Movimientos — {{ tesoreria()!.nombre }}</h2>
+      <div class="header-meta">
+        <span class="badge badge-id">ID: {{ tesoreria()!.idtesoreria }}</span>
+        <span>Responsable: <strong>{{ tesoreria()!.responsable || '—' }}</strong></span>
+        @if (soloLectura()) {
+          <span class="badge badge-warning">Solo lectura</span>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<!-- ── Filtros de fecha ───────────────────────────────────────── -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Desde</label>
+    <input type="date" class="form-control-sm" [(ngModel)]="desde" />
+  </div>
+  <div class="filter-group">
+    <label>Hasta</label>
+    <input type="date" class="form-control-sm" [(ngModel)]="hasta" />
+  </div>
+  <button class="btn btn-primary btn-sm" (click)="cargar()">Aplicar</button>
+
+  <div class="filter-spacer"></div>
+
+  <button class="btn btn-outline btn-sm" (click)="exportarExcel()">⬇ Exportar Excel</button>
+  @if (puedeAgregar()) {
+    <button class="btn btn-primary" (click)="abrirNuevo()">+ Movimiento</button>
+  }
+</div>
+
+<!-- ── Tabla de movimientos ───────────────────────────────────── -->
+@if (cargando()) {
+  <div class="loading-state">Cargando movimientos...</div>
+} @else {
+  <div class="table-container">
+    <table class="mov-table">
+      <thead>
+        <tr>
+          <th class="col-fecha">Fecha</th>
+          <th>Concepto</th>
+          <th class="col-tipo">Tipo</th>
+          <th class="col-monto col-ingreso">Ingresos</th>
+          <th class="col-monto col-egreso">Egresos</th>
+          <th class="col-monto col-saldo">Saldo acumulado</th>
+          @if (puedeEditar()) {
+            <th class="col-acciones">Acciones</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Fila especial: Saldo inicial -->
+        <tr class="row-saldo-inicial">
+          <td class="col-fecha">—</td>
+          <td><strong>Saldo Inicial</strong></td>
+          <td>—</td>
+          <td class="ingreso text-right">—</td>
+          <td class="egreso text-right">—</td>
+          <td class="saldo text-right">{{ formatQ(saldoInicial()) }}</td>
+          @if (puedeEditar()) { <td></td> }
+        </tr>
+
+        <!-- Filas de movimientos -->
+        @for (m of filas(); track m.idtesoreria_movimientos) {
+          <tr [class.row-anulado]="m.anulado">
+            <td class="col-fecha">{{ formatFecha(m.fecha) }}</td>
+            <td>
+              <div class="concepto-cell">
+                <span>{{ m.concepto }}</span>
+                @if (getAdjuntos(m).length > 0) {
+                  <span class="adjuntos-tag">
+                    📎
+                    @for (adj of getAdjuntos(m); track adj.filename) {
+                      <a [href]="urlAdjunto(adj.filename)" target="_blank"
+                         class="adj-link" [title]="adj.originalname || adj.filename">
+                        {{ (adj.originalname || adj.filename) | slice:0:20 }}{{ (adj.originalname || adj.filename || '').length > 20 ? '…' : '' }}
+                      </a>
+                    }
+                  </span>
+                }
+              </div>
+            </td>
+            <td class="text-muted text-sm">{{ m.tipo_movimiento || '—' }}</td>
+            <td class="text-right">
+              @if (!m.anulado && m.debito > 0) {
+                <span class="ingreso">{{ formatQ(m.debito) }}</span>
+              } @else { — }
+            </td>
+            <td class="text-right">
+              @if (!m.anulado && m.credito > 0) {
+                <span class="egreso">{{ formatQ(m.credito) }}</span>
+              } @else { — }
+            </td>
+            <td class="text-right">
+              @if (!m.anulado) {
+                <span class="saldo">{{ formatQ(m.saldo_acumulado) }}</span>
+              } @else {
+                <span class="text-muted">—</span>
+              }
+            </td>
+            @if (puedeEditar()) {
+              <td>
+                <div class="action-buttons">
+                  @if (!m.anulado) {
+                    <button class="btn btn-sm btn-outline" (click)="abrirEditar(m)"
+                            title="Editar">✏️</button>
+                    <button class="btn btn-sm btn-danger" (click)="anular(m)"
+                            title="Anular">🚫</button>
+                  } @else {
+                    <span class="badge badge-anulado">Anulado</span>
+                  }
+                </div>
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td [colSpan]="puedeEditar() ? 7 : 6" class="empty-row">
+              No hay movimientos en el período seleccionado
+            </td>
+          </tr>
+        }
+      </tbody>
+
+      <!-- Pie de tabla: totales -->
+      <tfoot>
+        <tr class="row-totales">
+          <td colspan="2" class="text-right"><strong>Totales del período</strong></td>
+          <td></td>
+          <td class="text-right ingreso"><strong>{{ formatQ(totalIngresos()) }}</strong></td>
+          <td class="text-right egreso"><strong>{{ formatQ(totalEgresos()) }}</strong></td>
+          <td class="text-right saldo"><strong>{{ formatQ(saldoFinal()) }}</strong></td>
+          @if (puedeEditar()) { <td></td> }
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="table-footer">
+    {{ movimientos().length }} movimiento(s) •
+    Saldo inicial: <strong>{{ formatQ(saldoInicial()) }}</strong> •
+    Saldo final: <strong>{{ formatQ(saldoFinal()) }}</strong>
+  </div>
+}
+
+<!-- ── Panel de formulario de movimiento ──────────────────────── -->
+@if (mostrarForm()) {
+  <div class="form-backdrop" (click)="cerrarForm()"></div>
+  <aside class="form-panel">
+    <div class="form-panel-header">
+      <h3>{{ modoEdicion() ? 'Editar' : 'Nuevo' }} movimiento</h3>
+      <button class="btn-close" (click)="cerrarForm()">✕</button>
+    </div>
+
+    <div class="form-panel-body">
+      @if (errorForm()) {
+        <div class="alert alert-error" style="margin-bottom:16px;">{{ errorForm() }}</div>
+      }
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fecha <span class="req">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="form.fecha" />
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de movimiento</label>
+          <select class="form-control" [(ngModel)]="form.idtipo_movimiento">
+            <option value="">-- Sin tipo --</option>
+            @for (t of tiposMovimiento; track t.id) {
+              <option [value]="t.id">{{ t.nombre }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Concepto <span class="req">*</span></label>
+        <textarea class="form-control" [(ngModel)]="form.concepto"
+                  maxlength="145" rows="3"
+                  placeholder="Descripción del movimiento (máx 145 caracteres)"></textarea>
+        <span class="char-count">{{ form.concepto.length }}/145</span>
+      </div>
+
+      <div class="form-group">
+        <label>Tipo de monto <span class="req">*</span></label>
+        <div class="tipo-monto-radio">
+          <label class="radio-option radio-ingreso" [class.radio-selected]="form.tipoMonto === 'ingreso'">
+            <input type="radio" name="tipoMonto" value="ingreso" [(ngModel)]="form.tipoMonto" />
+            Ingreso
+          </label>
+          <label class="radio-option radio-egreso" [class.radio-selected]="form.tipoMonto === 'egreso'">
+            <input type="radio" name="tipoMonto" value="egreso" [(ngModel)]="form.tipoMonto" />
+            Egreso
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label [class]="form.tipoMonto === 'ingreso' ? 'label-ingreso' : 'label-egreso'">
+          Monto (Q) <span class="req">*</span>
+        </label>
+        <input type="number"
+               [class]="'form-control ' + (form.tipoMonto === 'ingreso' ? 'input-ingreso' : 'input-egreso')"
+               step="0.01" min="0"
+               [(ngModel)]="form.monto" />
+      </div>
+
+      <div class="form-group">
+        <label>Adjuntos</label>
+        @if (adjuntosActuales.length > 0) {
+          <div class="adjuntos-existentes">
+            @for (adj of adjuntosActuales; track adj.filename) {
+              <a [href]="urlAdjunto(adj.filename)" target="_blank" class="adjunto-link">
+                📎 {{ adj.originalname }}
+              </a>
+            }
+          </div>
+        }
+        <input type="file" multiple (change)="onArchivosCambian($event)" class="file-input" />
+        @if (archivosNuevos.length > 0) {
+          <div class="archivos-seleccionados text-sm text-muted">
+            {{ archivosNuevos.length }} archivo(s) seleccionado(s)
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="form-panel-footer">
+      <button class="btn btn-outline" (click)="cerrarForm()" [disabled]="guardando()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </aside>
+}

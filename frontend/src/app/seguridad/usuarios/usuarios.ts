@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { PermisosService } from '../../core/services/permisos.service';
 import { Usuario } from '../../core/models/usuario.model';
+import { confirmar } from '../../shared/confirmar.util';
 
 @Component({
   selector: 'app-usuarios',
@@ -50,18 +51,19 @@ export class UsuariosComponent implements OnInit {
     );
   }
 
-  toggleEstado(u: Usuario) {
+  async toggleEstado(u: Usuario) {
     const accion = u.activo ? this.svc.desactivar(u.usuario) : this.svc.activar(u.usuario);
-    const msg = u.activo ? `¿Desactivar al usuario ${u.nombre_completo}?` : `¿Activar al usuario ${u.nombre_completo}?`;
-    if (!confirm(msg)) return;
+    const esDesactivar = u.activo;
+    const msg = esDesactivar ? `¿Desactivar al usuario <b>${u.nombre_completo}</b>?` : `¿Activar al usuario <b>${u.nombre_completo}</b>?`;
+    if (!await confirmar(msg, { btnConfirmar: esDesactivar ? 'Sí, desactivar' : 'Sí, activar' })) return;
     accion.subscribe({
       next: (r) => { this.successMsg.set(r.message); this.cargar(); setTimeout(() => this.successMsg.set(''), 3000); },
       error: (err) => this.error.set(err.message || 'Error al cambiar estado'),
     });
   }
 
-  reenviarInvitacion(u: Usuario) {
-    if (!confirm(`¿Reenviar invitación a ${u.nombre_completo} (${u.email})?`)) return;
+  async reenviarInvitacion(u: Usuario) {
+    if (!await confirmar(`¿Reenviar invitación a <b>${u.nombre_completo}</b> (${u.email})?`, { btnConfirmar: 'Sí, reenviar' })) return;
     this.svc.reenviarInvitacion(u.usuario).subscribe({
       next: (r) => { this.successMsg.set(r.message); setTimeout(() => this.successMsg.set(''), 3000); },
       error: (err) => this.error.set(err.message || 'Error al reenviar invitación'),

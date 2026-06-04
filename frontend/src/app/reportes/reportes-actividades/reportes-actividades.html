@@ -1,0 +1,270 @@
+<!-- ── Cabecera ─────────────────────────────────────────────── -->
+<div class="page-header no-print">
+  <h2>📊 Reporte de Actividades</h2>
+  @if (generado() && actividades().length > 0) {
+    <button class="btn btn-outline btn-print" style="width:auto" (click)="imprimir()">
+      🖨️ Imprimir / PDF
+    </button>
+  }
+</div>
+
+<!-- ── Filtros ───────────────────────────────────────────────── -->
+<div class="filtros-card no-print">
+  <div class="filtros-row">
+    <div class="form-group">
+      <label>Fecha inicio</label>
+      <input type="date" class="form-control" [(ngModel)]="filtro.fecha_inicio" />
+    </div>
+    <div class="form-group">
+      <label>Fecha fin</label>
+      <input type="date" class="form-control" [(ngModel)]="filtro.fecha_fin" />
+    </div>
+    <button class="btn btn-primary" style="width:auto;align-self:flex-end"
+            (click)="generar()" [disabled]="cargando()">
+      {{ cargando() ? 'Generando...' : '🔍 Generar reporte' }}
+    </button>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="alert alert-error no-print">{{ error() }}</div>
+}
+
+@if (cargando()) {
+  <div class="loading-state no-print">Generando reporte...</div>
+}
+
+@if (generado() && !cargando()) {
+
+  <!-- Encabezado solo para impresión -->
+  <div class="print-header print-only">
+    <img src="/logo.png" class="print-logo" alt="MQV"
+         onerror="this.style.display='none'" />
+    <div class="print-titulo">
+      <strong>Iglesia del Nazareno · Más que Vencedores</strong>
+      <h2>Reporte de Actividades</h2>
+      <span class="print-rango">
+        {{ formatFecha(filtro.fecha_inicio) }} — {{ formatFecha(filtro.fecha_fin) }}
+      </span>
+    </div>
+  </div>
+
+  @if (actividades().length === 0) {
+    <div class="empty-state no-print">
+      <p>No se encontraron actividades en el período seleccionado.</p>
+    </div>
+  } @else {
+
+    <!-- ══ SECCIÓN 1: Resumen por actividad ═════════════════════ -->
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Resumen de Actividades</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="logo-col"></th>
+              <th>Actividad</th>
+              <th>Categoría</th>
+              <th>Fecha inicio</th>
+              <th>Fecha fin</th>
+              <th class="num-col">Miembros</th>
+              <th class="num-col">Visitantes</th>
+              <th class="num-col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (act of actividades(); track act.idactividades) {
+              <tr>
+                <td class="logo-col">
+                  <ng-container *ngTemplateOutlet="logoTpl; context: { act: act, size: 40 }"></ng-container>
+                </td>
+                <td>
+                  <strong>{{ act.nombre }}</strong>
+                  @if (act.lugar) { <div class="subtexto">📍 {{ act.lugar }}</div> }
+                </td>
+                <td>
+                  @if (act.categoria) {
+                    <span class="cat-badge" [style.background]="act.categoria_color + '22'"
+                          [style.color]="act.categoria_color || '#666'">
+                      {{ act.categoria }}
+                    </span>
+                  } @else { — }
+                </td>
+                <td>{{ formatFecha(act.fecha_inicio) }}</td>
+                <td>{{ formatFecha(act.fecha_fin) }}</td>
+                <td class="num-col">{{ act.total_personas }}</td>
+                <td class="num-col">{{ act.total_visitantes }}</td>
+                <td class="num-col total-col"><strong>{{ act.total_asistentes }}</strong></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totales-row">
+              <td colspan="5"><strong>TOTALES</strong></td>
+              <td class="num-col"><strong>{{ totalPersonas() }}</strong></td>
+              <td class="num-col"><strong>{{ totalVisitantes() }}</strong></td>
+              <td class="num-col total-col"><strong>{{ totalAsistentes() }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══ SECCIÓN 2: Por grupos ════════════════════════════════ -->
+    @if (todosLosGrupos().length > 0) {
+      <section class="reporte-seccion">
+        <h3 class="seccion-titulo">Asistencia por Grupos</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="logo-col"></th>
+                <th>Actividad</th>
+                @for (g of todosLosGrupos(); track g) {
+                  <th class="num-col">{{ g }}</th>
+                }
+                <th class="num-col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (act of actividades(); track act.idactividades) {
+                <tr>
+                  <td class="logo-col">
+                    <ng-container *ngTemplateOutlet="logoTpl; context: { act: act, size: 28 }"></ng-container>
+                  </td>
+                  <td>{{ act.nombre }}</td>
+                  @for (g of todosLosGrupos(); track g) {
+                    <td class="num-col">{{ asistentesDeGrupo(act, g) || '—' }}</td>
+                  }
+                  <td class="num-col total-col"><strong>{{ act.total_personas }}</strong></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    <!-- ══ SECCIÓN 3: Por rango de edad ═════════════════════════ -->
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">
+        Asistencia por Rango de Edad
+        <span class="seccion-nota">(solo miembros registrados)</span>
+      </h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="logo-col"></th>
+              <th>Actividad</th>
+              <th class="num-col">Bebés<span class="rango-nota">0–2</span></th>
+              <th class="num-col">Niños<span class="rango-nota">3–12</span></th>
+              <th class="num-col">Adolescentes<span class="rango-nota">13–17</span></th>
+              <th class="num-col">Jóvenes<span class="rango-nota">18–25</span></th>
+              <th class="num-col">Adultos<span class="rango-nota">26–59</span></th>
+              <th class="num-col">Ad. Mayores<span class="rango-nota">60+</span></th>
+              <th class="num-col">Sin fecha</th>
+              <th class="num-col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (act of actividades(); track act.idactividades) {
+              <tr>
+                <td class="logo-col">
+                  <ng-container *ngTemplateOutlet="logoTpl; context: { act: act, size: 28 }"></ng-container>
+                </td>
+                <td>{{ act.nombre }}</td>
+                <td class="num-col">{{ act.por_edad.bebes        || '—' }}</td>
+                <td class="num-col">{{ act.por_edad.ninos        || '—' }}</td>
+                <td class="num-col">{{ act.por_edad.adolescentes || '—' }}</td>
+                <td class="num-col">{{ act.por_edad.jovenes      || '—' }}</td>
+                <td class="num-col">{{ act.por_edad.adultos      || '—' }}</td>
+                <td class="num-col">{{ act.por_edad.adultos_mayores || '—' }}</td>
+                <td class="num-col">{{ act.por_edad.sin_fecha    || '—' }}</td>
+                <td class="num-col total-col"><strong>{{ act.total_personas }}</strong></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totales-row">
+              <td colspan="2"><strong>TOTALES</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().bebes }}</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().ninos }}</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().adolescentes }}</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().jovenes }}</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().adultos }}</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().adultos_mayores }}</strong></td>
+              <td class="num-col"><strong>{{ totalEdad().sin_fecha }}</strong></td>
+              <td class="num-col total-col"><strong>{{ totalPersonas() }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══ SECCIÓN 4: Por género ════════════════════════════════ -->
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">
+        Asistencia por Género
+        <span class="seccion-nota">(solo miembros registrados)</span>
+      </h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="logo-col"></th>
+              <th>Actividad</th>
+              <th class="num-col">Mujeres</th>
+              <th class="num-col">Hombres</th>
+              <th class="num-col">Sin dato</th>
+              <th class="num-col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (act of actividades(); track act.idactividades) {
+              <tr>
+                <td class="logo-col">
+                  <ng-container *ngTemplateOutlet="logoTpl; context: { act: act, size: 28 }"></ng-container>
+                </td>
+                <td>{{ act.nombre }}</td>
+                <td class="num-col genero-f">{{ act.por_genero.mujeres  || '—' }}</td>
+                <td class="num-col genero-m">{{ act.por_genero.hombres  || '—' }}</td>
+                <td class="num-col">          {{ act.por_genero.sin_dato || '—' }}</td>
+                <td class="num-col total-col"><strong>{{ act.total_personas }}</strong></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totales-row">
+              <td colspan="2"><strong>TOTALES</strong></td>
+              <td class="num-col genero-f"><strong>{{ totalGenero().mujeres }}</strong></td>
+              <td class="num-col genero-m"><strong>{{ totalGenero().hombres }}</strong></td>
+              <td class="num-col"><strong>{{ totalGenero().sin_dato }}</strong></td>
+              <td class="num-col total-col"><strong>{{ totalPersonas() }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+  }
+}
+
+<!-- ── Template reutilizable: logo ─────────────────────────── -->
+<ng-template #logoTpl let-act="act" let-size="size">
+  @if (act.logo) {
+    <img [src]="urlLogo(act.logo)"
+         class="reporte-logo"
+         [style.width.px]="size"
+         [style.height.px]="size"
+         [alt]="act.nombre" />
+  } @else {
+    <div class="reporte-logo-placeholder"
+         [style.width.px]="size"
+         [style.height.px]="size"
+         [style.fontSize.px]="size * 0.45"
+         [style.background]="act.categoria_color || '#9e9e9e'">
+      {{ act.nombre[0] }}
+    </div>
+  }
+</ng-template>

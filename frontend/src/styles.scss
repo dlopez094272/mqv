@@ -370,3 +370,37 @@ table {
   display: inline-block;
   flex-shrink: 0;
 }
+
+/* ── Impresión global: ocultar shell y mostrar solo contenido ── */
+@media print {
+  /* Ocultar sidebar, topbar y session-guard */
+  .sidebar,
+  .topbar,
+  app-session-guard,
+  .sidebar-footer {
+    display: none !important;
+  }
+
+  /* El wrapper principal ocupa toda la hoja */
+  .shell {
+    display: block !important;
+  }
+
+  .main-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Reset de colores para impresión en blanco */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

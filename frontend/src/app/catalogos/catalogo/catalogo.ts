@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { CatalogosService, LookupItem } from '../../core/services/catalogos.service';
 import { PermisosService } from '../../core/services/permisos.service';
 import { CatalogoConfig, CampoConfig } from '../catalogo-config';
+import { confirmar } from '../../shared/confirmar.util';
 
 @Component({
   selector: 'app-catalogo',
@@ -139,19 +140,19 @@ export class CatalogoComponent implements OnInit {
     });
   }
 
-  toggleActivo(item: any) {
+  async toggleActivo(item: any) {
     const estado = item.activo ? 'desactivar' : 'activar';
     const label = this.getLabel(item);
-    if (!confirm(`¿Deseas ${estado} "${label}"?`)) return;
+    if (!await confirmar(`¿Deseas <b>${estado}</b> "${label}"?`, { btnConfirmar: `Sí, ${estado}` })) return;
     this.svc.toggle(this.config.apiRuta, item[this.config.pk]).subscribe({
       next: () => this.cargar(),
       error: (err: any) => this.error.set(err.message || 'Error al cambiar estado'),
     });
   }
 
-  eliminar(item: any) {
+  async eliminar(item: any) {
     const label = this.getLabel(item);
-    if (!confirm(`¿Eliminar "${label}"? Esta acción no se puede deshacer.`)) return;
+    if (!await confirmar(`¿Eliminar <b>"${label}"</b>?<br>Esta acción no se puede deshacer.`, { peligro: true })) return;
     this.svc.eliminar(this.config.apiRuta, item[this.config.pk]).subscribe({
       next: () => {
         this.successMsg.set('Registro eliminado');

@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { GruposService } from '../../core/services/grupos.service';
 import { GrupoDetalle } from '../../core/models/usuario.model';
+import { confirmar } from '../../shared/confirmar.util';
 
 type Tab = 'miembros' | 'derechos';
 
@@ -105,9 +106,10 @@ export class GrupoDetalleComponent implements OnInit {
     });
   }
 
-  quitar(usuario: string) {
+  async quitar(usuario: string) {
     const g = this.grupo();
-    if (!g || !confirm(`¿Quitar a ${usuario} del grupo?`)) return;
+    if (!g) return;
+    if (!await confirmar(`¿Quitar a <b>${usuario}</b> del grupo?`, { btnConfirmar: 'Sí, quitar' })) return;
     this.svc.quitarMiembro(g.GroupID, usuario).subscribe({
       next: () => { this.successMsg.set('Usuario removido'); this.cargar(g.GroupID); setTimeout(() => this.successMsg.set(''), 2500); },
       error: (e) => this.error.set(e.message),

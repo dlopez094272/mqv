@@ -5,11 +5,12 @@ import { HttpClient }     from '@angular/common/http';
 import { Observable }     from 'rxjs';
 import {
   ActividadesService, Actividad, AdjuntoInfo,
-  CategoriaLookup, LugarLookup,
+  CategoriaLookup, LugarLookup, GrupoLookup,
   AsistenciaPersona, Visitante, AsistenciaResumen,
 } from './actividades.service';
 import { PermisosService } from '../core/services/permisos.service';
 import { environment }     from '../../environments/environment';
+import { confirmar }       from '../shared/confirmar.util';
 
 interface DiaCalendario {
   fecha:        Date;
@@ -52,6 +53,18 @@ export class ActividadesComponent implements OnInit {
   actividades = signal<Actividad[]>([]);
   categorias  = signal<CategoriaLookup[]>([]);
   lugares     = signal<LugarLookup[]>([]);
+  grupos      = signal<GrupoLookup[]>([]);
+
+  // ── Grupos multiselect ────────────────────────────────────────
+  gruposSeleccionados    = signal<number[]>([]);
+  mostrarDropdownGrupos  = signal(false);
+
+  gruposLabel = computed(() => {
+    const sel = this.gruposSeleccionados();
+    if (!sel.length) return 'Sin grupos asignados';
+    const g = this.grupos();
+    return sel.map(id => g.find(x => x.id === id)?.nombre || id).join(', ');
+  });
 
   // ── Calendar ─────────────────────────────────────────────────
   mesActual = signal(new Date());
@@ -207,6 +220,8 @@ export class ActividadesComponent implements OnInit {
       .subscribe({ next: d => this.categorias.set(d) });
     this.http.get<LugarLookup[]>(`${environment.apiUrl}/catalogos/lookup/lugares`)
       .subscribe({ next: d => this.lugares.set(d) });
+    this.svc.listarGruposDisponibles()
+      .subscribe({ next: d => this.grupos.set(d) });
   }
 
   cargar() {
@@ -244,6 +259,8 @@ export class ActividadesComponent implements OnInit {
     this.logoFile = null; this.logoPreview = null;
     this.logoActual = null; this.eliminarLogo = false;
     this.adjuntosNuevos = []; this.adjuntosActuales = [];
+    this.gruposSeleccionados.set([]);
+    this.mostrarDropdownGrupos.set(false);
     this.modoEdicion.set(false); this.editandoId.set(null);
     this.errorForm.set(''); this.mostrarForm.set(true);
   }
@@ -263,13 +280,27 @@ export class ActividadesComponent implements OnInit {
     this.logoActual = act.logo; this.eliminarLogo = false;
     this.adjuntosNuevos = [];
     this.adjuntosActuales = this.parseAdjuntos(act.adjuntos);
+    this.gruposSeleccionados.set([]);
+    this.mostrarDropdownGrupos.set(false);
     this.modoEdicion.set(true); this.editandoId.set(act.idactividades);
     this.errorForm.set(''); this.mostrarForm.set(true);
+    // Cargar grupos previamente asignados
+    this.svc.listarGruposActividad(act.idactividades).subscribe({
+      next: ids => this.gruposSeleccionados.set(ids),
+    });
+  }
+
+  toggleGrupo(id: number) {
+    const cur = this.gruposSeleccionados();
+    this.gruposSeleccionados.set(
+      cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]
+    );
   }
 
   cerrarForm() {
     this.mostrarForm.set(false);
     this.logoPreview = null; this.adjuntosNuevos = [];
+    this.mostrarDropdownGrupos.set(false);
   }
 
   onLogoChange(event: Event) {
@@ -318,6 +349,7 @@ export class ActividadesComponent implements OnInit {
     if (this.logoFile)         fd.append('logo',        this.logoFile);
     if (this.eliminarLogo)     fd.append('eliminar_logo', 'true');
     for (const f of this.adjuntosNuevos) fd.append('adjuntos', f);
+    fd.append('grupos', JSON.stringify(this.gruposSeleccionados()));
 
     if (this.modoEdicion()) {
       fd.append('adjuntos_existentes', JSON.stringify(this.adjuntosActuales.map(a => a.filename)));
@@ -343,8 +375,8 @@ export class ActividadesComponent implements OnInit {
     });
   }
 
-  eliminar(act: Actividad) {
-    if (!confirm(`¿Eliminar "${act.nombre}"? Esta acción no se puede deshacer.`)) return;
+  async eliminar(act: Actividad) {
+    if (!await confirmar(`¿Eliminar <b>"${act.nombre}"</b>?<br>Esta acción no se puede deshacer.`, { peligro: true })) return;
     this.svc.eliminar(act.idactividades).subscribe({
       next: () => {
         this.successMsg.set('Actividad eliminada');
@@ -572,6 +604,8 @@ export class ActividadesComponent implements OnInit {
     if (act.idlugares)   fd.append('idlugares',   String(act.idlugares));
     fd.append('adjuntos_existentes',
       JSON.stringify(this.parseAdjuntos(act.adjuntos).map(a => a.filename)));
+    // No enviar grupos en drag&drop para no borrar los existentes; omitir el campo
+    // (el backend solo sincroniza si grupos !== undefined)
 
     this.guardandoDrag.set(true);
     this.svc.actualizar(act.idactividades, fd).subscribe({

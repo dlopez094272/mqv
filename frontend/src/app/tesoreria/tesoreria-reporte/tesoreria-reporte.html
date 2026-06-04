@@ -1,0 +1,200 @@
+<!-- ── Barra de controles (oculta al imprimir) ──────────────── -->
+<div class="no-print controls-bar">
+  @if (!cargando() && !error()) {
+    <button class="btn-print" (click)="imprimir()">🖨️ Imprimir / Guardar como PDF</button>
+  }
+  <button class="btn-close-report" (click)="cerrar()">✕ Cerrar</button>
+</div>
+
+@if (cargando()) {
+  <div class="loading-screen no-print">
+    <div class="spinner"></div>
+    <p>Generando reporte...</p>
+  </div>
+}
+
+@if (error()) {
+  <div class="error-screen no-print">
+    <p>{{ error() }}</p>
+    <button (click)="cerrar()">Cerrar</button>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════
+     DOCUMENTO IMPRIMIBLE
+════════════════════════════════════════════════════════════ -->
+@if (!cargando() && !error()) {
+<div class="document">
+
+  <!-- ── Encabezado ──────────────────────────────────────────── -->
+  <table class="header-table" cellspacing="0" cellpadding="0">
+    <tr>
+      <td class="header-logo-cell">
+        <img src="/logo-white.png"
+             onerror="this.src='/logo.png';this.style.filter='invert(0)'"
+             alt="Logo" class="header-logo-img" />
+      </td>
+      <td class="header-title-cell">
+        <div class="header-title-text">ESTADO DE CUENTA - TESORERÍA</div>
+        <div class="header-fecha-gen">Fecha de Generación: {{ formatFechaHora(fechaGeneracion) }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ── Información de la tesorería ────────────────────────── -->
+  <table class="info-table" cellspacing="0">
+    <tr>
+      <td class="info-label">Tesorería:</td>
+      <td class="info-value">{{ tesoreria()?.nombre }}</td>
+    </tr>
+    <tr>
+      <td class="info-label">Responsable:</td>
+      <td class="info-value">{{ tesoreria()?.responsable || '—' }}</td>
+    </tr>
+    <tr>
+      <td class="info-label">Período:</td>
+      <td class="info-value">{{ formatFecha(desde) }} al {{ formatFecha(hasta) }}</td>
+    </tr>
+  </table>
+
+  <!-- ── Tabla de movimientos ────────────────────────────────── -->
+  <table class="mov-table" cellspacing="0">
+    <thead>
+      <tr>
+        <th class="th-fecha">Fecha</th>
+        <th class="th-tipo">Tipo Movimiento</th>
+        <th class="th-concepto">Concepto</th>
+        <th class="th-monto text-right">Ingresos</th>
+        <th class="th-monto text-right">Egresos</th>
+        <th class="th-monto text-right">Saldo Acum.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Fila: Saldo inicial -->
+      <tr class="row-saldo-inicial">
+        <td></td>
+        <td></td>
+        <td><strong>SALDO INICIAL AL {{ formatFecha(desde) }}</strong></td>
+        <td></td>
+        <td></td>
+        <td class="text-right"><strong>{{ formatQ(saldoInicial()) }}</strong></td>
+      </tr>
+
+      <!-- Movimientos -->
+      @for (m of filasConSaldo(); track m.idtesoreria_movimientos) {
+        <tr [class.row-anulado]="m.anulado">
+          <td>{{ formatFecha(m.fecha) }}</td>
+          <td>{{ m.tipo_movimiento || '' }}</td>
+          <td>
+            {{ m.concepto }}
+            @if (m.anulado) { <em class="anulado-tag">(Anulado)</em> }
+          </td>
+          <td class="text-right">
+            {{ (!m.anulado && +m.debito > 0) ? formatQ(m.debito) : '' }}
+          </td>
+          <td class="text-right">
+            {{ (!m.anulado && +m.credito > 0) ? formatQ(m.credito) : '' }}
+          </td>
+          <td class="text-right">
+            {{ m.anulado ? '' : formatQ(m.saldo_acumulado) }}
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="6" class="text-center text-muted">
+            Sin movimientos en el período seleccionado
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <!-- ── Resumen por rubro ────────────────────────────────────── -->
+  <div class="section">
+    <h3 class="section-title">RESUMEN POR RUBRO (TIPOS DE MOVIMIENTOS)</h3>
+
+    <div class="rubros-grid">
+      <!-- Ingresos -->
+      <table class="rubro-table" cellspacing="0">
+        <tr class="rubro-header">
+          <td colspan="2"><strong>DETALLE DE INGRESOS</strong></td>
+        </tr>
+        @for (r of rubrosIngresos(); track r.tipo) {
+          <tr>
+            <td>{{ r.tipo }}</td>
+            <td class="text-right">{{ formatQ(r.ingresos) }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="2" class="text-muted text-center">Sin ingresos</td></tr>
+        }
+      </table>
+
+      <!-- Egresos -->
+      <table class="rubro-table" cellspacing="0">
+        <tr class="rubro-header">
+          <td colspan="2"><strong>DETALLE DE EGRESOS</strong></td>
+        </tr>
+        @for (r of rubrosEgresos(); track r.tipo) {
+          <tr>
+            <td>{{ r.tipo }}</td>
+            <td class="text-right">{{ formatQ(r.egresos) }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="2" class="text-muted text-center">Sin egresos</td></tr>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Resumen por mes ──────────────────────────────────────── -->
+  <div class="section">
+    <h3 class="section-title">RESUMEN POR MES</h3>
+    <table class="summary-mes-table" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th class="text-right">Ingresos</th>
+          <th class="text-right">Egresos</th>
+          <th class="text-right">Neto</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (mes of resumenMeses(); track mes.ym) {
+          <tr>
+            <td>{{ mes.label }}</td>
+            <td class="text-right">{{ formatQ(mes.ingresos) }}</td>
+            <td class="text-right">{{ formatQ(mes.egresos) }}</td>
+            <td class="text-right">{{ formatQ(mes.neto) }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="4" class="text-muted text-center">Sin datos</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Resumen final ────────────────────────────────────────── -->
+  <div class="section avoid-break">
+    <h3 class="section-title">RESUMEN FINAL</h3>
+    <table class="final-table" cellspacing="0">
+      <tr>
+        <td>Saldo Inicial Anterior:</td>
+        <td class="text-right">{{ formatQ(saldoInicial()) }}</td>
+      </tr>
+      <tr>
+        <td>Total Ingresos Periodo:</td>
+        <td class="text-right">{{ formatQ(totalIngresos()) }}</td>
+      </tr>
+      <tr>
+        <td>Total Egresos Periodo:</td>
+        <td class="text-right">{{ formatQ(totalEgresos()) }}</td>
+      </tr>
+      <tr class="final-saldo-row">
+        <td><strong>SALDO FINAL:</strong></td>
+        <td class="text-right"><strong>{{ formatQ(saldoFinal()) }}</strong></td>
+      </tr>
+    </table>
+  </div>
+
+</div><!-- /document -->
+}

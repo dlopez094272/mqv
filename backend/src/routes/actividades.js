@@ -42,6 +42,16 @@ const uploadFields = multer({
 
 router.use(authMiddleware);
 
+/* ── Grupos disponibles (lookup para multiselect) ────────────── */
+router.get('/grupos-disponibles', checkPermission('actividades', 'S'), async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT idgrupos AS id, grupo AS nombre FROM grupos WHERE activo = 1 ORDER BY grupo'
+    );
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
 /* ── Listar ──────────────────────────────────────────────────── */
 router.get('/', checkPermission('actividades', 'S'), async (req, res, next) => {
   try {
@@ -64,6 +74,17 @@ router.get('/adjuntos/:filename', checkPermission('actividades', 'S'), (req, res
   const filePath = path.join(adjuntosDir, path.basename(req.params.filename));
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archivo no encontrado' });
   res.sendFile(filePath);
+});
+
+/* ── Grupos de una actividad ─────────────────────────────────── */
+router.get('/:id/grupos', checkPermission('actividades', 'S'), async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT idgrupos FROM actividades_grupos WHERE idactividades = ?',
+      [req.params.id]
+    );
+    res.json(rows.map(r => r.idgrupos));
+  } catch (err) { next(err); }
 });
 
 /* ── Obtener uno ─────────────────────────────────────────────── */
@@ -126,6 +147,17 @@ router.post('/', checkPermission('actividades', 'A'), (req, res, next) => {
         idlugares    || null,
         req.user.usuario,
       ]);
+
+      // Insertar grupos asociados
+      const grupos = req.body.grupos;
+      if (grupos) {
+        let gruposIds = [];
+        try { gruposIds = JSON.parse(grupos); } catch {}
+        if (gruposIds.length) {
+          const vals = gruposIds.map(gId => [r.insertId, gId]);
+          await pool.query('INSERT INTO actividades_grupos (idactividades, idgrupos) VALUES ?', [vals]);
+        }
+      }
 
       res.status(201).json({ id: r.insertId });
     } catch (dbErr) { next(dbErr); }
@@ -212,6 +244,19 @@ router.put('/:id', checkPermission('actividades', 'E'), (req, res, next) => {
       ]);
 
       if (!r.affectedRows) return res.status(404).json({ error: 'No encontrado' });
+
+      // Sincronizar grupos asociados
+      const grupos = req.body.grupos;
+      if (grupos !== undefined) {
+        let gruposIds = [];
+        try { gruposIds = JSON.parse(grupos); } catch {}
+        await pool.query('DELETE FROM actividades_grupos WHERE idactividades = ?', [req.params.id]);
+        if (gruposIds.length) {
+          const vals = gruposIds.map(gId => [req.params.id, gId]);
+          await pool.query('INSERT INTO actividades_grupos (idactividades, idgrupos) VALUES ?', [vals]);
+        }
+      }
+
       res.json({ ok: true });
     } catch (dbErr) { next(dbErr); }
   });

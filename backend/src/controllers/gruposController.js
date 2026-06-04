@@ -26,8 +26,12 @@ const FEATURES = [
   { name: 'actividades_grupos',      label: 'Catálogo: Actividades-Grupos' },
 
   // Actividades
-  { name: 'actividades',           label: 'Actividades' },
+  { name: 'actividades',            label: 'Actividades' },
   { name: 'actividades_asistentes', label: 'Actividades: Registro de Asistencia' },
+
+  // Tesorería
+  { name: 'tesoreria_movimientos',  label: 'Tesorería: Movimientos' },
+  { name: 'tesoreria_tipomov',      label: 'Tesorería: Tipos de Movimiento' },
 ];
 
 async function listar(req, res, next) {

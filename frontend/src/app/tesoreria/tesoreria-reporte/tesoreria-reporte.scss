@@ -1,0 +1,328 @@
+// ── Variables del documento ────────────────────────────────────
+$font:        Arial, Helvetica, sans-serif;
+$font-size:   10.5pt;
+$border:      #cccccc;
+$header-bg:   linear-gradient(160deg, #214351 0%, #332940 100%);
+$title-size:  16pt;
+$section-gap: 18pt;
+$col-monto:   90pt;
+
+// ── Reset básico ───────────────────────────────────────────────
+* { box-sizing: border-box; }
+
+body {
+  font-family: $font;
+  font-size: $font-size;
+  color: #2a2a2a;
+  background: #f0f0f0;
+  margin: 0;
+}
+
+// ── Barra de controles (solo pantalla) ────────────────────────
+.controls-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 999;
+  background: #2d1f3e;
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.btn-print {
+  background: #40996d;
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: #338057; }
+}
+
+.btn-close-report {
+  background: transparent;
+  color: #ccc;
+  border: 1px solid #555;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-left: auto;
+  &:hover { color: white; border-color: #ccc; }
+}
+
+.loading-screen, .error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  font-size: 15px;
+  color: #555;
+}
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid #ddd;
+  border-top-color: #57446c;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Documento ─────────────────────────────────────────────────
+.document {
+  max-width: 800px;
+  margin: 60px auto 40px;
+  background: white;
+  padding: 24px 30px 30px;
+  box-shadow: 0 2px 20px rgba(0,0,0,.2);
+  font-family: $font;
+  font-size: $font-size;
+}
+
+// ── Encabezado ─────────────────────────────────────────────────
+.header-table {
+  width: 100%;
+  margin-bottom: 20px;
+  border: none;
+
+  .header-logo-cell {
+    background: $header-bg;
+    width: 130px;
+    min-height: 80px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 10px 14px;
+  }
+
+  .header-logo-img {
+    height: 60px;
+    width: auto;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .header-title-cell {
+    padding: 10px 16px;
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  .header-title-text {
+    font-size: $title-size;
+    font-weight: bold;
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+  }
+
+  .header-fecha-gen {
+    font-style: italic;
+    font-size: 9pt;
+    text-align: right;
+    color: #666;
+  }
+}
+
+// ── Información ────────────────────────────────────────────────
+.info-table {
+  width: 60%;
+  margin-bottom: 18px;
+  border: none;
+
+  td { padding: 3px 6px; font-size: 10pt; }
+  .info-label { font-weight: bold; width: 110px; }
+  .info-value { }
+}
+
+// ── Tabla de movimientos ───────────────────────────────────────
+.mov-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: $section-gap;
+  font-size: 9.5pt;
+
+  thead tr {
+    background: #e8e8e8;
+  }
+
+  th, td {
+    border: 1px solid $border;
+    padding: 5px 8px;
+    vertical-align: middle;
+  }
+
+  th {
+    font-weight: bold;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+
+  .th-fecha    { width: 80px; }
+  .th-tipo     { width: 130px; }
+  .th-concepto { }
+  .th-monto    { width: $col-monto; }
+}
+
+.row-saldo-inicial {
+  background: #f5f5f5;
+  td { font-size: 10pt; }
+}
+
+.row-anulado {
+  color: #999;
+  td { text-decoration: line-through; }
+  td:last-child { text-decoration: none; }
+}
+
+.anulado-tag {
+  font-size: 8pt;
+  color: #c62828;
+  margin-left: 4px;
+  font-style: italic;
+  text-decoration: none;
+  display: inline;
+}
+
+// ── Secciones de resumen ───────────────────────────────────────
+.section {
+  margin-bottom: $section-gap;
+}
+
+.section-title {
+  font-size: 11pt;
+  font-weight: bold;
+  text-align: center;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.rubros-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.rubro-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+
+  td {
+    border: 1px solid $border;
+    padding: 5px 8px;
+  }
+
+  .rubro-header td {
+    background: #e8e8e8;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    font-size: 9pt;
+  }
+}
+
+.summary-mes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+
+  th, td {
+    border: 1px solid $border;
+    padding: 5px 8px;
+  }
+
+  thead tr { background: #e8e8e8; }
+  th { font-weight: bold; font-size: 9pt; }
+}
+
+.final-table {
+  width: 50%;
+  min-width: 300px;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+  margin: 0 auto;
+
+  td {
+    border: 1px solid $border;
+    padding: 6px 10px;
+  }
+
+  td:first-child { width: 220px; }
+  td:last-child  { text-align: right; }
+}
+
+.final-saldo-row td {
+  background: #e8e8e8;
+  font-size: 11pt;
+}
+
+// ── Utilidades ─────────────────────────────────────────────────
+.text-right  { text-align: right; }
+.text-center { text-align: center; }
+.text-muted  { color: #999; font-size: 9pt; }
+.avoid-break { page-break-inside: avoid; }
+
+// ═══════════════════════════════════════════════════════════════
+// ESTILOS DE IMPRESIÓN
+// ═══════════════════════════════════════════════════════════════
+@media print {
+  // Ocultar controles
+  .no-print { display: none !important; }
+
+  // Configuración de página A4 portrait
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm;
+  }
+
+  body {
+    background: white;
+    font-size: 10pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .document {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    max-width: none;
+  }
+
+  // Forzar colores de fondo en impresión
+  .header-logo-cell {
+    background: $header-bg !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .row-saldo-inicial { background: #f5f5f5 !important; }
+  thead tr           { background: #e8e8e8 !important; }
+  .rubro-header td   { background: #e8e8e8 !important; }
+  .final-saldo-row td { background: #e8e8e8 !important; }
+
+  // Evitar corte de filas
+  tbody tr { page-break-inside: avoid; }
+  .section { page-break-inside: avoid; }
+  .avoid-break { page-break-inside: avoid; }
+
+  // Numeración de páginas
+  @page {
+    @bottom-right {
+      content: "Página " counter(page) " / " counter(pages);
+      font-size: 8pt;
+      color: #888;
+      font-family: Arial, sans-serif;
+    }
+  }
+}

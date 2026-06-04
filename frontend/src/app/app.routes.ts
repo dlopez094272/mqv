@@ -155,18 +155,39 @@ export const routes: Routes = [
         loadComponent: () => import('./catalogos/catalogo/catalogo').then(m => m.CatalogoComponent),
         data: { config: CATALOGO_CONFIGS['estados_crecimiento'] },
       },
+      {
+        path: 'catalogos/tesoreria-tipomov',
+        canActivate: [permissionGuard('tesoreria_tipomov', 'S')],
+        loadComponent: () => import('./catalogos/catalogo/catalogo').then(m => m.CatalogoComponent),
+        data: { config: CATALOGO_CONFIGS['tesoreria_tipomov'] },
+      },
       // Actividades
       {
         path: 'actividades',
         canActivate: [permissionGuard('actividades', 'S')],
         loadComponent: () => import('./actividades/actividades.component').then(m => m.ActividadesComponent),
       },
-      // Tesorería (módulo independiente)
+      // Tesorería
       {
         path: 'tesoreria',
         canActivate: [permissionGuard('tesoreria', 'S')],
-        loadComponent: () => import('./catalogos/catalogo/catalogo').then(m => m.CatalogoComponent),
-        data: { config: CATALOGO_CONFIGS['tesoreria'] },
+        loadComponent: () => import('./tesoreria/tesoreria-list/tesoreria-list').then(m => m.TesoreriaListComponent),
+      },
+      {
+        path: 'tesoreria/:id/movimientos',
+        canActivate: [authGuard],
+        loadComponent: () => import('./tesoreria/tesoreria-movimientos/tesoreria-movimientos').then(m => m.TesoreriaMovimientosComponent),
+      },
+      // Reportes
+      {
+        path: 'reportes/cumpleaneros',
+        canActivate: [permissionGuard('personas', 'S')],
+        loadComponent: () => import('./personas/cumpleaneros/cumpleaneros').then(m => m.CumpleaneroesComponent),
+      },
+      {
+        path: 'reportes/actividades',
+        canActivate: [permissionGuard('actividades', 'S')],
+        loadComponent: () => import('./reportes/reportes-actividades/reportes-actividades').then(m => m.ReportesActividadesComponent),
       },
       // Personas
       {
@@ -190,6 +211,13 @@ export const routes: Routes = [
         loadComponent: () => import('./personas/persona-form/persona-form').then(m => m.PersonaFormComponent),
       },
     ],
+  },
+
+  // Reporte de tesorería (fuera del shell — página limpia para impresión/PDF)
+  {
+    path: 'tesoreria/:id/reporte',
+    canActivate: [authGuard],
+    loadComponent: () => import('./tesoreria/tesoreria-reporte/tesoreria-reporte').then(m => m.TesoreriaReporteComponent),
   },
 
   { path: '**', redirectTo: 'dashboard' },

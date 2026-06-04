@@ -61,6 +61,11 @@ export interface ContadorGrupo {
   count: number;
 }
 
+export interface GrupoLookup {
+  id:     number;
+  nombre: string;
+}
+
 export interface AsistenciaResumen {
   personas:   AsistenciaPersona[];
   visitantes: Visitante[];
@@ -131,5 +136,13 @@ export class ActividadesService {
 
   eliminarAsistente(idActividad: number, idAsistente: number) {
     return this.http.delete<{ ok: boolean }>(`${this.base}/${idActividad}/asistentes/${idAsistente}`);
+  }
+
+  listarGruposDisponibles() {
+    return this.http.get<GrupoLookup[]>(`${this.base}/grupos-disponibles`);
+  }
+
+  listarGruposActividad(idActividad: number) {
+    return this.http.get<number[]>(`${this.base}/${idActividad}/grupos`);
   }
 }

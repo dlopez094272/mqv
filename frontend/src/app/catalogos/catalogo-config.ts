@@ -179,4 +179,14 @@ export const CATALOGO_CONFIGS: Record<string, CatalogoConfig> = {
       { nombre: 'estado', label: 'Estado de Crecimiento', tipo: 'text', requerido: true },
     ],
   },
+  tesoreria_tipomov: {
+    titulo: 'Tipos de Movimiento',
+    tablaPermiso: 'tesoreria_tipomov',
+    apiRuta: 'tesoreria_tipomov',
+    pk: 'idtesoreria_tipomov',
+    tieneActivo: true,
+    campos: [
+      { nombre: 'tipo_movimiento', label: 'Tipo de Movimiento', tipo: 'text', requerido: true },
+    ],
+  },
 };

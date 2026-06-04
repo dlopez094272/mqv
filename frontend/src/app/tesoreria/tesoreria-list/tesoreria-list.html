@@ -1,0 +1,245 @@
+<div class="page-header">
+  <h2>💰 Tesorería</h2>
+  <div class="header-actions">
+    <button class="btn btn-outline btn-sm" (click)="mostrarExtra.set(!mostrarExtra())">
+      {{ mostrarExtra() ? 'Ocultar columnas' : 'Más columnas' }}
+    </button>
+    @if (permisos.puede('tesoreria', 'A')) {
+      <button class="btn btn-primary" (click)="abrirNuevo()">+ Nueva</button>
+    }
+  </div>
+</div>
+
+@if (error())      { <div class="alert alert-error">{{ error() }}</div> }
+@if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+<div class="search-bar">
+  <input type="text" [(ngModel)]="busqueda" (ngModelChange)="filtrar()"
+         placeholder="🔍  Buscar tesorería o responsable..." />
+</div>
+
+@if (cargando()) {
+  <div class="loading-state">Cargando tesorerías...</div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-id">ID</th>
+          <th>Nombre</th>
+          <th class="col-monto">Saldo</th>
+          <th>Responsable</th>
+          @if (mostrarExtra()) {
+            <th>Fecha creación</th>
+            <th>Creador</th>
+          }
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of filtrados(); track t.idtesoreria) {
+          <tr [class.row-inactiva]="!t.activo">
+            <td class="col-id text-muted">{{ t.idtesoreria }}</td>
+            <td><strong>{{ t.nombre }}</strong></td>
+            <td class="col-monto amount">{{ formatQ(t.saldo) }}</td>
+            <td>{{ t.responsable || '—' }}</td>
+            @if (mostrarExtra()) {
+              <td class="text-muted text-sm">{{ t.fecha_cracion ? (t.fecha_cracion | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
+              <td class="text-muted text-sm">{{ t.creador || '—' }}</td>
+            }
+            <td>
+              @if (t.activo) {
+                <span class="badge badge-active">Activo</span>
+              } @else {
+                <span class="badge badge-inactive">Inactivo</span>
+              }
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-secondary" (click)="verMovimientos(t)"
+                        title="Ver movimientos">📊</button>
+
+                <button class="btn btn-sm btn-outline" (click)="abrirModalPdf(t)"
+                        title="Generar estado de cuenta PDF">📄</button>
+
+                @if (esResponsable(t)) {
+                  <button class="btn btn-sm btn-outline" (click)="abrirUsuarios(t)"
+                          title="Gestionar accesos">👥</button>
+                }
+
+                @if (permisos.puede('tesoreria', 'E')) {
+                  <button class="btn btn-sm btn-outline" (click)="abrirEditar(t)"
+                          title="Editar">✏️</button>
+                  @if (t.activo) {
+                    <button class="btn btn-sm btn-danger" (click)="toggleActivo(t)"
+                            title="Desactivar">🚫</button>
+                  } @else {
+                    <button class="btn btn-sm btn-success" (click)="toggleActivo(t)"
+                            title="Activar">✅</button>
+                  }
+                }
+
+                @if (permisos.puede('tesoreria', 'D')) {
+                  <button class="btn btn-sm btn-danger" (click)="eliminar(t)"
+                          title="Eliminar">🗑️</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td [colSpan]="mostrarExtra() ? 8 : 6" class="empty-row">
+              No se encontraron tesorerías
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    {{ filtrados().length }} registro(s) de {{ tesorerias().length }} total
+  </div>
+}
+
+<!-- ── Panel formulario tesorería ─────────────────────────────── -->
+@if (mostrarForm()) {
+  <div class="form-backdrop" (click)="cerrarForm()"></div>
+  <aside class="form-panel">
+    <div class="form-panel-header">
+      <h3>{{ modoEdicion() ? 'Editar' : 'Nueva' }} Tesorería</h3>
+      <button class="btn-close" (click)="cerrarForm()">✕</button>
+    </div>
+
+    <div class="form-panel-body">
+      @if (errorForm()) {
+        <div class="alert alert-error" style="margin-bottom:16px;">{{ errorForm() }}</div>
+      }
+
+      <div class="form-group">
+        <label>Nombre <span class="req">*</span></label>
+        <input class="form-control" type="text" [(ngModel)]="form.nombre" maxlength="255" />
+      </div>
+
+      <div class="form-group">
+        <label>Responsable</label>
+        <select class="form-control" [(ngModel)]="form.responsable">
+          <option value="">-- Seleccionar --</option>
+          @for (u of todosUsuarios; track u.usuario) {
+            <option [value]="u.usuario">{{ u.nombre_completo }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="form-panel-footer">
+      <button class="btn btn-outline" (click)="cerrarForm()" [disabled]="guardando()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </aside>
+}
+
+<!-- ── Modal PDF ─────────────────────────────────────────────────── -->
+@if (mostrarModalPdf()) {
+  <div class="modal-backdrop" (click)="cerrarModalPdf()"></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Estado de Cuenta PDF</h3>
+      <button class="btn-close" (click)="cerrarModalPdf()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-teso-name">{{ tesoParaPdf()?.nombre }}</p>
+      @if (errorPdf()) {
+        <div class="alert alert-error" style="margin-bottom:12px;">{{ errorPdf() }}</div>
+      }
+      <div class="modal-dates-grid">
+        <div class="form-group">
+          <label>Fecha de inicio <span class="req">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="pdfDesde" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de fin <span class="req">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="pdfHasta" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="cerrarModalPdf()">Cancelar</button>
+      <button class="btn btn-primary" (click)="generarPdf()">📄 Generar PDF</button>
+    </div>
+  </div>
+}
+
+<!-- ── Panel de usuarios ───────────────────────────────────────── -->
+@if (mostrarUsuarios()) {
+  <div class="form-backdrop" (click)="cerrarUsuarios()"></div>
+  <aside class="form-panel form-panel--wide">
+    <div class="form-panel-header">
+      <div>
+        <h3>Gestionar accesos</h3>
+        <span class="subtitle">{{ tesoActiva()?.nombre }}</span>
+      </div>
+      <button class="btn-close" (click)="cerrarUsuarios()">✕</button>
+    </div>
+
+    <div class="form-panel-body">
+      @if (errorUsuario()) {
+        <div class="alert alert-error" style="margin-bottom:16px;">{{ errorUsuario() }}</div>
+      }
+
+      <!-- Asignar nuevo usuario -->
+      <div class="assign-section">
+        <h4>Agregar acceso</h4>
+        <div class="assign-row">
+          <select class="form-control" [(ngModel)]="formUsuario.usuario">
+            <option value="">-- Seleccionar usuario --</option>
+            @for (u of usuariosDisponibles(); track u.usuario) {
+              <option [value]="u.usuario">{{ u.nombre_completo }}</option>
+            }
+          </select>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="formUsuario.solo_lectura" />
+            Solo lectura
+          </label>
+          <button class="btn btn-primary btn-sm" (click)="asignarUsuario()">Agregar</button>
+        </div>
+      </div>
+
+      <!-- Usuarios asignados -->
+      <h4 style="margin-top:20px;">Usuarios con acceso</h4>
+      @if (cargandoUsuarios()) {
+        <div class="loading-state">Cargando...</div>
+      } @else {
+        @if (usuariosAsignados().length === 0) {
+          <p class="text-muted text-sm">No hay usuarios asignados aún</p>
+        } @else {
+          <div class="usuario-list">
+            @for (u of usuariosAsignados(); track u.usuario) {
+              <div class="usuario-item">
+                <div class="usuario-info">
+                  <span class="usuario-nombre">{{ u.nombre_completo }}</span>
+                  <span class="usuario-code">@{{ u.usuario }}</span>
+                </div>
+                <div class="usuario-meta">
+                  @if (u.solo_lectura) {
+                    <span class="badge badge-warning">Solo lectura</span>
+                  } @else {
+                    <span class="badge badge-active">Escritura</span>
+                  }
+                  <button class="btn btn-sm btn-danger" (click)="quitarUsuario(u)"
+                          title="Quitar acceso">✕</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="form-panel-footer">
+      <button class="btn btn-outline" (click)="cerrarUsuarios()">Cerrar</button>
+    </div>
+  </aside>
+}

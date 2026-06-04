@@ -19,6 +19,7 @@ export class ShellComponent {
   seguridadOpen    = signal(false);
   catalogosOpen    = signal(false);
   actividadesOpen  = signal(false);
+  reportesOpen     = signal(false);
 
   constructor(
     public auth: AuthService,
@@ -30,6 +31,7 @@ export class ShellComponent {
       if (e.url.startsWith('/seguridad'))   this.seguridadOpen.set(true);
       if (e.url.startsWith('/catalogos'))   this.catalogosOpen.set(true);
       if (e.url.startsWith('/actividades')) this.actividadesOpen.set(true);
+      if (e.url.startsWith('/reportes'))    this.reportesOpen.set(true);
     });
   }
 
@@ -63,5 +65,9 @@ export class ShellComponent {
 
   tienePersonas(): boolean {
     return this.permisos.puede('personas', 'S');
+  }
+
+  tieneReportes(): boolean {
+    return this.permisos.puede('actividades', 'S') || this.permisos.puede('personas', 'S');
   }
 }
