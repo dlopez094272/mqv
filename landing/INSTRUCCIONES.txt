@@ -1,0 +1,34 @@
+ESTRUCTURA DE ARCHIVOS - LANDING PAGE MQV
+==========================================
+
+Coloca los archivos en estas rutas exactas:
+
+LOGOS:
+  landing/assets/img/logo-white.png   <- Logo blanco (para fondo oscuro)
+  landing/assets/img/logo-gray.png    <- Logo gris (opcional)
+  landing/assets/img/logo-gold.png    <- Logo dorado (opcional)
+
+IMÁGENES:
+  landing/assets/img/banner-church.jpg       <- Foto de la iglesia (fondo azul con congregación)
+  landing/assets/img/banner-discipulos.jpg   <- Banner "Discípulos de Jesucristo"
+  landing/assets/img/banner-casa.jpg         <- Banner "Ven conmigo a casa" (opcional)
+
+  landing/assets/img/ministerio-infantil.jpg  <- Foto niños (Ministerio Infantil)
+  landing/assets/img/ministerio-jovenes.jpg   <- Foto jóvenes/familia (JNI)
+  landing/assets/img/ministerio-alabanza.jpg  <- Foto coro Festival Coral 2025 (Alabanza)
+
+  landing/assets/img/evento-testigos.jpg      <- Poster "Los Testigos" (Domingo de Resurrección)
+  landing/assets/img/evento-familiar.jpg      <- Poster "Domingo Familiar" (Pastor Carlos Cordero)
+
+VIDEO:
+  landing/assets/video/hero.mp4   <- Tu video de fondo del hero
+
+PENDIENTE EN index.html:
+  - Líneas con "<!-- Actualiza href con tu canal de YouTube -->"
+    Cambia href="#" por tu URL de YouTube, ejemplo:
+    href="https://www.youtube.com/@TuCanal"
+
+HOSTING:
+  - Sube la carpeta "landing/" al raíz del dominio
+  - El portal Angular va en /admin
+  - La landing queda en / (raíz)
