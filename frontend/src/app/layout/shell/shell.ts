@@ -20,6 +20,7 @@ export class ShellComponent {
   catalogosOpen    = signal(false);
   actividadesOpen  = signal(false);
   reportesOpen     = signal(false);
+  crecimientoOpen  = signal(false);
 
   constructor(
     public auth: AuthService,
@@ -28,10 +29,11 @@ export class ShellComponent {
     private inactividad: InactividadService,
   ) {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe((e: any) => {
-      if (e.url.startsWith('/seguridad'))   this.seguridadOpen.set(true);
+      if (e.url.startsWith('/seguridad'))    this.seguridadOpen.set(true);
       if (e.url.startsWith('/catalogos'))   this.catalogosOpen.set(true);
       if (e.url.startsWith('/actividades')) this.actividadesOpen.set(true);
       if (e.url.startsWith('/reportes'))    this.reportesOpen.set(true);
+      if (e.url.startsWith('/crecimiento')) this.crecimientoOpen.set(true);
     });
   }
 
@@ -69,5 +71,9 @@ export class ShellComponent {
 
   tieneReportes(): boolean {
     return this.permisos.puede('actividades', 'S') || this.permisos.puede('personas', 'S');
+  }
+
+  tieneCrecimiento(): boolean {
+    return this.permisos.puede('cursos', 'S') || this.permisos.puede('mis_cursos', 'S');
   }
 }

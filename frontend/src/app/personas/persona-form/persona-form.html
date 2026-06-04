@@ -396,21 +396,15 @@
         <p class="map-hint">Ingresa las coordenadas y presiona "Ver en mapa" (o Enter), o usa el botón GPS para capturar tu ubicación actual. El mapa se mostrará a la derecha.</p>
       </div>
 
-      <!-- Columna derecha: mapa iframe -->
+      <!-- Columna derecha: mapa Leaflet -->
       <div class="dir-mapa">
-        @if (mapaUrl()) {
-          <iframe [src]="mapaUrl()!" class="mapa-iframe"
-                  frameborder="0" scrolling="no" loading="lazy">
-          </iframe>
+        <div id="mapa-leaflet" class="mapa-leaflet"></div>
+        @if (modelo.latitud && modelo.longitud) {
           <a [href]="mapaExternoUrl()" target="_blank" class="mapa-abrir">
-            🗺️ Abrir en OpenStreetMap ↗
+            Abrir en OpenStreetMap ↗
           </a>
-        } @else {
-          <div class="mapa-placeholder">
-            <div class="mapa-icon">📍</div>
-            <p>Usa el botón GPS o ingresa las<br/>coordenadas para ver el mapa</p>
-          </div>
         }
+        <p class="map-hint" style="margin-top:6px;">Haz clic en el mapa para marcar la ubicación, o arrastra el marcador para ajustarla.</p>
       </div>
 
     </div>

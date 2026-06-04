@@ -13,33 +13,85 @@
 
     <nav class="sidebar-nav">
 
-      <!-- Seguridad -->
-      @if (tieneSeguridad()) {
-        <div class="nav-group">
-        <button class="nav-item nav-group-toggle" (click)="seguridadOpen.set(!seguridadOpen())">
-          <span class="nav-icon">🔐</span>
-          <span class="nav-label">Seguridad</span>
-          <span class="nav-arrow" [class.open]="seguridadOpen()">▶</span>
-        </button>
-        @if (seguridadOpen()) {
-          <div class="nav-children">
-            @if (permisos.puede('usuarios', 'S')) {
-              <a routerLink="/seguridad/usuarios" class="nav-item nav-child"
-                 [class.active]="isActive('/seguridad/usuarios')">
-                <span class="nav-icon">👥</span>
-                <span class="nav-label">Usuarios</span>
-              </a>
-            }
+      <!-- Personas -->
+      @if (tienePersonas()) {
+        <a routerLink="/personas" class="nav-item" [class.active]="isActive('/personas')">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">Personas</span>
+        </a>
+      }
 
-            @if (auth.isSuperadmin()) {
-              <a routerLink="/seguridad/grupos" class="nav-item nav-child"
-                 [class.active]="isActive('/seguridad/grupos')">
-                <span class="nav-icon">🛡️</span>
-                <span class="nav-label">Grupos y Permisos</span>
-              </a>
-            }
-          </div>
-        }
+      <!-- Actividades -->
+      @if (tieneActividades()) {
+        <a routerLink="/actividades" class="nav-item" [class.active]="isActive('/actividades')">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Actividades</span>
+        </a>
+      }
+
+      <!-- Tesorería -->
+      @if (tieneTesoreria()) {
+        <a routerLink="/tesoreria" class="nav-item" [class.active]="isActive('/tesoreria')">
+          <span class="nav-icon">💰</span>
+          <span class="nav-label">Tesorería</span>
+        </a>
+      }
+
+      <!-- Crecimiento -->
+      @if (tieneCrecimiento()) {
+        <div class="nav-group">
+          <button class="nav-item nav-group-toggle" (click)="crecimientoOpen.set(!crecimientoOpen())">
+            <span class="nav-icon">🌱</span>
+            <span class="nav-label">Crecimiento</span>
+            <span class="nav-arrow" [class.open]="crecimientoOpen()">▶</span>
+          </button>
+          @if (crecimientoOpen()) {
+            <div class="nav-children">
+              @if (permisos.puede('cursos', 'S')) {
+                <a routerLink="/crecimiento/cursos" class="nav-item nav-child"
+                   [class.active]="isActive('/crecimiento/cursos')">
+                  <span class="nav-icon">📚</span>
+                  <span class="nav-label">Gestión de Cursos</span>
+                </a>
+              }
+              @if (permisos.puede('mis_cursos', 'S')) {
+                <a routerLink="/crecimiento/mis-cursos" class="nav-item nav-child"
+                   [class.active]="isActive('/crecimiento/mis-cursos')">
+                  <span class="nav-icon">🎓</span>
+                  <span class="nav-label">Mis Cursos</span>
+                </a>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Reportes -->
+      @if (tieneReportes()) {
+        <div class="nav-group">
+          <button class="nav-item nav-group-toggle" (click)="reportesOpen.set(!reportesOpen())">
+            <span class="nav-icon">📈</span>
+            <span class="nav-label">Reportes</span>
+            <span class="nav-arrow" [class.open]="reportesOpen()">▶</span>
+          </button>
+          @if (reportesOpen()) {
+            <div class="nav-children">
+              @if (permisos.puede('personas', 'S')) {
+                <a routerLink="/reportes/cumpleaneros" class="nav-item nav-child"
+                   [class.active]="isActive('/reportes/cumpleaneros')">
+                  <span class="nav-icon">🎂</span>
+                  <span class="nav-label">Cumpleañeros</span>
+                </a>
+              }
+              @if (permisos.puede('actividades', 'S')) {
+                <a routerLink="/reportes/actividades" class="nav-item nav-child"
+                   [class.active]="isActive('/reportes/actividades')">
+                  <span class="nav-icon">📊</span>
+                  <span class="nav-label">Actividades</span>
+                </a>
+              }
+            </div>
+          }
         </div>
       }
 
@@ -163,58 +215,36 @@
         </div>
       }
 
-      <!-- Personas -->
-      @if (tienePersonas()) {
-        <a routerLink="/personas" class="nav-item" [class.active]="isActive('/personas')">
-          <span class="nav-icon">👤</span>
-          <span class="nav-label">Personas</span>
-        </a>
-      }
-
-      <!-- Reportes -->
-      @if (tieneReportes()) {
+      <!-- Seguridad -->
+      @if (tieneSeguridad()) {
         <div class="nav-group">
-          <button class="nav-item nav-group-toggle" (click)="reportesOpen.set(!reportesOpen())">
-            <span class="nav-icon">📈</span>
-            <span class="nav-label">Reportes</span>
-            <span class="nav-arrow" [class.open]="reportesOpen()">▶</span>
-          </button>
-          @if (reportesOpen()) {
-            <div class="nav-children">
-              @if (permisos.puede('personas', 'S')) {
-                <a routerLink="/reportes/cumpleaneros" class="nav-item nav-child"
-                   [class.active]="isActive('/reportes/cumpleaneros')">
-                  <span class="nav-icon">🎂</span>
-                  <span class="nav-label">Cumpleañeros</span>
-                </a>
-              }
-              @if (permisos.puede('actividades', 'S')) {
-                <a routerLink="/reportes/actividades" class="nav-item nav-child"
-                   [class.active]="isActive('/reportes/actividades')">
-                  <span class="nav-icon">📊</span>
-                  <span class="nav-label">Actividades</span>
-                </a>
-              }
-            </div>
-          }
+        <button class="nav-item nav-group-toggle" (click)="seguridadOpen.set(!seguridadOpen())">
+          <span class="nav-icon">🔐</span>
+          <span class="nav-label">Seguridad</span>
+          <span class="nav-arrow" [class.open]="seguridadOpen()">▶</span>
+        </button>
+        @if (seguridadOpen()) {
+          <div class="nav-children">
+            @if (permisos.puede('usuarios', 'S')) {
+              <a routerLink="/seguridad/usuarios" class="nav-item nav-child"
+                 [class.active]="isActive('/seguridad/usuarios')">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Usuarios</span>
+              </a>
+            }
+
+            @if (auth.isSuperadmin()) {
+              <a routerLink="/seguridad/grupos" class="nav-item nav-child"
+                 [class.active]="isActive('/seguridad/grupos')">
+                <span class="nav-icon">🛡️</span>
+                <span class="nav-label">Grupos y Permisos</span>
+              </a>
+            }
+          </div>
+        }
         </div>
       }
 
-      <!-- Actividades -->
-      @if (tieneActividades()) {
-        <a routerLink="/actividades" class="nav-item" [class.active]="isActive('/actividades')">
-          <span class="nav-icon">📅</span>
-          <span class="nav-label">Actividades</span>
-        </a>
-      }
-
-      <!-- Tesorería -->
-      @if (tieneTesoreria()) {
-        <a routerLink="/tesoreria" class="nav-item" [class.active]="isActive('/tesoreria')">
-          <span class="nav-icon">💰</span>
-          <span class="nav-label">Tesorería</span>
-        </a>
-      }
     </nav>
 
     <div class="sidebar-footer">v1.0.0 · 2026</div>

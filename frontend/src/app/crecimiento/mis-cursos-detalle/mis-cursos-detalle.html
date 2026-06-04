@@ -1,0 +1,117 @@
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando curso...</div>
+} @else if (error()) {
+  <div class="alert-error">{{ error() }}</div>
+} @else if (curso(); as c) {
+
+  <!-- Header del curso -->
+  <div class="curso-hero" [style.background]="c.color">
+    <button class="btn-back-hero" (click)="volver()">← Volver</button>
+    @if (c.logo) {
+      <img [src]="logoUrl(c.logo)" alt="" class="hero-logo" />
+    } @else {
+      <div class="hero-logo-placeholder">📚</div>
+    }
+    <div class="hero-info">
+      <h1>{{ c.nombre }}</h1>
+      @if (c.descripcion) {
+        <p>{{ c.descripcion }}</p>
+      }
+      <div class="hero-stats">
+        <span>📹 {{ c.contenido.length }} bloque(s) de contenido</span>
+        @if (c.total_preguntas > 0) {
+          <span>❓ {{ c.total_preguntas }} pregunta(s) de evaluación</span>
+        }
+      </div>
+    </div>
+    @if (c.evaluacion_aprobada) {
+      <div class="hero-badge">
+        🏆 Completado con {{ c.evaluacion_aprobada.puntaje }}%
+      </div>
+    }
+  </div>
+
+  <!-- Acciones principales -->
+  <div class="acciones-row">
+    @if (c.evaluacion_aprobada) {
+      <button class="btn-certificado" (click)="verCertificado()">
+        🏅 Ver / Reimprimir Certificado
+      </button>
+    } @else if (c.total_preguntas > 0) {
+      <button class="btn-evaluar" (click)="tomarEvaluacion()">
+        📝 Tomar Evaluación
+      </button>
+    }
+  </div>
+
+  <!-- Contenido del curso -->
+  <div class="contenido-section">
+    <h2 class="section-title">Contenido del Curso</h2>
+
+    @if (!c.contenido.length) {
+      <div class="empty-content">
+        <p>Este curso no tiene contenido definido aún.</p>
+      </div>
+    }
+
+    @for (bloque of c.contenido; track bloque.idcontenido; let i = $index) {
+      <div class="bloque-card">
+        <div class="bloque-header" (click)="toggleContenido(bloque.idcontenido)">
+          <div class="bloque-num" [style.background]="c.color">{{ i + 1 }}</div>
+          <h3>{{ bloque.titulo }}</h3>
+          <span class="bloque-toggle">{{ abiertos().has(bloque.idcontenido) ? '▲' : '▼' }}</span>
+        </div>
+
+        @if (abiertos().has(bloque.idcontenido)) {
+          <div class="bloque-body">
+            @if (bloque.descripcion) {
+              <div class="bloque-desc">
+                <h4>📋 Descripción</h4>
+                <p>{{ bloque.descripcion }}</p>
+              </div>
+            }
+
+            @if (bloque.video_filename) {
+              <div class="video-section">
+                <h4>🎬 Video</h4>
+                <video class="video-player" controls preload="metadata"
+                       [src]="safeVideoUrl(bloque.video_filename)">
+                  Tu navegador no soporta la reproducción de video.
+                </video>
+              </div>
+            }
+
+            @if (bloque.archivos.length) {
+              <div class="archivos-section">
+                <h4>📎 Archivos de soporte</h4>
+                <ul class="archivos-list">
+                  @for (a of bloque.archivos; track a.idarchivo) {
+                    <li>
+                      <a [href]="safeArchivoUrl(a.filename)" target="_blank" download class="archivo-link">
+                        <span class="archivo-icon">{{ a.mimetype.includes('pdf') ? '📄' : a.mimetype.includes('image') ? '🖼️' : '📎' }}</span>
+                        <span>{{ a.nombre_original }}</span>
+                        <span class="archivo-size">{{ (a.tamanio / 1024 / 1024).toFixed(1) }} MB</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Evaluación (si existe y no ha aprobado) -->
+  @if (!c.evaluacion_aprobada && c.total_preguntas > 0) {
+    <div class="eval-cta">
+      <div class="eval-cta-icon">📝</div>
+      <div>
+        <h3>¿Listo para la evaluación?</h3>
+        <p>Responde {{ c.total_preguntas }} pregunta(s). Necesitas al menos <strong>80%</strong> para aprobar.</p>
+      </div>
+      <button class="btn-evaluar" (click)="tomarEvaluacion()">Tomar Evaluación</button>
+    </div>
+  }
+}

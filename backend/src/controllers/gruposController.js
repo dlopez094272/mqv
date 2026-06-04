@@ -32,6 +32,10 @@ const FEATURES = [
   // Tesorería
   { name: 'tesoreria_movimientos',  label: 'Tesorería: Movimientos' },
   { name: 'tesoreria_tipomov',      label: 'Tesorería: Tipos de Movimiento' },
+
+  // Crecimiento
+  { name: 'cursos',     label: 'Crecimiento: Gestión de Cursos' },
+  { name: 'mis_cursos', label: 'Crecimiento: Mis Cursos' },
 ];
 
 async function listar(req, res, next) {

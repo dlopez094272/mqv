@@ -1,7 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
+import { CrecimientoService, LogroItem } from '../crecimiento/crecimiento.service';
+import { PermisosService } from '../core/services/permisos.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -10,13 +12,38 @@ import { AuthService } from '../core/services/auth.service';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
-export class DashboardComponent {
-  now = new Date();
+export class DashboardComponent implements OnInit {
+  now         = new Date();
   errorPerfil = signal('');
+  logros      = signal<LogroItem[]>([]);
+  cargandoLogros = signal(false);
 
-  constructor(public auth: AuthService, private router: Router) {}
+  constructor(
+    public  auth:     AuthService,
+    public  permisos: PermisosService,
+    private router:   Router,
+    private crecSvc:  CrecimientoService,
+  ) {}
 
-  irAMiPerfil() {
-    this.router.navigate(['/mi-perfil']);
+  ngOnInit() {
+    this.cargarLogros();
+  }
+
+  cargarLogros() {
+    this.cargandoLogros.set(true);
+    this.crecSvc.misLogros().subscribe({
+      next:  data => { this.logros.set(data); this.cargandoLogros.set(false); },
+      error: ()   => { this.cargandoLogros.set(false); },
+    });
+  }
+
+  irAMiPerfil() { this.router.navigate(['/mi-perfil']); }
+  irACurso(idcursos: number) { this.router.navigate(['/crecimiento/mis-cursos', idcursos]); }
+  verCertificado(idcursos: number) { window.open(`/certificado/${idcursos}`, '_blank'); }
+
+  logoUrl(filename: string) { return this.crecSvc.logoUrl(filename); }
+
+  formatFecha(f: string): string {
+    return new Date(f).toLocaleDateString('es-GT', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 }

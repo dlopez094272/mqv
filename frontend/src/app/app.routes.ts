@@ -189,6 +189,38 @@ export const routes: Routes = [
         canActivate: [permissionGuard('actividades', 'S')],
         loadComponent: () => import('./reportes/reportes-actividades/reportes-actividades').then(m => m.ReportesActividadesComponent),
       },
+      // Crecimiento — Gestión de Cursos (permiso: cursos)
+      {
+        path: 'crecimiento/cursos',
+        canActivate: [permissionGuard('cursos', 'S')],
+        loadComponent: () => import('./crecimiento/gestion-cursos/gestion-cursos').then(m => m.GestionCursosComponent),
+      },
+      {
+        path: 'crecimiento/cursos/nuevo',
+        canActivate: [permissionGuard('cursos', 'A')],
+        loadComponent: () => import('./crecimiento/gestion-cursos-form/gestion-cursos-form').then(m => m.GestionCursosFormComponent),
+      },
+      {
+        path: 'crecimiento/cursos/:id/editar',
+        canActivate: [permissionGuard('cursos', 'E')],
+        loadComponent: () => import('./crecimiento/gestion-cursos-form/gestion-cursos-form').then(m => m.GestionCursosFormComponent),
+      },
+      // Crecimiento — Mis Cursos (permiso: mis_cursos)
+      {
+        path: 'crecimiento/mis-cursos',
+        canActivate: [permissionGuard('mis_cursos', 'S')],
+        loadComponent: () => import('./crecimiento/mis-cursos/mis-cursos').then(m => m.MisCursosComponent),
+      },
+      {
+        path: 'crecimiento/mis-cursos/:id',
+        canActivate: [permissionGuard('mis_cursos', 'S')],
+        loadComponent: () => import('./crecimiento/mis-cursos-detalle/mis-cursos-detalle').then(m => m.MisCursosDetalleComponent),
+      },
+      {
+        path: 'crecimiento/mis-cursos/:id/evaluacion',
+        canActivate: [permissionGuard('mis_cursos', 'S')],
+        loadComponent: () => import('./crecimiento/mis-cursos-evaluacion/mis-cursos-evaluacion').then(m => m.MisCursosEvaluacionComponent),
+      },
       // Personas
       {
         path: 'personas',
@@ -218,6 +250,13 @@ export const routes: Routes = [
     path: 'tesoreria/:id/reporte',
     canActivate: [authGuard],
     loadComponent: () => import('./tesoreria/tesoreria-reporte/tesoreria-reporte').then(m => m.TesoreriaReporteComponent),
+  },
+
+  // Certificado de curso (fuera del shell — página limpia para impresión)
+  {
+    path: 'certificado/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./crecimiento/certificado/certificado').then(m => m.CertificadoComponent),
   },
 
   { path: '**', redirectTo: 'dashboard' },

@@ -1,11 +1,11 @@
 import {
-  Component, OnInit, signal,
+  Component, OnInit, OnDestroy, signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import * as L from 'leaflet';
 import { PersonasService, PersonaDetalle, RegistroCrecimiento } from '../personas.service';
 import { CatalogosService } from '../../core/services/catalogos.service';
 import { confirmar } from '../../shared/confirmar.util';
@@ -21,7 +21,7 @@ interface ChipItem { id: number; nombre: string; }
   templateUrl: './persona-form.html',
   styleUrl: './persona-form.scss',
 })
-export class PersonaFormComponent implements OnInit {
+export class PersonaFormComponent implements OnInit, OnDestroy {
   tabActivo  = signal<Tab>('personales');
   esEdicion  = false;
   idpersonas = 0;
@@ -74,8 +74,9 @@ export class PersonaFormComponent implements OnInit {
   fotoNombre  = signal('');
   fotoStatus  = signal<''|'cargando'|'lista'|'error'>('');
 
-  // Mapa iframe (OSM embed — sin dependencias)
-  mapaUrl = signal<SafeResourceUrl | null>(null);
+  // Mapa Leaflet
+  private leafletMap:    L.Map    | null = null;
+  private leafletMarker: L.Marker | null = null;
 
   readonly ESTADOS_CIVIL      = ['Solter@','Casad@','Viud@','Unid@','Divorciad@'];
   readonly ESTADOS_ASISTENCIA = ['Activo','Inactivo','Visitante','Retirado','Trasladado'];
@@ -118,7 +119,6 @@ export class PersonaFormComponent implements OnInit {
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
-    private sanitizer: DomSanitizer,
     private auth: AuthService,
   ) {}
 
@@ -161,18 +161,83 @@ export class PersonaFormComponent implements OnInit {
   tabActualIndex(): number { return this.TABS.findIndex(t => t.key === this.tabActivo()); }
 
   // ── Tabs ─────────────────────────────────────────────────────
-  cambiarTab(tab: Tab) { this.tabActivo.set(tab); }
+  cambiarTab(tab: Tab) {
+    if (this.tabActivo() === 'direcciones' && tab !== 'direcciones') {
+      this.leafletMap?.remove();
+      this.leafletMap    = null;
+      this.leafletMarker = null;
+    }
+    this.tabActivo.set(tab);
+    if (tab === 'direcciones') {
+      setTimeout(() => this.initMapa(), 0);
+    }
+  }
 
-  // ── Mapa iframe (OpenStreetMap embed, sin dependencias) ───────
-  private actualizarMapa() {
-    const lat = this.modelo.latitud;
-    const lng = this.modelo.longitud;
-    if (!lat || !lng) { this.mapaUrl.set(null); return; }
-    const d = 0.006;
-    const url = `https://www.openstreetmap.org/export/embed.html`
-      + `?bbox=${(+lng - d).toFixed(6)},${(+lat - d).toFixed(6)},${(+lng + d).toFixed(6)},${(+lat + d).toFixed(6)}`
-      + `&layer=mapnik&marker=${lat},${lng}`;
-    this.mapaUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
+  ngOnDestroy() {
+    this.leafletMap?.remove();
+  }
+
+  // ── Mapa Leaflet ──────────────────────────────────────────────
+  private mapaIcono(): L.Icon {
+    return L.icon({
+      iconUrl:       'assets/leaflet/marker-icon.png',
+      iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
+      shadowUrl:     'assets/leaflet/marker-shadow.png',
+      iconSize:    [25, 41],
+      iconAnchor:  [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize:  [41, 41],
+    });
+  }
+
+  private initMapa() {
+    const el = document.getElementById('mapa-leaflet');
+    if (!el || this.leafletMap) return;
+
+    const tieneCoords = !!(this.modelo.latitud && this.modelo.longitud);
+    const lat  = tieneCoords ? +this.modelo.latitud! : 14.6349;
+    const lng  = tieneCoords ? +this.modelo.longitud! : -90.5069;
+    const zoom = tieneCoords ? 15 : 8;
+
+    this.leafletMap = L.map(el, { fadeAnimation: false }).setView([lat, lng], zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(this.leafletMap);
+
+    // Recalcula dimensiones después de que el DOM termine de pintar el tab
+    setTimeout(() => this.leafletMap?.invalidateSize(), 100);
+
+    if (tieneCoords) {
+      this.leafletMarker = L.marker([lat, lng], { icon: this.mapaIcono(), draggable: true })
+        .addTo(this.leafletMap);
+      this.leafletMarker.on('dragend', () => {
+        const pos = this.leafletMarker!.getLatLng();
+        this.modelo.latitud  = pos.lat.toFixed(7);
+        this.modelo.longitud = pos.lng.toFixed(7);
+      });
+    }
+
+    this.leafletMap.on('click', (e: L.LeafletMouseEvent) => {
+      this.modelo.latitud  = e.latlng.lat.toFixed(7);
+      this.modelo.longitud = e.latlng.lng.toFixed(7);
+      this.actualizarMarcador(e.latlng.lat, e.latlng.lng);
+    });
+  }
+
+  private actualizarMarcador(lat: number, lng: number) {
+    if (!this.leafletMap) return;
+    if (this.leafletMarker) {
+      this.leafletMarker.setLatLng([lat, lng]);
+    } else {
+      this.leafletMarker = L.marker([lat, lng], { icon: this.mapaIcono(), draggable: true })
+        .addTo(this.leafletMap);
+      this.leafletMarker.on('dragend', () => {
+        const pos = this.leafletMarker!.getLatLng();
+        this.modelo.latitud  = pos.lat.toFixed(7);
+        this.modelo.longitud = pos.lng.toFixed(7);
+      });
+    }
+    this.leafletMap.setView([lat, lng], 15);
   }
 
   mapaExternoUrl(): string {
@@ -180,7 +245,11 @@ export class PersonaFormComponent implements OnInit {
     return `https://www.openstreetmap.org/?mlat=${this.modelo.latitud}&mlon=${this.modelo.longitud}&zoom=17`;
   }
 
-  onCoordenadaChange() { this.actualizarMapa(); }
+  onCoordenadaChange() {
+    if (this.modelo.latitud && this.modelo.longitud) {
+      this.actualizarMarcador(+this.modelo.latitud, +this.modelo.longitud);
+    }
+  }
 
   usarGPS() {
     if (!navigator.geolocation) { this.error.set('Geolocalización no disponible'); return; }
@@ -188,7 +257,7 @@ export class PersonaFormComponent implements OnInit {
       ({ coords: { latitude: lat, longitude: lng } }) => {
         this.modelo.latitud  = lat.toFixed(7);
         this.modelo.longitud = lng.toFixed(7);
-        this.actualizarMapa();
+        this.actualizarMarcador(lat, lng);
       },
       () => this.error.set('No se pudo obtener la ubicación GPS')
     );

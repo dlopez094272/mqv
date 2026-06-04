@@ -1,0 +1,223 @@
+<div class="page-header">
+  <button class="btn-back" (click)="volver()">← Volver</button>
+  <h2>{{ modoEdicion ? 'Editar Curso' : 'Nuevo Curso' }}</h2>
+</div>
+
+@if (exito()) { <div class="alert-success">{{ exito() }}</div> }
+@if (error()) { <div class="alert-error">{{ error() }}</div> }
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else {
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.active]="tabActiva() === 'info'"       (click)="tabActiva.set('info')">📝 Información</button>
+    @if (modoEdicion) {
+      <button class="tab" [class.active]="tabActiva() === 'contenido'"  (click)="tabActiva.set('contenido')">📹 Contenido</button>
+      <button class="tab" [class.active]="tabActiva() === 'evaluacion'" (click)="tabActiva.set('evaluacion')">❓ Evaluación</button>
+    }
+  </div>
+
+  <!-- ───── TAB: INFORMACIÓN BÁSICA ───── -->
+  @if (tabActiva() === 'info') {
+    <div class="tab-panel">
+      <div class="form-row">
+        <div class="form-group flex-2">
+          <label>Nombre del curso <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="form.nombre" placeholder="Ej. Discipulado Básico" class="input" />
+        </div>
+        <div class="form-group">
+          <label>Color identificador</label>
+          <div class="color-picker-row">
+            <input type="color" [(ngModel)]="form.color" class="input-color" />
+            <span class="color-label">{{ form.color }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea [(ngModel)]="form.descripcion" rows="3" placeholder="Descripción del curso..." class="input"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Logotipo del curso</label>
+        <div class="logo-upload-area">
+          @if (logoPreview) {
+            <img [src]="logoPreview" class="logo-preview" alt="Logotipo" />
+          } @else if (logoActual) {
+            <img [src]="logoUrl(logoActual)" class="logo-preview" alt="Logotipo" />
+          } @else {
+            <div class="logo-placeholder">📸 Sin imagen</div>
+          }
+          <label class="btn-secondary file-btn">
+            Seleccionar imagen
+            <input type="file" accept="image/*" (change)="onLogoChange($event)" hidden />
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-secondary" (click)="volver()">Cancelar</button>
+        <button class="btn-primary" [disabled]="guardando()" (click)="guardarInfo()">
+          @if (guardando()) { <span class="spinner-sm"></span> } Guardar Información
+        </button>
+      </div>
+
+      @if (!modoEdicion) {
+        <p class="hint-text">💡 Después de guardar podrás agregar el contenido y las preguntas de evaluación.</p>
+      }
+    </div>
+  }
+
+  <!-- ───── TAB: CONTENIDO ───── -->
+  @if (tabActiva() === 'contenido') {
+    <div class="tab-panel">
+      <div class="section-header">
+        <p class="section-desc">Define los bloques de contenido del curso. Cada bloque puede tener un video y archivos de soporte.</p>
+        <button class="btn-primary" (click)="agregarContenido()">+ Agregar Bloque</button>
+      </div>
+
+      @if (!contenido().length) {
+        <div class="empty-section">
+          <span>📹</span>
+          <p>No hay bloques de contenido. ¡Agrega el primero!</p>
+        </div>
+      }
+
+      @for (c of contenido(); track $index; let i = $index) {
+        <div class="block-card">
+          <div class="block-header" (click)="toggleContenido(i)">
+            <span class="block-number">{{ i + 1 }}</span>
+            <strong>{{ c.titulo || 'Nuevo bloque' }}</strong>
+            <span class="block-toggle">{{ c.expandido ? '▲' : '▼' }}</span>
+          </div>
+
+          @if (c.expandido) {
+            <div class="block-body">
+              <div class="form-group">
+                <label>Título <span class="req">*</span></label>
+                <input type="text" [(ngModel)]="c.titulo" placeholder="Título del contenido" class="input" />
+              </div>
+
+              <div class="form-group">
+                <label>Descripción / Para qué les servirá</label>
+                <textarea [(ngModel)]="c.descripcion" rows="3" placeholder="Explica el propósito de este contenido..." class="input"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Video del contenido</label>
+                @if (c.video_filename) {
+                  <div class="file-item">
+                    <span class="file-icon">🎬</span>
+                    <span>{{ c.video_nombre_original || c.video_filename }}</span>
+                    <button class="btn-icon btn-danger" (click)="eliminarVideo(i)" title="Eliminar video">✕</button>
+                  </div>
+                } @else {
+                  <label class="btn-secondary file-btn">
+                    📹 Seleccionar video
+                    <input type="file" accept="video/*" (change)="onVideoChange(i, $event)" hidden />
+                  </label>
+                  @if (c.nuevoVideo) {
+                    <span class="file-selected">✅ {{ c.nuevoVideo.name }}</span>
+                  }
+                }
+              </div>
+
+              <div class="form-group">
+                <label>Archivos de soporte adicionales</label>
+                @if (c.archivos.length) {
+                  <ul class="archivos-list">
+                    @for (a of c.archivos; track a.idarchivo) {
+                      <li class="file-item">
+                        <span class="file-icon">📎</span>
+                        <span>{{ a.nombre_original }}</span>
+                        <button class="btn-icon btn-danger" (click)="eliminarArchivoSoporte(i, a)" title="Eliminar">✕</button>
+                      </li>
+                    }
+                  </ul>
+                }
+                <label class="btn-secondary file-btn" style="margin-top:8px">
+                  📎 Agregar archivos
+                  <input type="file" multiple (change)="onArchivosChange(i, $event)" hidden />
+                </label>
+                @if (c.nuevosArchivos?.length) {
+                  <span class="file-selected">✅ {{ c.nuevosArchivos!.length }} archivo(s) seleccionado(s)</span>
+                }
+              </div>
+
+              <div class="block-actions">
+                <button class="btn-danger-outline" (click)="eliminarContenidoItem(i)">🗑 Eliminar bloque</button>
+                <button class="btn-primary" [disabled]="guardandoContenido() === i" (click)="guardarContenido(i)">
+                  @if (guardandoContenido() === i) { <span class="spinner-sm"></span> } Guardar bloque
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ───── TAB: EVALUACIÓN ───── -->
+  @if (tabActiva() === 'evaluacion') {
+    <div class="tab-panel">
+      <div class="section-header">
+        <p class="section-desc">Las preguntas son de selección múltiple. El usuario necesita ≥ 80 puntos para aprobar.</p>
+        <button class="btn-primary" (click)="agregarPregunta()">+ Agregar Pregunta</button>
+      </div>
+
+      @if (!preguntas().length) {
+        <div class="empty-section">
+          <span>❓</span>
+          <p>No hay preguntas. ¡Agrega la primera!</p>
+        </div>
+      }
+
+      @for (p of preguntas(); track $index; let i = $index) {
+        <div class="block-card">
+          <div class="block-header" (click)="togglePregunta(i)">
+            <span class="block-number">{{ i + 1 }}</span>
+            <strong>{{ p.pregunta || 'Nueva pregunta' }}</strong>
+            <span class="block-toggle">{{ p.expandida ? '▲' : '▼' }}</span>
+          </div>
+
+          @if (p.expandida) {
+            <div class="block-body">
+              <div class="form-group">
+                <label>Pregunta <span class="req">*</span></label>
+                <textarea [(ngModel)]="p.pregunta" rows="2" placeholder="Escribe la pregunta..." class="input"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Opciones de respuesta <span class="req">*</span> <small>(haz clic en el círculo para marcar la correcta)</small></label>
+                @for (o of p.opciones; track $index; let oi = $index) {
+                  <div class="opcion-row">
+                    <button class="radio-btn" [class.correcta]="o.es_correcta" (click)="setCorrecta(i, oi)" title="Marcar como correcta">
+                      {{ o.es_correcta ? '✅' : '⭕' }}
+                    </button>
+                    <input type="text" [(ngModel)]="o.texto" placeholder="Opción {{ oi + 1 }}" class="input" />
+                    @if (p.opciones.length > 2) {
+                      <button class="btn-icon btn-danger" (click)="eliminarOpcion(i, oi)">✕</button>
+                    }
+                  </div>
+                }
+                @if (p.opciones.length < 6) {
+                  <button class="btn-secondary btn-sm" (click)="agregarOpcion(i)">+ Opción</button>
+                }
+              </div>
+
+              <div class="block-actions">
+                <button class="btn-danger-outline" (click)="eliminarPreguntaItem(i)">🗑 Eliminar pregunta</button>
+                <button class="btn-primary" [disabled]="guardandoPregunta() === i" (click)="guardarPregunta(i)">
+                  @if (guardandoPregunta() === i) { <span class="spinner-sm"></span> } Guardar pregunta
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+}

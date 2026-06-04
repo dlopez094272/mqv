@@ -1,0 +1,53 @@
+<div class="page-header">
+  <h2>Mis Cursos</h2>
+</div>
+
+@if (error()) {
+  <div class="alert-error">{{ error() }}</div>
+}
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando tus cursos...</div>
+} @else if (!cursos().length) {
+  <div class="empty-state">
+    <span class="empty-icon">🎓</span>
+    <h3>No tienes cursos asignados</h3>
+    <p>Cuando se te asigne un curso aparecerá aquí.</p>
+  </div>
+} @else {
+  <p class="subtitle">Tienes <strong>{{ cursos().length }}</strong> curso(s) asignado(s).</p>
+  <div class="cursos-grid">
+    @for (c of cursos(); track c.idcursos) {
+      <div class="curso-card" (click)="abrirCurso(c)">
+        <div class="curso-header" [style.background]="c.color">
+          @if (c.logo) {
+            <img [src]="logoUrl(c.logo)" alt="" class="curso-logo" />
+          } @else {
+            <div class="curso-logo-placeholder">📚</div>
+          }
+          @if (c.idevaluacion_aprobada) {
+            <div class="badge-aprobado">🏆 Aprobado</div>
+          }
+        </div>
+        <div class="curso-body">
+          <h3 class="curso-nombre">{{ c.nombre }}</h3>
+          @if (c.descripcion) {
+            <p class="curso-desc">{{ c.descripcion }}</p>
+          }
+          <div class="curso-status">
+            @if (c.idevaluacion_aprobada) {
+              <span class="status-chip aprobado">✅ Completado</span>
+            } @else {
+              <span class="status-chip pendiente">📖 Pendiente</span>
+            }
+          </div>
+        </div>
+        <div class="curso-footer">
+          <button class="btn-ver">
+            {{ c.idevaluacion_aprobada ? '🏅 Ver certificado' : '📖 Acceder al curso' }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}

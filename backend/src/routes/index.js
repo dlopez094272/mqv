@@ -18,5 +18,6 @@ router.use('/actividades', require('./actividades'));
 router.use('/personas',    require('./personas'));
 router.use('/reportes',    require('./reportes'));
 router.use('/tesoreria',   require('./tesoreria'));
+router.use('/crecimiento', require('./crecimiento'));
 
 module.exports = router;

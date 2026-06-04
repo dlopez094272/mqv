@@ -1,0 +1,82 @@
+<!-- Resultado de la evaluación -->
+@if (resultado(); as r) {
+  <div class="resultado-page">
+    @if (r.aprobado) {
+      <div class="resultado-card aprobado">
+        <div class="resultado-icon">🏆</div>
+        <h2>¡Felicitaciones!</h2>
+        <p class="puntaje">{{ r.puntaje }}%</p>
+        <p>Respondiste <strong>{{ r.correctas }} de {{ r.total }}</strong> preguntas correctamente.</p>
+        <p class="resultado-msg">Has aprobado el curso exitosamente.</p>
+        <div class="resultado-actions">
+          <button class="btn-certificado" (click)="verCertificado()">🏅 Ver mi Certificado</button>
+          <button class="btn-secondary" (click)="volverListado()">Volver a Mis Cursos</button>
+        </div>
+      </div>
+    } @else {
+      <div class="resultado-card reprobado">
+        <div class="resultado-icon">📝</div>
+        <h2>Sigue intentándolo</h2>
+        <p class="puntaje">{{ r.puntaje }}%</p>
+        <p>Respondiste <strong>{{ r.correctas }} de {{ r.total }}</strong> preguntas correctamente.</p>
+        <p class="resultado-msg">Necesitas al menos <strong>80%</strong> para aprobar. ¡Revisa el contenido y vuelve a intentarlo!</p>
+        <div class="resultado-actions">
+          <button class="btn-primary" (click)="volver()">📖 Revisar Contenido</button>
+          <button class="btn-secondary" (click)="cargar()">🔄 Intentar de Nuevo</button>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+
+  <!-- Formulario de evaluación -->
+  <div class="eval-header">
+    <button class="btn-back" (click)="volver()">← Volver al curso</button>
+    <h2>Evaluación del Curso</h2>
+    <p class="eval-subtitle">Selecciona la respuesta correcta para cada pregunta. Necesitas <strong>80%</strong> para aprobar.</p>
+  </div>
+
+  @if (error()) {
+    <div class="alert-error">{{ error() }}</div>
+  }
+
+  @if (cargando()) {
+    <div class="loading-state"><span class="spinner"></span> Cargando preguntas...</div>
+  } @else {
+    <div class="preguntas-list">
+      @for (p of preguntas(); track p.idpregunta; let i = $index) {
+        <div class="pregunta-card" [class.respondida]="respuestas()[i]?.idopcion !== null">
+          <div class="pregunta-numero">{{ i + 1 }}</div>
+          <div class="pregunta-content">
+            <p class="pregunta-texto">{{ p.pregunta }}</p>
+            <div class="opciones-list">
+              @for (o of p.opciones; track o.idopcion) {
+                <div class="opcion-item"
+                     [class.seleccionada]="estaSeleccionado(p.idpregunta, o.idopcion)"
+                     (click)="seleccionar(p.idpregunta, o.idopcion)">
+                  <div class="opcion-radio">
+                    @if (estaSeleccionado(p.idpregunta, o.idopcion)) {
+                      <div class="radio-check"></div>
+                    }
+                  </div>
+                  <span>{{ o.texto }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="eval-footer">
+      <div class="progress-info">
+        {{ respuestas().filter(r => r.idopcion !== null).length }} / {{ preguntas().length }} respondidas
+      </div>
+      <button class="btn-enviar"
+              [disabled]="!todasRespondidas() || enviando()"
+              (click)="enviar()">
+        @if (enviando()) { <span class="spinner-sm"></span> } Enviar Evaluación
+      </button>
+    </div>
+  }
+}

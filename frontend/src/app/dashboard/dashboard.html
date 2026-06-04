@@ -20,3 +20,38 @@
     }
   </div>
 </div>
+
+<!-- Mis Logros -->
+@if (cargandoLogros()) {
+  <div class="logros-loading"><span class="logros-spinner"></span> Cargando logros...</div>
+} @else if (logros().length) {
+  <div class="logros-section">
+    <div class="logros-header">
+      <h3 class="logros-title">🏆 Mis Logros</h3>
+      <span class="logros-count">{{ logros().length }} curso(s) completado(s)</span>
+    </div>
+    <div class="logros-grid">
+      @for (l of logros(); track l.idcursos) {
+        <div class="logro-card">
+          <div class="logro-badge" [style.background]="l.color">
+            @if (l.logo) {
+              <img [src]="logoUrl(l.logo)" alt="" class="logro-logo" />
+            } @else {
+              <span class="logro-logo-icon">📚</span>
+            }
+            <div class="logro-medal">🏅</div>
+          </div>
+          <div class="logro-info">
+            <div class="logro-nombre">{{ l.nombre }}</div>
+            <div class="logro-puntaje">{{ l.puntaje }}% · {{ formatFecha(l.completado_at) }}</div>
+          </div>
+          <div class="logro-actions">
+            <button class="btn-logro" (click)="verCertificado(l.idcursos)" title="Reimprimir certificado">
+              🖨️
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}

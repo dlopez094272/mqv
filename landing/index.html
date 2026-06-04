@@ -150,6 +150,7 @@
     #main {
       opacity: 0;
       transition: opacity .7s ease;
+      padding-top: 72px;
     }
     #main.visible { opacity: 1; }
 
@@ -202,7 +203,7 @@
     }
 
     .nav-logo {
-      height: 42px;
+      height: 58px;
       filter: brightness(0) invert(1);
       opacity: .92;
       transition: opacity .2s, transform .2s;
@@ -371,8 +372,8 @@
     /* ── HERO ──────────────────────────────────────────── */
     .hero {
       position: relative;
-      height: 100vh;
-      min-height: 620px;
+      height: calc(100vh - 72px);
+      min-height: 548px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1156,6 +1157,8 @@
     /* ── RESPONSIVE ────────────────────────────────────── */
     @media (max-width: 820px) {
       .navbar { padding: 0 20px; height: 64px; }
+      #main { padding-top: 64px; }
+      .hero { height: calc(100vh - 64px); min-height: 484px; }
       .btn-portal { display: none; }
       .info-grid { grid-template-columns: 1fr; max-width: 380px; margin: 0 auto; }
       .welcome-grid { grid-template-columns: 1fr; }

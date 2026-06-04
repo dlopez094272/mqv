@@ -1,0 +1,113 @@
+@if (cargando()) {
+  <div class="loading-state">
+    <span class="spinner"></span>
+    <p>Preparando certificado...</p>
+  </div>
+} @else if (error()) {
+  <div class="error-state">
+    <p>{{ error() }}</p>
+    <button (click)="cerrar()">Cerrar</button>
+  </div>
+} @else if (datos(); as d) {
+
+  <!-- Barra de acciones (no se imprime) -->
+  <div class="no-print action-bar">
+    <button class="btn-print" (click)="imprimir()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn-close" (click)="cerrar()">✕ Cerrar</button>
+  </div>
+
+  <!-- Certificado -->
+  <div class="certificado-page">
+    <div class="cert-border">
+      <div class="cert-inner">
+
+        <!-- Header con logos -->
+        <div class="cert-header">
+          <div class="cert-header-logo">
+            <img src="/logo.png" alt="Iglesia del Nazareno" class="iglesia-logo"
+                 onerror="this.style.display='none'" />
+          </div>
+          <div class="cert-header-center">
+            <div class="cert-iglesia-name">Iglesia del Nazareno</div>
+            <div class="cert-iglesia-sub">Más que Vencedores</div>
+          </div>
+          @if (d.curso_logo) {
+            <div class="cert-header-logo">
+              <div class="curso-logo-wrap" [style.background]="d.curso_color">
+                <img [src]="logoUrl(d.curso_logo)" alt="{{ d.curso_nombre }}" class="curso-logo-cert" />
+              </div>
+            </div>
+          } @else {
+            <div class="cert-header-logo">
+              <div class="curso-logo-wrap" [style.background]="d.curso_color">
+                <span class="curso-logo-icon">📚</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="cert-divider"></div>
+
+        <!-- Título -->
+        <div class="cert-title-section">
+          <div class="cert-label">CERTIFICADO DE APROBACIÓN</div>
+          <div class="cert-subtitle">Se certifica que</div>
+        </div>
+
+        <!-- Nombre del usuario -->
+        <div class="cert-nombre">{{ d.nombre_completo }}</div>
+
+        <!-- Texto del certificado -->
+        <div class="cert-body-text">
+          ha completado satisfactoriamente el curso
+        </div>
+
+        <!-- Nombre del curso -->
+        <div class="cert-curso-nombre" [style.color]="d.curso_color">{{ d.curso_nombre }}</div>
+
+        <!-- Puntaje -->
+        <div class="cert-puntaje">
+          con una calificación de <strong>{{ d.puntaje }}%</strong>
+        </div>
+
+        <div class="cert-divider cert-divider-sm"></div>
+
+        <!-- Fecha -->
+        <div class="cert-fecha-section">
+          <div class="cert-fecha-label">Fecha de obtención</div>
+          <div class="cert-fecha">{{ formatFecha(d.completado_at) }}</div>
+        </div>
+
+        <!-- Firmas -->
+        <div class="cert-firmas">
+          <div class="firma-block">
+            <div class="firma-line"></div>
+            <div class="firma-label">Director General</div>
+            <div class="firma-org">Iglesia del Nazareno — MQV</div>
+          </div>
+          <div class="cert-sello">
+            <div class="sello-circle" [style.border-color]="d.curso_color">
+              <img src="/logo.png" alt="" class="sello-logo"
+                   onerror="this.style.display='none'" />
+              <div class="sello-text">MQV</div>
+            </div>
+          </div>
+          <div class="firma-block">
+            <div class="firma-line"></div>
+            <div class="firma-label">Coordinador de Formación</div>
+            <div class="firma-org">Más que Vencedores</div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="cert-footer">
+          <div class="cert-footer-line"></div>
+          <div class="cert-footer-text">
+            Iglesia del Nazareno · Más que Vencedores · {{ hoy.getFullYear() }}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}

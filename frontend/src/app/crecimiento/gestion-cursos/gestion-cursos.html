@@ -1,0 +1,145 @@
+<div class="page-header">
+  <h2>Gestión de Cursos y Contenido</h2>
+  @if (permisos.puede('cursos', 'A')) {
+    <button class="btn-primary" (click)="nuevo()">+ Nuevo Curso</button>
+  }
+</div>
+
+@if (exito()) {
+  <div class="alert-success">{{ exito() }}</div>
+}
+@if (error()) {
+  <div class="alert-error">{{ error() }}</div>
+}
+
+<div class="search-bar">
+  <input type="text" [(ngModel)]="busqueda" (ngModelChange)="filtrar()"
+         placeholder="Buscar curso..." class="input-search" />
+</div>
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else if (!filtrados().length) {
+  <div class="empty-state">
+    <span class="empty-icon">📚</span>
+    <p>{{ cursos().length ? 'No hay cursos que coincidan con la búsqueda.' : 'No hay cursos creados aún.' }}</p>
+    @if (!cursos().length && permisos.puede('cursos', 'A')) {
+      <button class="btn-primary" (click)="nuevo()">Crear primer curso</button>
+    }
+  </div>
+} @else {
+  <div class="cursos-grid">
+    @for (c of filtrados(); track c.idcursos) {
+      <div class="curso-card" [class.inactivo]="!c.activo">
+        <div class="curso-card-header" [style.background]="c.color">
+          @if (c.logo) {
+            <img [src]="logoUrl(c.logo)" alt="" class="curso-logo" />
+          } @else {
+            <div class="curso-logo-placeholder">📚</div>
+          }
+          @if (!c.activo) {
+            <span class="badge-inactivo">Inactivo</span>
+          }
+        </div>
+        <div class="curso-card-body">
+          <h3 class="curso-nombre">{{ c.nombre }}</h3>
+          @if (c.descripcion) {
+            <p class="curso-desc">{{ c.descripcion }}</p>
+          }
+          <div class="curso-stats">
+            <span class="stat"><span class="stat-icon">📄</span> {{ c.total_contenido }} contenido(s)</span>
+            <span class="stat"><span class="stat-icon">❓</span> {{ c.total_preguntas }} pregunta(s)</span>
+            <span class="stat"><span class="stat-icon">👤</span> {{ c.total_asignados }} asignado(s)</span>
+          </div>
+        </div>
+        <div class="curso-card-footer">
+          @if (permisos.puede('cursos', 'E')) {
+            <button class="btn-action" (click)="editar(c)" title="Editar">✏️ Editar</button>
+          }
+          @if (permisos.puede('cursos', 'E')) {
+            <button class="btn-action" (click)="abrirAsig(c)" title="Asignar usuarios">👥 Asignar</button>
+            <button class="btn-action" [class.btn-danger]="c.activo" (click)="toggle(c)">
+              {{ c.activo ? '🔴 Inactivar' : '🟢 Activar' }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Modal asignaciones -->
+@if (modalAsig()) {
+  <div class="modal-overlay" (click)="cerrarAsig()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Asignar Usuarios — {{ cursoAsig()?.nombre }}</h3>
+        <button class="btn-close" (click)="cerrarAsig()">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (errorAsig()) {
+          <div class="alert-error">{{ errorAsig() }}</div>
+        }
+
+        @if (cargandoAsig()) {
+          <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+        } @else {
+          <!-- Asignados actualmente -->
+          <div class="asig-section">
+            <h4>Usuarios asignados ({{ asignaciones().length }})</h4>
+            @if (!asignaciones().length) {
+              <p class="text-muted">Ningún usuario asignado aún.</p>
+            } @else {
+              <ul class="asig-list">
+                @for (a of asignaciones(); track a.idasignacion) {
+                  <li class="asig-item">
+                    <span class="asig-avatar">{{ (a.nombre_completo || a.usuario)[0].toUpperCase() }}</span>
+                    <div class="asig-info">
+                      <strong>{{ a.nombre_completo }}</strong>
+                      <span class="text-muted">{{ a.usuario }}</span>
+                    </div>
+                    @if (a.aprobado) {
+                      <span class="badge-aprobado">✅ Aprobado</span>
+                    }
+                    @if (permisos.puede('cursos', 'E')) {
+                      <button class="btn-icon btn-danger" (click)="quitarAsig(a)" title="Quitar">✕</button>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <!-- Agregar nuevos -->
+          @if (permisos.puede('cursos', 'E') && disponibles().length) {
+            <div class="asig-section">
+              <h4>Agregar usuarios</h4>
+              <ul class="asig-list disponibles-list">
+                @for (u of disponibles(); track u.usuario) {
+                  <li class="asig-item clickable"
+                      [class.selected]="seleccionados().has(u.usuario)"
+                      (click)="toggleSeleccion(u.usuario)">
+                    <input type="checkbox" [checked]="seleccionados().has(u.usuario)" />
+                    <span class="asig-avatar">{{ (u.nombre_completo || u.usuario)[0].toUpperCase() }}</span>
+                    <div class="asig-info">
+                      <strong>{{ u.nombre_completo }}</strong>
+                      <span class="text-muted">{{ u.usuario }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="cerrarAsig()">Cerrar</button>
+        @if (permisos.puede('cursos', 'E') && seleccionados().size) {
+          <button class="btn-primary" (click)="guardarAsig()">
+            Asignar {{ seleccionados().size }} usuario(s)
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
