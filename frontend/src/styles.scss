@@ -536,6 +536,61 @@ table {
   flex-shrink: 0;
 }
 
+/* ── Mobile responsive global ────────────────────────────────── */
+@media (max-width: 767px) {
+  html, body { font-size: 14px; }
+
+  /* Tables scroll horizontally instead of overflowing */
+  .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Page header stacks title and actions */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    h2 { font-size: 18px; }
+  }
+
+  /* Form rows stack vertically */
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Full-screen modals on mobile */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    animation: slideUp .25s ease;
+  }
+
+  /* Auth card full width */
+  .auth-card { border-radius: 12px; }
+  .auth-body { padding: 22px 20px 26px; }
+  .auth-header { padding: 24px 20px 20px; }
+
+  /* Tabs: scrollable horizontally */
+  .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .tabs .tab { white-space: nowrap; }
+
+  /* Input search full width on mobile */
+  .input-search { max-width: 100%; }
+
+  /* Form actions: full-width buttons stack */
+  .form-actions { flex-direction: column-reverse; gap: 8px; }
+  .form-actions .btn,
+  .form-actions button { width: 100%; justify-content: center; }
+
+  /* Reduce search bar margin */
+  .search-bar { margin-bottom: 12px; }
+}
+
+@keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 /* ── Impresión global: ocultar shell y mostrar solo contenido ── */
 @media print {
   /* Ocultar sidebar, topbar y session-guard */

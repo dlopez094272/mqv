@@ -1,0 +1,345 @@
+/* ── Cabecera ────────────────────────────────────────────────── */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  h2 { margin: 0; }
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 80px 20px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.spinner-lg {
+  width: 28px; height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+/* ── KPIs ────────────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.kpi-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-left: 4px solid transparent;
+
+  .kpi-icon { font-size: 26px; }
+}
+
+.kpi-body {
+  display: flex;
+  flex-direction: column;
+  .kpi-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; }
+  .kpi-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+}
+
+.kpi-total      { border-left-color: var(--primary); }
+.kpi-hombres    { border-left-color: #1565c0; }
+.kpi-mujeres    { border-left-color: #c2185b; }
+.kpi-convertidos{ border-left-color: #2e7d32; }
+.kpi-bautizados { border-left-color: #0277bd; }
+
+/* ── Layout de secciones ─────────────────────────────────────── */
+.stats-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 24px;
+  margin-bottom: 0;
+
+  .reporte-seccion { margin-bottom: 0; }
+}
+
+.reporte-seccion {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+
+.seccion-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 18px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.chart-wrap {
+  flex: 1;
+  min-width: 220px;
+}
+
+.table-wrap {
+  flex: 1;
+  min-width: 200px;
+  overflow-x: auto;
+}
+
+/* ── Donut chart ─────────────────────────────────────────────── */
+.donut-chart {
+  width: 140px;
+  height: 140px;
+  display: block;
+  margin: 0 auto 12px;
+}
+
+.donut-leyenda {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.9;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* ── Estado eclesial ─────────────────────────────────────────── */
+.eclesial-bars { display: flex; flex-direction: column; gap: 18px; padding-top: 8px; }
+
+.eclesial-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.eclesial-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bar-pct { font-size: 11px; color: var(--text-muted); }
+
+/* ── Barras horizontales ─────────────────────────────────────── */
+.hbar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hbar-label {
+  font-size: 12px;
+  color: var(--text);
+  min-width: 100px;
+  max-width: 100px;
+  display: flex;
+  flex-direction: column;
+  small { font-size: 10px; color: var(--text-muted); }
+}
+
+.hbar-label-wide { min-width: 140px; max-width: 140px; }
+
+.hbar-track {
+  flex: 1;
+  height: 18px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hbar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--primary);
+  transition: width .4s;
+}
+.hbar-fill-depto { background: #0288d1; }
+.hbar-fill-nac   { background: #388e3c; }
+.hbar-fill-prof  { background: #e65100; }
+
+.hbar-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 28px;
+  text-align: right;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 20px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .4s;
+}
+.bar-conv { background: #2e7d32; }
+.bar-baut { background: #0277bd; }
+.bar-val  { font-size: 13px; font-weight: 700; min-width: 30px; text-align: right; }
+
+/* ── Barras verticales (años) ────────────────────────────────── */
+.chart-anio { min-height: 160px; }
+
+.vbars-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.vbar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 36px;
+}
+
+.vbar-val  { font-size: 11px; font-weight: 700; color: var(--text); }
+.vbar-label{ font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+
+.vbar-track {
+  width: 28px;
+  height: 120px;
+  background: var(--bg);
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.vbar-fill {
+  width: 100%;
+  background: var(--primary);
+  border-radius: 4px 4px 0 0;
+  transition: height .4s;
+  min-height: 2px;
+}
+
+/* ── Tabla estadística ───────────────────────────────────────── */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th, td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  th {
+    background: var(--bg);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--text-muted);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg); }
+  tfoot td {
+    background: var(--bg);
+    border-top: 2px solid var(--border);
+    padding: 8px 10px;
+  }
+}
+
+.num  { text-align: right !important; }
+.muted{ color: var(--text-muted); font-size: 12px; }
+
+.dot-m  { display:inline-block; width:10px; height:10px; border-radius:50%; background:#1565c0; margin-right:5px; vertical-align:middle; }
+.dot-f  { display:inline-block; width:10px; height:10px; border-radius:50%; background:#c2185b; margin-right:5px; vertical-align:middle; }
+.dot-nd { display:inline-block; width:10px; height:10px; border-radius:50%; background:#9e9e9e; margin-right:5px; vertical-align:middle; }
+
+/* ── Barras de género ────────────────────────────────────────── */
+.gender-bars   { display: flex; flex-direction: column; gap: 16px; }
+.gender-item   { display: flex; flex-direction: column; gap: 4px; }
+.gender-header { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); }
+.gender-pct    { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+
+.bar-m  { background: #1565c0; }
+.bar-f  { background: #c2185b; }
+.bar-nd { background: #9e9e9e; }
+
+/* ── Impresión ───────────────────────────────────────────────── */
+.print-header { display: none; }
+
+.print-titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  strong { font-size: 11px; color: #57446c; text-transform: uppercase; }
+  h2 { margin: 0; font-size: 20px; }
+}
+
+@media print {
+  .no-print  { display: none !important; }
+  .print-only{ display: block !important; }
+
+  .print-header {
+    padding-bottom: 14px;
+    border-bottom: 2px solid #57446c;
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+  }
+
+  .kpi-grid { gap: 8px; margin-bottom: 20px; }
+  .kpi-card { padding: 10px 14px; border-radius: 6px; }
+  .kpi-body .kpi-value { font-size: 22px; }
+
+  .reporte-seccion {
+    page-break-inside: avoid;
+    margin-bottom: 16px;
+    box-shadow: none;
+    border: 1px solid #ddd;
+    padding: 14px 16px;
+  }
+
+  .stats-table {
+    th { background: #f0eaf7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; color: #57446c !important; }
+    tbody tr:hover td { background: transparent !important; }
+    tfoot td { background: #f8f5ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  .hbar-fill, .bar-fill, .vbar-fill {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page { margin: 18mm 14mm; size: A4 portrait; }
+}

@@ -16,12 +16,14 @@ import { CorreoService } from '../../correo/correo.service';
   styleUrl: './shell.scss',
 })
 export class ShellComponent {
-  sidebarOpen      = signal(true);
+  sidebarOpen      = signal(window.innerWidth >= 768);
   seguridadOpen    = signal(false);
   catalogosOpen    = signal(false);
   actividadesOpen  = signal(false);
   reportesOpen     = signal(false);
   crecimientoOpen  = signal(false);
+
+  get isMobile() { return window.innerWidth < 768; }
 
   constructor(
     public auth:       AuthService,
@@ -31,6 +33,7 @@ export class ShellComponent {
     private inactividad: InactividadService,
   ) {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe((e: any) => {
+      if (this.isMobile) this.sidebarOpen.set(false);
       if (e.url.startsWith('/seguridad'))    this.seguridadOpen.set(true);
       if (e.url.startsWith('/catalogos'))   this.catalogosOpen.set(true);
       if (e.url.startsWith('/actividades')) this.actividadesOpen.set(true);
@@ -79,5 +82,9 @@ export class ShellComponent {
 
   tieneCrecimiento(): boolean {
     return this.permisos.puede('cursos', 'S') || this.permisos.puede('mis_cursos', 'S');
+  }
+
+  tieneCorreo(): boolean {
+    return this.auth.isSuperadmin() || this.permisos.puede('correo', 'S');
   }
 }

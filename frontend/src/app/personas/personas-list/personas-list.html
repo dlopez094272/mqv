@@ -1,12 +1,13 @@
 <div class="page-header">
   <div class="header-left">
     <h2>👤 Personas</h2>
-    <span class="total-badge">{{ personas().length }} registros</span>
+    <span class="total-badge">{{ totalRegistros() }} registros</span>
   </div>
   <div class="header-actions">
     @if (permisos.puede('personas', 'S')) {
+      <a routerLink="/reportes/personas" class="btn btn-outline-blue btn-sm">📊 Estadísticas</a>
       <button class="btn btn-outline-blue btn-sm" (click)="exportar()" [disabled]="exportando()">
-        @if (exportando()) { <span class="spinner"></span> } @else { 📊 }
+        @if (exportando()) { <span class="spinner"></span> } @else { 📥 }
         Exportar Excel
       </button>
     }
@@ -24,7 +25,7 @@
 <div class="filtros-bar">
   <div class="filtros-row">
     <div class="filtro-item filtro-nombre">
-      <input type="text" [(ngModel)]="filtros.nombre" (keyup.enter)="cargar()"
+      <input type="text" [(ngModel)]="filtros.nombre" (keyup.enter)="buscar()"
              placeholder="🔍 Buscar por nombre..." />
     </div>
     <div class="filtro-item">
@@ -49,13 +50,13 @@
     <div class="filtro-item filtro-edad">
       <label>Edad</label>
       <div class="edad-range">
-        <input type="number" [(ngModel)]="edadMin" min="0" max="120" placeholder="Min" />
+        <input type="number" [(ngModel)]="filtros.edad_min" min="0" max="120" placeholder="Min" />
         <span>—</span>
-        <input type="number" [(ngModel)]="edadMax" min="0" max="120" placeholder="Máx" />
+        <input type="number" [(ngModel)]="filtros.edad_max" min="0" max="120" placeholder="Máx" />
       </div>
     </div>
     <div class="filtro-actions">
-      <button class="btn btn-secondary btn-sm" (click)="cargar()">Buscar</button>
+      <button class="btn btn-secondary btn-sm" (click)="buscar()">Buscar</button>
       <button class="btn btn-outline btn-sm"   (click)="limpiarFiltros()">Limpiar</button>
     </div>
   </div>
@@ -68,6 +69,7 @@
     <table>
       <thead>
         <tr>
+          <th style="width:44px;" class="col-id">#ID</th>
           <th style="width:52px;"></th>
           <th>Nombre</th>
           <th>Edad</th>
@@ -81,6 +83,7 @@
       <tbody>
         @for (p of personas(); track p.idpersonas) {
           <tr>
+            <td class="col-id"><span class="id-badge">{{ p.idpersonas }}</span></td>
             <td>
               @if (p.foto) {
                 <img [src]="fotoUrl(p.foto)" class="avatar-foto" [alt]="p.nombre_completo"
@@ -117,13 +120,36 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="8" class="empty-row">No se encontraron personas con los filtros aplicados</td>
+            <td colspan="9" class="empty-row">No se encontraron personas con los filtros aplicados</td>
           </tr>
         }
       </tbody>
     </table>
   </div>
-  <div class="table-footer">{{ personas().length }} persona(s) encontrada(s)</div>
+
+  <!-- Paginación -->
+  @if (totalPaginas() > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">
+        Página {{ paginaActual() }} de {{ totalPaginas() }} · {{ totalRegistros() }} registros
+      </span>
+      <div class="pagination-controls">
+        <button class="btn-page" [disabled]="paginaActual() === 1" (click)="irPagina(1)" title="Primera">«</button>
+        <button class="btn-page" [disabled]="paginaActual() === 1" (click)="irPagina(paginaActual() - 1)" title="Anterior">‹</button>
+        @for (p of paginas(); track $index) {
+          @if (p === '...') {
+            <span class="page-dots">…</span>
+          } @else {
+            <button class="btn-page" [class.active]="p === paginaActual()" (click)="irPagina(p)">{{ p }}</button>
+          }
+        }
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(paginaActual() + 1)" title="Siguiente">›</button>
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(totalPaginas())" title="Última">»</button>
+      </div>
+    </div>
+  } @else {
+    <div class="table-footer">{{ totalRegistros() }} persona(s) encontrada(s)</div>
+  }
 }
 
 <!-- ═══════ MODAL CREAR USUARIO ═══════ -->

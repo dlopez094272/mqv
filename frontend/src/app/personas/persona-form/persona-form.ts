@@ -135,6 +135,7 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
         next: (p: any) => {
           this.idpersonas = p.idpersonas;
           this.modelo = { ...p };
+          this.normalizarFechas(this.modelo);
           this.gruposPersona = (p.grupos || []).map((g: any) => ({
             idgrupos: g.idgrupos, idgrupos_personas: g.idgrupos_personas, grupo: g.grupo,
           }));
@@ -384,12 +385,25 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   }
   quitarGrupo(idgrupos: number) { this.gruposPersona = this.gruposPersona.filter(g => g.idgrupos!==idgrupos); }
 
+  private toDateStr(val: any): string {
+    if (!val) return '';
+    const s = val instanceof Date ? val.toISOString() : String(val);
+    return s.substring(0, 10);
+  }
+
+  private normalizarFechas(m: any) {
+    for (const f of ['fechanacimiento','fecha_inicio_asistencia','fechaconversion','fechabautiso']) {
+      if (m[f]) m[f] = this.toDateStr(m[f]);
+    }
+  }
+
   // ── Cargar persona ───────────────────────────────────────────
   cargarPersona() {
     this.cargando.set(true);
     this.svc.obtener(this.idpersonas).subscribe({
       next: (p) => {
         this.modelo = { ...p };
+        this.normalizarFechas(this.modelo);
         this.gruposPersona = (p.grupos||[]).map(g => ({ idgrupos:g.idgrupos, idgrupos_personas:g.idgrupos_personas, grupo:g.grupo }));
         if (p.foto) this.fotoPreview.set(this.svc.fotoUrl(p.foto));
         if (this.modelo.iddepartamentos_nacimiento) this.onDeptNacChange();
@@ -443,6 +457,9 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
     }
     if (!this.modelo.fechanacimiento) {
       this.error.set('Fecha de nacimiento es requerida'); this.tabActivo.set('personales'); return;
+    }
+    if (!this.esEdicion && !this.modoPerfil && this.gruposPersona.length === 0) {
+      this.error.set('Debe asignar al menos un grupo a la persona'); this.tabActivo.set('grupos'); return;
     }
 
     this.guardando.set(true);

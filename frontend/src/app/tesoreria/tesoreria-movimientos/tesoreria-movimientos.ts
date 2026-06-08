@@ -74,6 +74,29 @@ export class TesoreriaMovimientosComponent implements OnInit {
     });
   });
 
+  // ── Paginación ────────────────────────────────────────────────
+  readonly LIMITE = 50;
+  paginaActual  = signal(1);
+  totalPaginas  = computed(() => Math.ceil(this.filas().length / this.LIMITE));
+  filasPagina   = computed(() => {
+    const start = (this.paginaActual() - 1) * this.LIMITE;
+    return this.filas().slice(start, start + this.LIMITE);
+  });
+  paginas = computed(() => {
+    const total = this.totalPaginas(); const actual = this.paginaActual();
+    if (total <= 1) return [];
+    const rango: (number | '...')[] = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= actual - 2 && i <= actual + 2)) rango.push(i);
+      else if (rango[rango.length - 1] !== '...') rango.push('...');
+    }
+    return rango;
+  });
+  irPagina(p: number | '...') {
+    if (p === '...' || (p as number) < 1 || (p as number) > this.totalPaginas()) return;
+    this.paginaActual.set(p as number);
+  }
+
   // ── Computed: totales ─────────────────────────────────────────
   totalIngresos = computed(() =>
     this.movimientos().filter(m => !m.anulado)

@@ -189,6 +189,11 @@ export const routes: Routes = [
         canActivate: [permissionGuard('actividades', 'S')],
         loadComponent: () => import('./reportes/reportes-actividades/reportes-actividades').then(m => m.ReportesActividadesComponent),
       },
+      {
+        path: 'reportes/personas',
+        canActivate: [permissionGuard('personas', 'S')],
+        loadComponent: () => import('./reportes/reportes-personas/reportes-personas').then(m => m.ReportesPersonasComponent),
+      },
       // Crecimiento — Gestión de Cursos (permiso: cursos)
       {
         path: 'crecimiento/cursos',
@@ -224,6 +229,7 @@ export const routes: Routes = [
       // Correo
       {
         path: 'correo',
+        canActivate: [permissionGuard('correo', 'S')],
         loadComponent: () => import('./correo/correo.component').then(m => m.CorreoComponent),
       },
       // Personas

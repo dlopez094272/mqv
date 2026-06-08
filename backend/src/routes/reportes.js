@@ -209,4 +209,108 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
   } catch (err) { next(err); }
 });
 
+/* ─────────────────────────────────────────────────────────────
+   GET /reportes/personas
+   Permiso: personas:S
+   Devuelve estadísticas globales de personas:
+     - por género, por rango de edad, por nacionalidad,
+     - convertidos, bautizados, por año de inicio asistencia,
+     - por departamento de nacimiento, por profesión
+   ───────────────────────────────────────────────────────────── */
+router.get('/personas', checkPermission('personas', 'S'), async (req, res, next) => {
+  try {
+    // ── Alcance (mismo filtro de visibilidad que listar) ────────
+    let baseWhere = 'WHERE 1=1';
+    const baseParams = [];
+    if (!req.user.is_superadmin) {
+      baseWhere += ` AND p.idpersonas IN (
+        SELECT gp.idpersonas FROM grupos_personas gp
+        INNER JOIN grupos_encargados ge ON ge.idgrupos = gp.idgrupos
+        WHERE ge.idpersonas = (SELECT idpersonas FROM usuarios WHERE usuario = ? LIMIT 1)
+      )`;
+      baseParams.push(req.user.usuario);
+    }
+
+    // ── Total general ───────────────────────────────────────────
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM personas p ${baseWhere}`, baseParams);
+
+    // ── Por género ──────────────────────────────────────────────
+    const [porGenero] = await pool.query(`
+      SELECT
+        SUM(CASE WHEN p.sexo = 'M' THEN 1 ELSE 0 END) AS hombres,
+        SUM(CASE WHEN p.sexo = 'F' THEN 1 ELSE 0 END) AS mujeres,
+        SUM(CASE WHEN p.sexo NOT IN ('M','F') OR p.sexo IS NULL THEN 1 ELSE 0 END) AS sin_dato
+      FROM personas p ${baseWhere}`, baseParams);
+
+    // ── Por rango de edad ───────────────────────────────────────
+    const [porEdad] = await pool.query(`
+      SELECT
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 0  AND 2   THEN 1 ELSE 0 END) AS bebes,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 3  AND 12  THEN 1 ELSE 0 END) AS ninos,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 13 AND 17  THEN 1 ELSE 0 END) AS adolescentes,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 18 AND 25  THEN 1 ELSE 0 END) AS jovenes,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 26 AND 59  THEN 1 ELSE 0 END) AS adultos,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) >= 60              THEN 1 ELSE 0 END) AS adultos_mayores,
+        SUM(CASE WHEN p.fechanacimiento IS NULL                                          THEN 1 ELSE 0 END) AS sin_fecha
+      FROM personas p ${baseWhere}`, baseParams);
+
+    // ── Convertidos y bautizados ────────────────────────────────
+    const [[eclesial]] = await pool.query(`
+      SELECT
+        SUM(CASE WHEN p.fechaconversion IS NOT NULL THEN 1 ELSE 0 END) AS convertidos,
+        SUM(CASE WHEN p.fechabautiso    IS NOT NULL THEN 1 ELSE 0 END) AS bautizados
+      FROM personas p ${baseWhere}`, baseParams);
+
+    // ── Por nacionalidad ────────────────────────────────────────
+    const [porNacionalidad] = await pool.query(`
+      SELECT COALESCE(n.nacionalidad, 'Sin dato') AS etiqueta, COUNT(*) AS cantidad
+      FROM personas p
+      LEFT JOIN nacionalidades n ON n.idnacionalidades = p.idnacionalidades
+      ${baseWhere}
+      GROUP BY n.idnacionalidades, n.nacionalidad
+      ORDER BY cantidad DESC
+      LIMIT 20`, baseParams);
+
+    // ── Por año de inicio de asistencia ────────────────────────
+    const [porAnioAsistencia] = await pool.query(`
+      SELECT YEAR(p.fecha_inicio_asistencia) AS anio, COUNT(*) AS cantidad
+      FROM personas p
+      ${baseWhere} AND p.fecha_inicio_asistencia IS NOT NULL
+      GROUP BY YEAR(p.fecha_inicio_asistencia)
+      ORDER BY anio ASC`, baseParams);
+
+    // ── Por departamento de nacimiento ──────────────────────────
+    const [porDepartamento] = await pool.query(`
+      SELECT COALESCE(d.departamento, 'Sin dato') AS etiqueta, COUNT(*) AS cantidad
+      FROM personas p
+      LEFT JOIN departamentos d ON d.iddepartamentos = p.iddepartamentos_nacimiento
+      ${baseWhere}
+      GROUP BY d.iddepartamentos, d.departamento
+      ORDER BY cantidad DESC
+      LIMIT 25`, baseParams);
+
+    // ── Por profesión ───────────────────────────────────────────
+    const [porProfesion] = await pool.query(`
+      SELECT COALESCE(pr.profesion, 'Sin dato') AS etiqueta, COUNT(*) AS cantidad
+      FROM personas p
+      LEFT JOIN profesiones pr ON pr.idprofesiones = p.idprofesiones
+      ${baseWhere}
+      GROUP BY pr.idprofesiones, pr.profesion
+      ORDER BY cantidad DESC
+      LIMIT 20`, baseParams);
+
+    res.json({
+      total,
+      por_genero:         porGenero[0],
+      por_edad:           porEdad[0],
+      eclesial,
+      por_nacionalidad:   porNacionalidad,
+      por_anio_asistencia: porAnioAsistencia,
+      por_departamento:   porDepartamento,
+      por_profesion:      porProfesion,
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

@@ -175,7 +175,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (act of actividades(); track act.idactividades) {
+        @for (act of tabPaginados(); track act.idactividades) {
           <tr>
             <td>
               @if (act.logo) {
@@ -233,7 +233,23 @@
       </tbody>
     </table>
   </div>
-  <div class="table-footer">{{ actividades().length }} actividad(es)</div>
+  @if (tabTotalPag() > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Página {{ tabPagina() }} de {{ tabTotalPag() }} · {{ actividades().length }} actividades</span>
+      <div class="pagination-controls">
+        <button class="btn-page" [disabled]="tabPagina() === 1"              (click)="tabIrPagina(1)">«</button>
+        <button class="btn-page" [disabled]="tabPagina() === 1"              (click)="tabIrPagina(tabPagina() - 1)">‹</button>
+        @for (p of tabPaginas(); track $index) {
+          @if (p === '...') { <span class="page-dots">…</span> }
+          @else { <button class="btn-page" [class.active]="p === tabPagina()" (click)="tabIrPagina(p)">{{ p }}</button> }
+        }
+        <button class="btn-page" [disabled]="tabPagina() === tabTotalPag()" (click)="tabIrPagina(tabPagina() + 1)">›</button>
+        <button class="btn-page" [disabled]="tabPagina() === tabTotalPag()" (click)="tabIrPagina(tabTotalPag())">»</button>
+      </div>
+    </div>
+  } @else {
+    <div class="table-footer">{{ actividades().length }} actividad(es)</div>
+  }
 }
 
 <!-- ════════════════════════════════════════════════════════════ -->

@@ -29,7 +29,7 @@
   </div>
 } @else {
   <div class="cursos-grid">
-    @for (c of filtrados(); track c.idcursos) {
+    @for (c of paginados(); track c.idcursos) {
       <div class="curso-card" [class.inactivo]="!c.activo">
         <div class="curso-card-header" [style.background]="c.color">
           @if (c.logo) {
@@ -66,6 +66,21 @@
       </div>
     }
   </div>
+  @if (totalPaginas() > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Página {{ paginaActual() }} de {{ totalPaginas() }} · {{ filtrados().length }} cursos</span>
+      <div class="pagination-controls">
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(1)">«</button>
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(paginaActual() - 1)">‹</button>
+        @for (p of paginas(); track $index) {
+          @if (p === '...') { <span class="page-dots">…</span> }
+          @else { <button class="btn-page" [class.active]="p === paginaActual()" (click)="irPagina(p)">{{ p }}</button> }
+        }
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(paginaActual() + 1)">›</button>
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(totalPaginas())">»</button>
+      </div>
+    </div>
+  }
 }
 
 <!-- Modal asignaciones -->

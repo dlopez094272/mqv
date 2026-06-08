@@ -1,0 +1,324 @@
+<!-- ── Cabecera ─────────────────────────────────────────────── -->
+<div class="page-header no-print">
+  <div class="header-left">
+    <a routerLink="/personas" class="btn btn-outline btn-sm">← Volver</a>
+    <h2>📊 Estadísticas de Personas</h2>
+  </div>
+  @if (!cargando() && datos()) {
+    <button class="btn btn-outline btn-sm" style="width:auto" (click)="imprimir()">🖨️ Imprimir / PDF</button>
+  }
+</div>
+
+<!-- Encabezado solo para impresión -->
+<div class="print-header print-only">
+  <div class="print-titulo">
+    <strong>Iglesia del Nazareno · Más que Vencedores</strong>
+    <h2>Estadísticas de Personas</h2>
+  </div>
+</div>
+
+@if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+@if (cargando()) {
+  <div class="loading-state"><div class="spinner-lg"></div><span>Cargando estadísticas...</span></div>
+}
+
+@if (!cargando() && datos(); as d) {
+
+  <!-- ══ KPIs globales ══════════════════════════════════════════ -->
+  <div class="kpi-grid">
+    <div class="kpi-card kpi-total">
+      <span class="kpi-icon">👥</span>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ d.total }}</span>
+        <span class="kpi-label">Total personas</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-hombres">
+      <span class="kpi-icon">♂</span>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ d.por_genero.hombres }}</span>
+        <span class="kpi-label">Hombres · {{ pct(d.por_genero.hombres, d.total) }}</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-mujeres">
+      <span class="kpi-icon">♀</span>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ d.por_genero.mujeres }}</span>
+        <span class="kpi-label">Mujeres · {{ pct(d.por_genero.mujeres, d.total) }}</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-convertidos">
+      <span class="kpi-icon">✝</span>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ d.eclesial.convertidos }}</span>
+        <span class="kpi-label">Convertidos · {{ pct(d.eclesial.convertidos, d.total) }}</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-bautizados">
+      <span class="kpi-icon">💧</span>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ d.eclesial.bautizados }}</span>
+        <span class="kpi-label">Bautizados · {{ pct(d.eclesial.bautizados, d.total) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Fila 1: Género + Estado Eclesial ══════════════════════ -->
+  <div class="stats-grid-2">
+
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Por Género</h3>
+      <div class="stats-row">
+        <div class="chart-wrap">
+          <div class="gender-bars">
+            <div class="gender-item">
+              <div class="gender-header">
+                <span class="dot-m"></span><span>Hombres</span>
+                <span class="gender-pct">{{ pct(d.por_genero.hombres, d.total) }}</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill bar-m" [style.width.%]="barWidth(d.por_genero.hombres, d.total)"></div>
+              </div>
+              <span class="bar-val">{{ d.por_genero.hombres }} personas</span>
+            </div>
+            <div class="gender-item">
+              <div class="gender-header">
+                <span class="dot-f"></span><span>Mujeres</span>
+                <span class="gender-pct">{{ pct(d.por_genero.mujeres, d.total) }}</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill bar-f" [style.width.%]="barWidth(d.por_genero.mujeres, d.total)"></div>
+              </div>
+              <span class="bar-val">{{ d.por_genero.mujeres }} personas</span>
+            </div>
+            @if (d.por_genero.sin_dato > 0) {
+              <div class="gender-item">
+                <div class="gender-header">
+                  <span class="dot-nd"></span><span>Sin dato</span>
+                  <span class="gender-pct">{{ pct(d.por_genero.sin_dato, d.total) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar-fill bar-nd" [style.width.%]="barWidth(d.por_genero.sin_dato, d.total)"></div>
+                </div>
+                <span class="bar-val">{{ d.por_genero.sin_dato }} personas</span>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Género</th><th class="num">Cantidad</th><th class="num">%</th></tr></thead>
+            <tbody>
+              <tr><td><span class="dot-m"></span> Hombres</td><td class="num">{{ d.por_genero.hombres }}</td><td class="num">{{ pct(d.por_genero.hombres, d.total) }}</td></tr>
+              <tr><td><span class="dot-f"></span> Mujeres</td> <td class="num">{{ d.por_genero.mujeres }}</td><td class="num">{{ pct(d.por_genero.mujeres, d.total) }}</td></tr>
+              @if (d.por_genero.sin_dato > 0) {
+                <tr><td>Sin dato</td><td class="num">{{ d.por_genero.sin_dato }}</td><td class="num">{{ pct(d.por_genero.sin_dato, d.total) }}</td></tr>
+              }
+            </tbody>
+            <tfoot><tr><td><strong>Total</strong></td><td class="num"><strong>{{ d.total }}</strong></td><td class="num"><strong>100%</strong></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Estado Eclesial</h3>
+      <div class="stats-row">
+        <div class="chart-wrap">
+          <div class="eclesial-bars">
+            <div class="eclesial-item">
+              <div class="gender-header">
+                <span>✝ Convertidos</span>
+                <span class="gender-pct">{{ pct(d.eclesial.convertidos, d.total) }}</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill bar-conv" [style.width.%]="barWidth(d.eclesial.convertidos, d.total)"></div></div>
+              <span class="bar-val">{{ d.eclesial.convertidos }} personas</span>
+            </div>
+            <div class="eclesial-item">
+              <div class="gender-header">
+                <span>💧 Bautizados</span>
+                <span class="gender-pct">{{ pct(d.eclesial.bautizados, d.total) }}</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill bar-baut" [style.width.%]="barWidth(d.eclesial.bautizados, d.total)"></div></div>
+              <span class="bar-val">{{ d.eclesial.bautizados }} personas</span>
+            </div>
+            <div class="eclesial-item">
+              <div class="gender-header">
+                <span>Sin conversión registrada</span>
+                <span class="gender-pct">{{ pct(d.total - d.eclesial.convertidos, d.total) }}</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill bar-nd" [style.width.%]="barWidth(d.total - d.eclesial.convertidos, d.total)"></div></div>
+              <span class="bar-val">{{ d.total - d.eclesial.convertidos }} personas</span>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Estado</th><th class="num">Cantidad</th><th class="num">%</th></tr></thead>
+            <tbody>
+              <tr><td>✝ Convertidos</td><td class="num">{{ d.eclesial.convertidos }}</td><td class="num">{{ pct(d.eclesial.convertidos, d.total) }}</td></tr>
+              <tr><td>💧 Bautizados</td> <td class="num">{{ d.eclesial.bautizados  }}</td><td class="num">{{ pct(d.eclesial.bautizados,  d.total) }}</td></tr>
+              <tr><td>Sin conversión</td> <td class="num">{{ d.total - d.eclesial.convertidos }}</td><td class="num">{{ pct(d.total - d.eclesial.convertidos, d.total) }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══ SECCIÓN 2: Rango de edad ══════════════════════════════ -->
+  <section class="reporte-seccion">
+    <h3 class="seccion-titulo">Por Rango de Edad</h3>
+    <div class="stats-row">
+      <div class="chart-wrap chart-edad">
+        @for (r of edadRows(); track r.label) {
+          <div class="hbar-item">
+            <span class="hbar-label">{{ r.label }}<small>{{ r.rango }}</small></span>
+            <div class="hbar-track"><div class="hbar-fill" [style.width.%]="barWidth(r.val, maxEdad())"></div></div>
+            <span class="hbar-val">{{ r.val }}</span>
+          </div>
+        }
+      </div>
+      <div class="table-wrap">
+        <table class="stats-table">
+          <thead><tr><th>Rango</th><th>Edades</th><th class="num">Cantidad</th><th class="num">%</th></tr></thead>
+          <tbody>
+            @for (r of edadRows(); track r.label) {
+              <tr>
+                <td>{{ r.label }}</td>
+                <td class="muted">{{ r.rango }}</td>
+                <td class="num">{{ r.val }}</td>
+                <td class="num">{{ pct(r.val, totalEdadConFecha() + (datos()?.por_edad?.sin_fecha ?? 0)) }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr><td colspan="2"><strong>Con fecha nacimiento</strong></td>
+              <td class="num"><strong>{{ totalEdadConFecha() }}</strong></td>
+              <td class="num"><strong>{{ pct(totalEdadConFecha(), d.total) }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SECCIÓN 3: Año de inicio de asistencia ═══════════════ -->
+  @if (d.por_anio_asistencia.length > 0) {
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Por Año de Inicio de Asistencia</h3>
+      <div class="stats-row">
+        <div class="chart-wrap chart-anio">
+          <div class="vbars-container">
+            @for (a of d.por_anio_asistencia; track a.anio) {
+              <div class="vbar-item">
+                <span class="vbar-val">{{ a.cantidad }}</span>
+                <div class="vbar-track">
+                  <div class="vbar-fill" [style.height.%]="barWidth(a.cantidad, maxAnio())"></div>
+                </div>
+                <span class="vbar-label">{{ a.anio }}</span>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Año</th><th class="num">Personas</th><th class="num">%</th></tr></thead>
+            <tbody>
+              @for (a of d.por_anio_asistencia; track a.anio) {
+                <tr><td>{{ a.anio }}</td><td class="num">{{ a.cantidad }}</td><td class="num">{{ pct(a.cantidad, d.total) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ══ SECCIÓN 4: Por departamento de nacimiento ════════════ -->
+  @if (d.por_departamento.length > 0) {
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Por Departamento de Nacimiento</h3>
+      <div class="stats-row">
+        <div class="chart-wrap chart-depto">
+          @for (item of d.por_departamento; track item.etiqueta) {
+            <div class="hbar-item">
+              <span class="hbar-label hbar-label-wide">{{ item.etiqueta }}</span>
+              <div class="hbar-track"><div class="hbar-fill hbar-fill-depto" [style.width.%]="barWidth(item.cantidad, maxDepartamento())"></div></div>
+              <span class="hbar-val">{{ item.cantidad }}</span>
+            </div>
+          }
+        </div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Departamento</th><th class="num">Personas</th><th class="num">%</th></tr></thead>
+            <tbody>
+              @for (item of d.por_departamento; track item.etiqueta) {
+                <tr><td>{{ item.etiqueta }}</td><td class="num">{{ item.cantidad }}</td><td class="num">{{ pct(item.cantidad, d.total) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ══ SECCIÓN 5: Por nacionalidad ═══════════════════════════ -->
+  @if (d.por_nacionalidad.length > 0) {
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Por Nacionalidad</h3>
+      <div class="stats-row">
+        <div class="chart-wrap">
+          @for (item of d.por_nacionalidad; track item.etiqueta) {
+            <div class="hbar-item">
+              <span class="hbar-label hbar-label-wide">{{ item.etiqueta }}</span>
+              <div class="hbar-track"><div class="hbar-fill hbar-fill-nac" [style.width.%]="barWidth(item.cantidad, maxNacionalidad())"></div></div>
+              <span class="hbar-val">{{ item.cantidad }}</span>
+            </div>
+          }
+        </div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Nacionalidad</th><th class="num">Personas</th><th class="num">%</th></tr></thead>
+            <tbody>
+              @for (item of d.por_nacionalidad; track item.etiqueta) {
+                <tr><td>{{ item.etiqueta }}</td><td class="num">{{ item.cantidad }}</td><td class="num">{{ pct(item.cantidad, d.total) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ══ SECCIÓN 6: Por profesión ══════════════════════════════ -->
+  @if (d.por_profesion.length > 0) {
+    <section class="reporte-seccion">
+      <h3 class="seccion-titulo">Por Profesión</h3>
+      <div class="stats-row">
+        <div class="chart-wrap">
+          @for (item of d.por_profesion; track item.etiqueta) {
+            <div class="hbar-item">
+              <span class="hbar-label hbar-label-wide">{{ item.etiqueta }}</span>
+              <div class="hbar-track"><div class="hbar-fill hbar-fill-prof" [style.width.%]="barWidth(item.cantidad, maxProfesion())"></div></div>
+              <span class="hbar-val">{{ item.cantidad }}</span>
+            </div>
+          }
+        </div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Profesión</th><th class="num">Personas</th><th class="num">%</th></tr></thead>
+            <tbody>
+              @for (item of d.por_profesion; track item.etiqueta) {
+                <tr><td>{{ item.etiqueta }}</td><td class="num">{{ item.cantidad }}</td><td class="num">{{ pct(item.cantidad, d.total) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+}

@@ -22,8 +22,8 @@ async function login(req, res, next) {
     }
 
     const [rows] = await pool.query(
-      'SELECT usuario, password, nombre_completo, activo, primer_ingreso FROM usuarios WHERE usuario = ?',
-      [usuario]
+      'SELECT usuario, password, nombre_completo, activo, primer_ingreso FROM usuarios WHERE usuario = ? OR email = ?',
+      [usuario, usuario]
     );
 
     if (!rows.length) {

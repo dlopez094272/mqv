@@ -45,16 +45,17 @@ const CAMPOS_LISTA = `
 
 async function listar(req, res, next) {
   try {
-    const { nombre, sexo, estado_civil, grupo } = req.query;
-    let sql = `SELECT ${CAMPOS_LISTA}
-               FROM personas p
-               LEFT JOIN nacionalidades n ON p.idnacionalidades = n.idnacionalidades
-               WHERE 1=1`;
+    const { nombre, sexo, estado_civil, grupo, edad_min, edad_max } = req.query;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, Math.max(5, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    let where = `WHERE 1=1`;
     const params = [];
 
     // Superadmin ve todas las personas; los demás solo ven personas de sus grupos como encargado
     if (!req.user.is_superadmin) {
-      sql += ` AND p.idpersonas IN (
+      where += ` AND p.idpersonas IN (
         SELECT gp.idpersonas FROM grupos_personas gp
         INNER JOIN grupos_encargados ge ON ge.idgrupos = gp.idgrupos
         WHERE ge.idpersonas = (SELECT idpersonas FROM usuarios WHERE usuario = ? LIMIT 1)
@@ -63,19 +64,39 @@ async function listar(req, res, next) {
     }
 
     if (nombre) {
-      sql += ` AND CONCAT(p.primer_nombre,' ',IFNULL(p.segundo_nombre,''),' ',
+      where += ` AND CONCAT(p.primer_nombre,' ',IFNULL(p.segundo_nombre,''),' ',
                           p.primer_apellido,' ',IFNULL(p.segundo_apellido,'')) LIKE ?`;
       params.push(`%${nombre}%`);
     }
-    if (sexo)         { sql += ` AND p.sexo = ?`;         params.push(sexo); }
-    if (estado_civil) { sql += ` AND p.estado_civil = ?`; params.push(estado_civil); }
+    if (sexo)         { where += ` AND p.sexo = ?`;         params.push(sexo); }
+    if (estado_civil) { where += ` AND p.estado_civil = ?`; params.push(estado_civil); }
     if (grupo) {
-      sql += ` AND p.idpersonas IN (SELECT idpersonas FROM grupos_personas WHERE idgrupos = ?)`;
+      where += ` AND p.idpersonas IN (SELECT idpersonas FROM grupos_personas WHERE idgrupos = ?)`;
       params.push(grupo);
     }
-    sql += ` ORDER BY p.primer_apellido, p.primer_nombre`;
-    const [rows] = await pool.query(sql, params);
-    res.json(rows);
+    if (edad_min) {
+      where += ` AND TIMESTAMPDIFF(YEAR, p.fechanacimiento, CURDATE()) >= ?`;
+      params.push(parseInt(edad_min));
+    }
+    if (edad_max) {
+      where += ` AND TIMESTAMPDIFF(YEAR, p.fechanacimiento, CURDATE()) <= ?`;
+      params.push(parseInt(edad_max));
+    }
+
+    const countSql = `SELECT COUNT(*) AS total FROM personas p
+                      LEFT JOIN nacionalidades n ON p.idnacionalidades = n.idnacionalidades
+                      ${where}`;
+    const [[{ total }]] = await pool.query(countSql, params);
+
+    const dataSql = `SELECT ${CAMPOS_LISTA}
+                     FROM personas p
+                     LEFT JOIN nacionalidades n ON p.idnacionalidades = n.idnacionalidades
+                     ${where}
+                     ORDER BY p.primer_apellido, p.primer_nombre
+                     LIMIT ? OFFSET ?`;
+    const [rows] = await pool.query(dataSql, [...params, limit, offset]);
+
+    res.json({ data: rows, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) { next(err); }
 }
 
@@ -450,6 +471,10 @@ async function crearUsuarioDesdePersona(req, res, next) {
     const [[existe]] = await conn.query('SELECT usuario FROM usuarios WHERE usuario = ?', [usuario]);
     if (existe) return res.status(409).json({ error: 'El código de usuario ya está en uso' });
 
+    // Verificar que el correo no esté ya registrado en otro usuario
+    const [[emailExiste]] = await conn.query('SELECT usuario FROM usuarios WHERE email = ?', [email]);
+    if (emailExiste) return res.status(409).json({ error: 'Ya existe un usuario registrado con ese correo electrónico' });
+
     const token = crypto.randomBytes(32).toString('hex');
 
     await conn.beginTransaction();
@@ -480,7 +505,7 @@ async function crearUsuarioDesdePersona(req, res, next) {
     await sendMail({
       to: email,
       subject: 'Bienvenido – Completa tu registro en Sistema MQV',
-      html: emailBienvenida(nombre_completo, link),
+      html: emailBienvenida(nombre_completo, usuario, link),
     });
 
     res.status(201).json({ message: 'Usuario creado correctamente. Se envió correo de activación.' });

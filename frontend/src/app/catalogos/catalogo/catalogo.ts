@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -18,11 +18,33 @@ import { confirmar } from '../../shared/confirmar.util';
 export class CatalogoComponent implements OnInit {
   config!: CatalogoConfig;
 
-  items = signal<any[]>([]);
+  items     = signal<any[]>([]);
   filtrados = signal<any[]>([]);
-  cargando = signal(false);
-  error = signal('');
+  cargando  = signal(false);
+  error     = signal('');
   successMsg = signal('');
+
+  readonly LIMITE = 50;
+  paginaActual = signal(1);
+  totalPaginas = computed(() => Math.ceil(this.filtrados().length / this.LIMITE));
+  paginados    = computed(() => {
+    const start = (this.paginaActual() - 1) * this.LIMITE;
+    return this.filtrados().slice(start, start + this.LIMITE);
+  });
+  paginas = computed(() => {
+    const total = this.totalPaginas(); const actual = this.paginaActual();
+    if (total <= 1) return [];
+    const rango: (number | '...')[] = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= actual - 2 && i <= actual + 2)) rango.push(i);
+      else if (rango[rango.length - 1] !== '...') rango.push('...');
+    }
+    return rango;
+  });
+  irPagina(p: number | '...') {
+    if (p === '...' || (p as number) < 1 || (p as number) > this.totalPaginas()) return;
+    this.paginaActual.set(p as number);
+  }
 
   mostrarForm = signal(false);
   modoEdicion = signal(false);
@@ -70,14 +92,17 @@ export class CatalogoComponent implements OnInit {
 
   filtrar() {
     const q = this.busqueda.toLowerCase().trim();
-    if (!q) { this.filtrados.set([...this.items()]); return; }
-    this.filtrados.set(
-      this.items().filter(item =>
-        this.config.campos.some(c =>
-          String(item[c.columnaTabla ?? c.nombre] ?? '').toLowerCase().includes(q)
+    if (!q) { this.filtrados.set([...this.items()]); }
+    else {
+      this.filtrados.set(
+        this.items().filter(item =>
+          this.config.campos.some(c =>
+            String(item[c.columnaTabla ?? c.nombre] ?? '').toLowerCase().includes(q)
+          )
         )
-      )
-    );
+      );
+    }
+    this.paginaActual.set(1);
   }
 
   abrirNuevo() {

@@ -4,6 +4,11 @@ const path    = require('path');
 const fs      = require('fs');
 require('dotenv').config();
 
+const LOG = path.join(__dirname, '..', 'startup.log');
+fs.writeFileSync(LOG, `[${new Date().toISOString()}] Iniciando...\nDB_USER=${process.env.DB_USER}\nDB_NAME=${process.env.DB_NAME}\nPORT=${process.env.PORT}\nNODE_ENV=${process.env.NODE_ENV}\n`);
+process.on('uncaughtException',   err => { fs.appendFileSync(LOG, `CRASH: ${err.stack}\n`); process.exit(1); });
+process.on('unhandledRejection',  (r)  => { fs.appendFileSync(LOG, `REJECTION: ${r}\n`);    process.exit(1); });
+
 const { testConnection } = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const indexRouter  = require('./routes/index');
@@ -30,14 +35,25 @@ app.use('/api/files/actividades/logos', express.static(actLogosDir, { maxAge: '1
 
 app.use('/api', indexRouter);
 
+// Servir frontend Angular compilado
+const frontendDist = process.env.FRONTEND_DIST || path.join(__dirname, '..', 'public');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get('/{*splat}', (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-testConnection().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-  });
+// Passenger requiere que listen() se llame de forma síncrona al arrancar
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// Verificar BD después de iniciar (si falla, process.exit(1) termina el proceso)
+testConnection();
 
 module.exports = app;

@@ -55,6 +55,29 @@ export class ActividadesComponent implements OnInit {
   lugares     = signal<LugarLookup[]>([]);
   grupos      = signal<GrupoLookup[]>([]);
 
+  // ── Paginación tabla ─────────────────────────────────────────
+  readonly LIMITE_TABLA = 25;
+  tabPagina     = signal(1);
+  tabTotalPag   = computed(() => Math.ceil(this.actividades().length / this.LIMITE_TABLA));
+  tabPaginados  = computed(() => {
+    const start = (this.tabPagina() - 1) * this.LIMITE_TABLA;
+    return this.actividades().slice(start, start + this.LIMITE_TABLA);
+  });
+  tabPaginas    = computed(() => {
+    const total = this.tabTotalPag(); const actual = this.tabPagina();
+    if (total <= 1) return [];
+    const rango: (number | '...')[] = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= actual - 2 && i <= actual + 2)) rango.push(i);
+      else if (rango[rango.length - 1] !== '...') rango.push('...');
+    }
+    return rango;
+  });
+  tabIrPagina(p: number | '...') {
+    if (p === '...' || (p as number) < 1 || (p as number) > this.tabTotalPag()) return;
+    this.tabPagina.set(p as number);
+  }
+
   // ── Grupos multiselect ────────────────────────────────────────
   gruposSeleccionados    = signal<number[]>([]);
   mostrarDropdownGrupos  = signal(false);

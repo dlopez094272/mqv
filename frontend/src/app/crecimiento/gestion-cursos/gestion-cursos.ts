@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -20,6 +20,28 @@ export class GestionCursosComponent implements OnInit {
   error        = signal('');
   exito        = signal('');
   busqueda     = '';
+
+  readonly LIMITE = 25;
+  paginaActual = signal(1);
+  totalPaginas = computed(() => Math.ceil(this.filtrados().length / this.LIMITE));
+  paginados    = computed(() => {
+    const start = (this.paginaActual() - 1) * this.LIMITE;
+    return this.filtrados().slice(start, start + this.LIMITE);
+  });
+  paginas = computed(() => {
+    const total = this.totalPaginas(); const actual = this.paginaActual();
+    if (total <= 1) return [];
+    const rango: (number | '...')[] = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= actual - 2 && i <= actual + 2)) rango.push(i);
+      else if (rango[rango.length - 1] !== '...') rango.push('...');
+    }
+    return rango;
+  });
+  irPagina(p: number | '...') {
+    if (p === '...' || (p as number) < 1 || (p as number) > this.totalPaginas()) return;
+    this.paginaActual.set(p as number);
+  }
 
   // ── Modal de asignaciones ────────────────────────────────────
   modalAsig       = signal(false);
@@ -54,6 +76,7 @@ export class GestionCursosComponent implements OnInit {
       ? this.cursos().filter(c => c.nombre.toLowerCase().includes(q))
       : [...this.cursos()]
     );
+    this.paginaActual.set(1);
   }
 
   nuevo()         { this.router.navigate(['/crecimiento/cursos/nuevo']); }

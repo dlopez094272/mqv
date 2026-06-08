@@ -70,7 +70,7 @@
         </tr>
 
         <!-- Filas de movimientos -->
-        @for (m of filas(); track m.idtesoreria_movimientos) {
+        @for (m of filasPagina(); track m.idtesoreria_movimientos) {
           <tr [class.row-anulado]="m.anulado">
             <td class="col-fecha">{{ formatFecha(m.fecha) }}</td>
             <td>
@@ -150,6 +150,21 @@
     Saldo inicial: <strong>{{ formatQ(saldoInicial()) }}</strong> •
     Saldo final: <strong>{{ formatQ(saldoFinal()) }}</strong>
   </div>
+  @if (totalPaginas() > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Página {{ paginaActual() }} de {{ totalPaginas() }}</span>
+      <div class="pagination-controls">
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(1)">«</button>
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(paginaActual() - 1)">‹</button>
+        @for (p of paginas(); track $index) {
+          @if (p === '...') { <span class="page-dots">…</span> }
+          @else { <button class="btn-page" [class.active]="p === paginaActual()" (click)="irPagina(p)">{{ p }}</button> }
+        }
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(paginaActual() + 1)">›</button>
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(totalPaginas())">»</button>
+      </div>
+    </div>
+  }
 }
 
 <!-- ── Panel de formulario de movimiento ──────────────────────── -->

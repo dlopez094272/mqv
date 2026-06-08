@@ -1,4 +1,9 @@
 <div class="shell" [class.sidebar-closed]="!sidebarOpen()">
+  <!-- Mobile backdrop: closes sidebar when tapping outside -->
+  @if (sidebarOpen() && isMobile) {
+    <div class="sidebar-backdrop" (click)="sidebarOpen.set(false)"></div>
+  }
+
   <!-- Sidebar -->
   <aside class="sidebar">
     <a routerLink="/dashboard" class="sidebar-header sidebar-header-link">
@@ -14,13 +19,15 @@
     <nav class="sidebar-nav">
 
       <!-- Correo -->
-      <a routerLink="/correo" class="nav-item" [class.active]="isActive('/correo')">
-        <span class="nav-icon">✉️</span>
-        <span class="nav-label">Correo</span>
-        @if (correoSvc.noLeidos() > 0) {
-          <span class="nav-badge">{{ correoSvc.noLeidos() }}</span>
-        }
-      </a>
+      @if (tieneCorreo()) {
+        <a routerLink="/correo" class="nav-item" [class.active]="isActive('/correo')">
+          <span class="nav-icon">✉️</span>
+          <span class="nav-label">Correo</span>
+          @if (correoSvc.noLeidos() > 0) {
+            <span class="nav-badge">{{ correoSvc.noLeidos() }}</span>
+          }
+        </a>
+      }
 
       <!-- Personas -->
       @if (tienePersonas()) {

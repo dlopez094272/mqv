@@ -247,3 +247,69 @@ $topbar-h:  58px;
   overflow-y: auto;
   padding: 28px;
 }
+
+/* ── Mobile backdrop ──────────────────────────────────────────── */
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ── Mobile / Tablet responsive ──────────────────────────────── */
+@media (max-width: 767px) {
+  .shell { position: relative; }
+
+  /* Sidebar becomes a fixed overlay */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 300;
+    transform: translateX(0);
+    transition: transform .25s ease, width .25s ease;
+    width: $sidebar-w !important;
+    min-width: $sidebar-w !important;
+  }
+
+  /* When closed on mobile: slide fully off-screen (not collapse to 58px) */
+  .shell.sidebar-closed .sidebar {
+    transform: translateX(-100%);
+    width: $sidebar-w !important;
+    min-width: $sidebar-w !important;
+
+    /* Restore all hidden elements so they show when sidebar opens */
+    .sidebar-title, .nav-label, .nav-arrow, .sidebar-footer { display: unset; }
+    .sidebar-header { justify-content: flex-start; padding: 18px 14px; }
+    .logo-sidebar { width: 40px; }
+    .logo-text { display: flex; }
+    .nav-item { justify-content: flex-start; padding: 10px 12px; }
+    .nav-children { display: block; }
+  }
+
+  /* Backdrop visible on mobile when sidebar open */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 299;
+    animation: fadeIn .2s ease;
+  }
+
+  /* Main wrapper takes full width */
+  .main-wrapper { width: 100%; }
+
+  /* Topbar: smaller padding, hide brand text to save space */
+  .topbar {
+    padding: 0 10px;
+    gap: 8px;
+
+    .topbar-brand { display: none; }
+    .user-name { max-width: 100px; }
+    .user-role { display: none; }
+  }
+
+  /* Reduce content padding */
+  .main-content { padding: 16px 12px; }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

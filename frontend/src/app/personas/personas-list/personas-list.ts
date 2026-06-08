@@ -18,29 +18,38 @@ import { confirmar } from '../../shared/confirmar.util';
   styleUrl: './personas-list.scss',
 })
 export class PersonasListComponent implements OnInit {
-  todasPersonas = signal<PersonaLista[]>([]);
-  cargando      = signal(false);
-  error         = signal('');
-  successMsg    = signal('');
-  exportando    = signal(false);
+  personas       = signal<PersonaLista[]>([]);
+  cargando       = signal(false);
+  error          = signal('');
+  successMsg     = signal('');
+  exportando     = signal(false);
+
+  // Paginación
+  totalRegistros = signal(0);
+  paginaActual   = signal(1);
+  totalPaginas   = signal(0);
+  readonly LIMITE = 20;
 
   filtros: FiltrosPersonas = {};
   grupos: LookupItem[] = [];
 
-  // Filtro edad (client-side)
-  edadMin = '';
-  edadMax = '';
-
   readonly ESTADOS_CIVIL = ['Solter@','Casad@','Viud@','Unid@','Divorciad@'];
 
-  // Personas después de filtro edad
-  personas = computed(() => {
-    let lista = this.todasPersonas();
-    const min = this.edadMin ? +this.edadMin : null;
-    const max = this.edadMax ? +this.edadMax : null;
-    if (min !== null) lista = lista.filter(p => p.edad >= min);
-    if (max !== null) lista = lista.filter(p => p.edad <= max);
-    return lista;
+  // Páginas a mostrar en el paginador
+  paginas = computed(() => {
+    const total = this.totalPaginas();
+    const actual = this.paginaActual();
+    if (total <= 1) return [];
+    const rango: (number | '...')[] = [];
+    const delta = 2;
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= actual - delta && i <= actual + delta)) {
+        rango.push(i);
+      } else if (rango[rango.length - 1] !== '...') {
+        rango.push('...');
+      }
+    }
+    return rango;
   });
 
   // Modal crear usuario
@@ -83,20 +92,34 @@ export class PersonasListComponent implements OnInit {
     });
   }
 
-  cargar() {
+  cargar(pagina = this.paginaActual()) {
     this.cargando.set(true);
     this.error.set('');
-    this.svc.listar(this.filtros).subscribe({
-      next: (data) => { this.todasPersonas.set(data); this.cargando.set(false); },
+    const filtros: FiltrosPersonas = { ...this.filtros, page: pagina, limit: this.LIMITE };
+    this.svc.listar(filtros).subscribe({
+      next: (res) => {
+        this.personas.set(res.data);
+        this.totalRegistros.set(res.total);
+        this.paginaActual.set(res.page);
+        this.totalPaginas.set(res.pages);
+        this.cargando.set(false);
+      },
       error: (err) => { this.error.set(err.message || 'Error al cargar'); this.cargando.set(false); },
     });
   }
 
+  buscar() {
+    this.cargar(1);
+  }
+
   limpiarFiltros() {
     this.filtros = {};
-    this.edadMin = '';
-    this.edadMax = '';
-    this.cargar();
+    this.cargar(1);
+  }
+
+  irPagina(p: number | '...') {
+    if (p === '...' || p === this.paginaActual()) return;
+    this.cargar(p as number);
   }
 
   async eliminar(p: PersonaLista) {

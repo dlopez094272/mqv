@@ -39,6 +39,9 @@ async function crear(req, res, next) {
     const [existe] = await pool.query('SELECT usuario FROM usuarios WHERE usuario = ?', [usuario]);
     if (existe.length) return res.status(409).json({ error: 'El código de usuario ya existe' });
 
+    const [emailExiste] = await pool.query('SELECT usuario FROM usuarios WHERE email = ?', [email]);
+    if (emailExiste.length) return res.status(409).json({ error: 'Ya existe un usuario registrado con ese correo electrónico' });
+
     const token = crypto.randomBytes(32).toString('hex');
 
     await pool.query(
@@ -51,7 +54,7 @@ async function crear(req, res, next) {
     await sendMail({
       to: email,
       subject: 'Bienvenido – Completa tu registro en Sistema MQV',
-      html: emailBienvenida(nombre_completo, link),
+      html: emailBienvenida(nombre_completo, usuario, link),
     });
 
     res.status(201).json({ message: 'Usuario creado. Se envió correo de bienvenida para completar el registro.' });
@@ -143,7 +146,7 @@ async function reenviarInvitacion(req, res, next) {
     await sendMail({
       to: u.email,
       subject: 'Completa tu registro en Sistema MQV',
-      html: emailBienvenida(u.nombre_completo, link),
+      html: emailBienvenida(u.nombre_completo, u.usuario, link),
     });
 
     res.json({ message: 'Invitación reenviada correctamente' });

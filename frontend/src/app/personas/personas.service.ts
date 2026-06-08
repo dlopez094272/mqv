@@ -80,6 +80,18 @@ export interface FiltrosPersonas {
   sexo?: string;
   estado_civil?: string;
   grupo?: string;
+  edad_min?: string;
+  edad_max?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PersonasPaginadas {
+  data: PersonaLista[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
 }
 
 export interface RegistroCrecimiento {
@@ -103,7 +115,11 @@ export class PersonasService {
     if (filtros.sexo)         params = params.set('sexo',         filtros.sexo);
     if (filtros.estado_civil) params = params.set('estado_civil', filtros.estado_civil);
     if (filtros.grupo)        params = params.set('grupo',        filtros.grupo);
-    return this.http.get<PersonaLista[]>(this.base, { params });
+    if (filtros.edad_min)     params = params.set('edad_min',     filtros.edad_min);
+    if (filtros.edad_max)     params = params.set('edad_max',     filtros.edad_max);
+    params = params.set('page',  String(filtros.page  ?? 1));
+    params = params.set('limit', String(filtros.limit ?? 20));
+    return this.http.get<PersonasPaginadas>(this.base, { params });
   }
 
   obtener(id: number) {

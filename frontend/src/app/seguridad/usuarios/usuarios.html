@@ -35,7 +35,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (u of filtrados(); track u.usuario) {
+        @for (u of paginados(); track u.usuario) {
           <tr>
             <td><div class="avatar">{{ iniciales(u.nombre_completo) }}</div></td>
             <td><strong>{{ u.usuario }}</strong></td>
@@ -82,7 +82,21 @@
       </tbody>
     </table>
   </div>
-  <div class="table-footer">
-    {{ filtrados().length }} usuario(s) encontrado(s) de {{ usuarios().length }} total
-  </div>
+  @if (totalPaginas() > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Página {{ paginaActual() }} de {{ totalPaginas() }} · {{ filtrados().length }} usuario(s)</span>
+      <div class="pagination-controls">
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(1)">«</button>
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(paginaActual() - 1)">‹</button>
+        @for (p of paginas(); track $index) {
+          @if (p === '...') { <span class="page-dots">…</span> }
+          @else { <button class="btn-page" [class.active]="p === paginaActual()" (click)="irPagina(p)">{{ p }}</button> }
+        }
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(paginaActual() + 1)">›</button>
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(totalPaginas())">»</button>
+      </div>
+    </div>
+  } @else {
+    <div class="table-footer">{{ filtrados().length }} usuario(s) encontrado(s)</div>
+  }
 }

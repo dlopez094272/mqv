@@ -36,6 +36,9 @@ const FEATURES = [
   // Crecimiento
   { name: 'cursos',     label: 'Crecimiento: Gestión de Cursos' },
   { name: 'mis_cursos', label: 'Crecimiento: Mis Cursos' },
+
+  // Correo
+  { name: 'correo', label: 'Correo' },
 ];
 
 async function listar(req, res, next) {

@@ -36,7 +36,7 @@
 <div class="tabs">
   @for (t of TABS; track t.key) {
     <button class="tab" [class.active]="tabActivo()===t.key" (click)="cambiarTab(t.key)">
-      {{ t.icon }} {{ t.label }}
+      {{ t.icon }} {{ t.label }}@if (t.key === 'grupos' && !esEdicion && !modoPerfil) {<span class="req" style="margin-left:2px;">*</span>}
     </button>
   }
 </div>
@@ -469,7 +469,7 @@
   @if (tabActivo() === 'grupos') {
     <div class="form-section">
       <div class="grupos-header">
-        <span>Grupos a los que asiste esta persona</span>
+        <span>Grupos a los que asiste esta persona @if (!esEdicion && !modoPerfil) { <span class="req">*</span> }</span>
         <div class="grupos-add">
           <select #grupoSelect>
             <option value="">Seleccionar grupo...</option>
