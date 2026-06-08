@@ -597,6 +597,8 @@
     &:hover { box-shadow: 0 3px 12px rgba(37,211,102,.35); transform:translateY(-1px); } }
   &.btn-share-download  { background: var(--secondary); color: #fff;
     &:hover { background: var(--blue-dark); } }
+  &.btn-share-editar    { background: #57446c; color: #fff; text-decoration: none;
+    &:hover { box-shadow: 0 3px 12px rgba(87,68,108,.35); transform:translateY(-1px); } }
 }
 
 .share-hint {

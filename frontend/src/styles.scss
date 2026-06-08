@@ -542,6 +542,7 @@ table {
 
   /* Tables scroll horizontally instead of overflowing */
   .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-container table { min-width: 600px; }
 
   /* Page header stacks title and actions */
   .page-header {

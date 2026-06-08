@@ -205,6 +205,11 @@
             <button class="btn-share btn-share-download" (click)="descargarTarjeta()">
               ⬇️ Descargar
             </button>
+            <a class="btn-share btn-share-editar"
+               [routerLink]="['/personas', personaSelec!.idpersonas, 'editar']"
+               (click)="cerrarTarjeta()">
+              ✏️ Editar
+            </a>
           </div>
           @if (msgWhatsapp()) {
             <div class="alert alert-success" style="margin-top:10px;font-size:13px;">{{ msgWhatsapp() }}</div>

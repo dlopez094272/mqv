@@ -179,7 +179,7 @@ export class CumpleaneroesComponent implements OnInit {
     let logoH = 0;
     try {
       const logo = await this.loadImage('/logo.png');
-      const lw=130, lh=Math.round(130*(logo.naturalHeight/logo.naturalWidth||1));
+      const lw=190, lh=Math.round(190*(logo.naturalHeight/logo.naturalWidth||1));
       // Dibujar logo en blanco (filtro visual)
       ctx.save();
       ctx.drawImage(logo, W/2-lw/2, 30, lw, lh);

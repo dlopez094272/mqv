@@ -257,26 +257,22 @@ $topbar-h:  58px;
 @media (max-width: 767px) {
   .shell { position: relative; }
 
-  /* Sidebar becomes a fixed overlay */
+  /* Sidebar: fixed overlay, oculto por default en móvil */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
     z-index: 300;
-    transform: translateX(0);
+    transform: translateX(-100%);
     transition: transform .25s ease, width .25s ease;
     width: $sidebar-w !important;
     min-width: $sidebar-w !important;
   }
 
-  /* When closed on mobile: slide fully off-screen (not collapse to 58px) */
-  .shell.sidebar-closed .sidebar {
-    transform: translateX(-100%);
-    width: $sidebar-w !important;
-    min-width: $sidebar-w !important;
-
-    /* Restore all hidden elements so they show when sidebar opens */
+  /* Mostrar sidebar cuando está abierto (sin clase sidebar-closed) */
+  .shell:not(.sidebar-closed) .sidebar {
+    transform: translateX(0);
     .sidebar-title, .nav-label, .nav-arrow, .sidebar-footer { display: unset; }
     .sidebar-header { justify-content: flex-start; padding: 18px 14px; }
     .logo-sidebar { width: 40px; }

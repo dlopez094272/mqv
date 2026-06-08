@@ -300,11 +300,28 @@ router.get('/personas', checkPermission('personas', 'S'), async (req, res, next)
       ORDER BY cantidad DESC
       LIMIT 20`, baseParams);
 
+    const g = porGenero[0];
+    const e = porEdad[0];
     res.json({
-      total,
-      por_genero:         porGenero[0],
-      por_edad:           porEdad[0],
-      eclesial,
+      total:       Number(total) || 0,
+      por_genero: {
+        hombres:  Number(g.hombres)  || 0,
+        mujeres:  Number(g.mujeres)  || 0,
+        sin_dato: Number(g.sin_dato) || 0,
+      },
+      por_edad: {
+        bebes:          Number(e.bebes)          || 0,
+        ninos:          Number(e.ninos)          || 0,
+        adolescentes:   Number(e.adolescentes)   || 0,
+        jovenes:        Number(e.jovenes)        || 0,
+        adultos:        Number(e.adultos)        || 0,
+        adultos_mayores:Number(e.adultos_mayores)|| 0,
+        sin_fecha:      Number(e.sin_fecha)      || 0,
+      },
+      eclesial: {
+        convertidos: Number(eclesial.convertidos) || 0,
+        bautizados:  Number(eclesial.bautizados)  || 0,
+      },
       por_nacionalidad:   porNacionalidad,
       por_anio_asistencia: porAnioAsistencia,
       por_departamento:   porDepartamento,
