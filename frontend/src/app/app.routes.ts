@@ -221,6 +221,11 @@ export const routes: Routes = [
         canActivate: [permissionGuard('mis_cursos', 'S')],
         loadComponent: () => import('./crecimiento/mis-cursos-evaluacion/mis-cursos-evaluacion').then(m => m.MisCursosEvaluacionComponent),
       },
+      // Correo
+      {
+        path: 'correo',
+        loadComponent: () => import('./correo/correo.component').then(m => m.CorreoComponent),
+      },
       // Personas
       {
         path: 'personas',

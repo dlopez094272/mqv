@@ -21,6 +21,18 @@
   </div>
 </div>
 
+<!-- Alerta de correo no leído -->
+@if (correoSvc.configurado() && correoSvc.noLeidos() > 0) {
+  <div class="correo-alert" (click)="irACorreo()">
+    <div class="correo-alert-icon">✉️</div>
+    <div class="correo-alert-text">
+      <strong>{{ correoSvc.noLeidos() }} correo{{ correoSvc.noLeidos() === 1 ? '' : 's' }} sin leer</strong>
+      <span>Haz clic para ver tu bandeja de entrada</span>
+    </div>
+    <div class="correo-alert-arrow">›</div>
+  </div>
+}
+
 <!-- Mis Logros -->
 @if (cargandoLogros()) {
   <div class="logros-loading"><span class="logros-spinner"></span> Cargando logros...</div>

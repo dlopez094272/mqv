@@ -84,6 +84,48 @@
   border-left: 3px solid #ef9a9a;
 }
 
+/* ── Correo alert ─────────────────────────────────────────────── */
+.correo-alert {
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  margin-top:    20px;
+  padding:       16px 20px;
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-left:   4px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow:    var(--shadow);
+  cursor:        pointer;
+  transition:    box-shadow .15s, transform .1s;
+
+  &:hover {
+    box-shadow: var(--shadow-lg);
+    transform:  translateY(-1px);
+  }
+
+  .correo-alert-icon {
+    font-size:  32px;
+    flex-shrink: 0;
+  }
+
+  .correo-alert-text {
+    flex:           1;
+    display:        flex;
+    flex-direction: column;
+    gap:            2px;
+
+    strong { font-size: 15px; color: var(--text-primary); }
+    span   { font-size: 13px; color: var(--text-secondary); }
+  }
+
+  .correo-alert-arrow {
+    font-size:  22px;
+    color:      var(--text-secondary);
+    flex-shrink: 0;
+  }
+}
+
 /* ── Mis Logros ───────────────────────────────────────────────── */
 .logros-loading {
   margin-top: 24px;

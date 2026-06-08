@@ -1,0 +1,347 @@
+<div class="page-header">
+  <h2>Correo</h2>
+  <div class="page-header-actions">
+    @if (configurado()) {
+      <span class="cuenta-label">{{ cuentaGuardada() }}</span>
+      <button class="btn-icon" (click)="abrirConfig()" title="Configuración">⚙️</button>
+    }
+  </div>
+</div>
+
+<!-- ── Sin configurar ─────────────────────────────────────────── -->
+@if (!configurado()) {
+  <div class="correo-setup">
+    <div class="setup-icon">✉️</div>
+    <h3>Conecta tu cuenta de correo</h3>
+    <p>Ingresa tu cuenta <strong>&#64;iglesiamqv.org</strong> y contraseña para acceder desde aquí.</p>
+    <button class="btn-primary" (click)="abrirConfig()">Configurar cuenta</button>
+  </div>
+}
+
+<!-- ── Cliente de correo ──────────────────────────────────────── -->
+@if (configurado()) {
+  <div class="correo-layout">
+
+    <!-- Sidebar izquierdo -->
+    <aside class="correo-sidebar">
+      <button class="btn-compose" (click)="abrirCompose()">
+        ✏️ Redactar
+      </button>
+
+      <nav class="carpetas-nav">
+        @for (c of carpetas(); track c.path) {
+          <button class="carpeta-item"
+                  [class.active]="carpetaActual() === c.path"
+                  (click)="seleccionarCarpeta(c.path)">
+            <span>{{ iconoCarpeta(c.path) }}</span>
+            <span class="carpeta-nombre">{{ nombreCarpeta(c.path) }}</span>
+          </button>
+        }
+        @if (!carpetas().length) {
+          <button class="carpeta-item active">
+            <span>📥</span><span class="carpeta-nombre">Bandeja de entrada</span>
+          </button>
+        }
+      </nav>
+
+      <button class="btn-desconectar" (click)="desconectar()">🔌 Desconectar</button>
+    </aside>
+
+    <!-- Lista de correos -->
+    <section class="correo-lista" [class.oculta-en-movil]="correoAbierto()">
+      <div class="lista-toolbar">
+        <span class="carpeta-titulo">{{ nombreCarpeta(carpetaActual()) }}</span>
+        <button class="btn-icon" (click)="cargarBandeja(paginaActual())" title="Actualizar">🔄</button>
+      </div>
+
+      @if (cargando()) {
+        <div class="lista-estado"><span class="spinner"></span> Cargando...</div>
+      } @else if (error()) {
+        <div class="lista-estado error">{{ error() }}</div>
+      } @else if (!correos().length) {
+        <div class="lista-estado">No hay correos en esta carpeta.</div>
+      } @else {
+        <ul class="correo-items">
+          @for (c of correos(); track c.uid) {
+            <li class="correo-item"
+                [class.no-leido]="!c.leido"
+                [class.seleccionado]="correoAbierto()?.uid === c.uid"
+                (click)="abrirCorreo(c)">
+              <div class="item-avatar">{{ (c.deNombre || c.de || '?')[0].toUpperCase() }}</div>
+              <div class="item-body">
+                <div class="item-header">
+                  <span class="item-de">{{ c.deNombre || c.de }}</span>
+                  <span class="item-fecha">{{ formatFecha(c.fecha) }}</span>
+                </div>
+                <div class="item-asunto">{{ c.asunto }}</div>
+              </div>
+              @if (!c.leido) { <span class="badge-no-leido"></span> }
+            </li>
+          }
+        </ul>
+
+        <!-- Paginación -->
+        @if (totalPaginas > 1) {
+          <div class="paginacion">
+            <button class="btn-pag" [disabled]="paginaActual() === 1" (click)="paginaAnterior()">‹</button>
+            <span>{{ paginaActual() }} / {{ totalPaginas }}</span>
+            <button class="btn-pag" [disabled]="paginaActual() === totalPaginas" (click)="paginaSiguiente()">›</button>
+          </div>
+        }
+      }
+    </section>
+
+    <!-- Lector de correo -->
+    <section class="correo-lector" [class.visible]="correoAbierto() || cargandoLeer()">
+      @if (cargandoLeer()) {
+        <div class="lector-estado"><span class="spinner"></span> Cargando correo...</div>
+      } @else if (correoAbierto()) {
+        <div class="lector-header">
+          <button class="btn-icon btn-volver" (click)="cerrarLector()" title="Volver">‹</button>
+          <div class="lector-asunto">{{ correoAbierto()!.asunto }}</div>
+          <div class="lector-acciones">
+            <button class="btn-accion" (click)="responder()" title="Responder">↩️ Responder</button>
+            <button class="btn-accion btn-eliminar" (click)="eliminar(correoAbierto()!)" title="Eliminar">🗑️ Eliminar</button>
+          </div>
+        </div>
+
+        <div class="lector-meta">
+          <div class="meta-row">
+            <span class="meta-label">De:</span>
+            <span class="meta-valor">{{ correoAbierto()!.deNombre || correoAbierto()!.de }} &lt;{{ correoAbierto()!.de }}&gt;</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Para:</span>
+            <span class="meta-valor">{{ correoAbierto()!.para }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Fecha:</span>
+            <span class="meta-valor">{{ correoAbierto()!.fecha | date:'dd/MM/yyyy HH:mm':'':'es' }}</span>
+          </div>
+          @if (correoAbierto()!.adjuntos.length) {
+            <div class="meta-row meta-row-adjuntos">
+              <span class="meta-label">📎</span>
+              <span class="adjuntos-lista">
+                @for (a of correoAbierto()!.adjuntos; track a.filename) {
+                  <button class="adjunto-chip-btn"
+                          [class.descargando]="descargando() === a.filename"
+                          (click)="descargarAdjunto(a)"
+                          type="button"
+                          [title]="'Descargar ' + a.filename">
+                    @if (descargando() === a.filename) {
+                      <span class="spinner-xs"></span>
+                    } @else {
+                      <span>📄</span>
+                    }
+                    <span class="adj-nombre">{{ a.filename }}</span>
+                    <span class="adj-size">{{ formatFileSize(a.size) }}</span>
+                    <span class="adj-dl">⬇</span>
+                  </button>
+                }
+              </span>
+            </div>
+          }
+        </div>
+
+        <div class="lector-cuerpo">
+          @if (correoAbierto()!.html) {
+            <iframe class="lector-iframe" [srcdoc]="correoAbierto()!.html" sandbox="allow-same-origin"></iframe>
+          } @else {
+            <pre class="lector-texto">{{ correoAbierto()!.texto }}</pre>
+          }
+        </div>
+      } @else {
+        <div class="lector-vacio">
+          <span>✉️</span>
+          <p>Selecciona un correo para leerlo</p>
+        </div>
+      }
+    </section>
+
+  </div>
+}
+
+<!-- ── Modal Compose ──────────────────────────────────────────── -->
+@if (componiendo()) {
+  <div class="modal-overlay" (click)="cerrarCompose()">
+    <div class="modal-compose" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <span>✏️ Nuevo correo</span>
+        <button class="btn-icon" (click)="cerrarCompose()">✕</button>
+      </div>
+
+      <div class="compose-form">
+
+        <!-- Para -->
+        <div class="compose-field compose-field-row">
+          <label>Para</label>
+          <div class="compose-input-wrap">
+            <div class="autocomplete-wrap">
+              <input type="text" [(ngModel)]="compPara"
+                     (input)="onParaInput($event)"
+                     (blur)="cerrarSugerencias()"
+                     placeholder="destinatario@ejemplo.com, otro@ejemplo.com"
+                     autocomplete="off" />
+              @if (mostrandoSug() && sugCampo === 'para') {
+                <ul class="contactos-sug">
+                  @for (c of contactosSug(); track c.email) {
+                    <li (mousedown)="seleccionarContacto(c)">
+                      <span class="sug-avatar">{{ c.nombre[0].toUpperCase() }}</span>
+                      <span class="sug-info">
+                        <span class="sug-nombre">{{ c.nombre }}</span>
+                        <span class="sug-email">{{ c.email }}</span>
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+            <button class="btn-cc-toggle" type="button" (click)="toggleCC()"
+                    [class.activo]="compCCVisible" title="Agregar copia">
+              CC
+            </button>
+          </div>
+        </div>
+
+        <!-- CC (condicional) -->
+        @if (compCCVisible) {
+          <div class="compose-field compose-field-row">
+            <label>CC</label>
+            <div class="autocomplete-wrap">
+              <input type="text" [(ngModel)]="compCC"
+                     (input)="onCCInput($event)"
+                     (blur)="cerrarSugerencias()"
+                     placeholder="copia@ejemplo.com, otro@ejemplo.com"
+                     autocomplete="off" />
+              @if (mostrandoSug() && sugCampo === 'cc') {
+                <ul class="contactos-sug">
+                  @for (c of contactosSug(); track c.email) {
+                    <li (mousedown)="seleccionarContacto(c)">
+                      <span class="sug-avatar">{{ c.nombre[0].toUpperCase() }}</span>
+                      <span class="sug-info">
+                        <span class="sug-nombre">{{ c.nombre }}</span>
+                        <span class="sug-email">{{ c.email }}</span>
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Asunto -->
+        <div class="compose-field compose-field-row">
+          <label>Asunto</label>
+          <input type="text" [(ngModel)]="compAsunto" placeholder="Asunto del correo" />
+        </div>
+
+        <!-- Editor HTML -->
+        <div class="compose-field compose-field-grow">
+          <label>Mensaje</label>
+          <div class="editor-toolbar">
+            <button type="button" (click)="execCmd('bold')"         title="Negrita"><b>B</b></button>
+            <button type="button" (click)="execCmd('italic')"       title="Cursiva"><i>I</i></button>
+            <button type="button" (click)="execCmd('underline')"    title="Subrayado"><u>U</u></button>
+            <button type="button" (click)="execCmd('strikeThrough')" title="Tachado"><s>S</s></button>
+            <span class="toolbar-sep"></span>
+            <button type="button" (click)="execCmd('insertUnorderedList')" title="Lista">≡</button>
+            <button type="button" (click)="execCmd('insertOrderedList')"   title="Lista numerada">1.</button>
+            <span class="toolbar-sep"></span>
+            <button type="button" (click)="execCmd('justifyLeft')"   title="Izquierda">⫷</button>
+            <button type="button" (click)="execCmd('justifyCenter')" title="Centrar">≡</button>
+            <button type="button" (click)="execCmd('justifyRight')"  title="Derecha">⫸</button>
+            <span class="toolbar-sep"></span>
+            <button type="button" (click)="execLink()" title="Insertar enlace">🔗</button>
+            <button type="button" (click)="execCmd('removeFormat')" title="Limpiar formato">✕</button>
+            <select class="toolbar-select" (change)="execFontSize($event)" title="Tamaño">
+              <option value="">Tamaño</option>
+              <option value="1">Pequeño</option>
+              <option value="3">Normal</option>
+              <option value="5">Grande</option>
+              <option value="7">Muy grande</option>
+            </select>
+          </div>
+          <div #editorRef
+               class="compose-editor"
+               contenteditable="true"
+               (keydown.enter)="$event.stopPropagation()"
+               placeholder="Escribe tu mensaje aquí..."></div>
+        </div>
+
+        <!-- Adjuntos -->
+        <div class="compose-adjuntos">
+          <label class="btn-adjunto-add" for="fileInput" title="Adjuntar archivo">
+            📎 Adjuntar archivo
+          </label>
+          <input id="fileInput" type="file" multiple (change)="onFileSelect($event)" style="display:none" />
+
+          @if (compAdjuntos.length) {
+            <div class="adjuntos-preview">
+              @for (f of compAdjuntos; track f.name; let i = $index) {
+                <span class="adjunto-preview-chip">
+                  📄 {{ f.name }} <span class="adj-size">{{ formatFileSize(f.size) }}</span>
+                  <button type="button" class="adj-remove" (click)="quitarAdjunto(i)" title="Quitar">✕</button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        @if (compError()) {
+          <div class="form-error">{{ compError() }}</div>
+        }
+
+        <div class="compose-actions">
+          <button class="btn-secondary" (click)="cerrarCompose()">Cancelar</button>
+          <button class="btn-primary" (click)="enviar()" [disabled]="compEnviando()">
+            @if (compEnviando()) { <span class="spinner-sm"></span> Enviando... }
+            @else { 📤 Enviar }
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Modal Configuración ────────────────────────────────────── -->
+@if (configurando()) {
+  <div class="modal-overlay" (click)="cerrarConfig()">
+    <div class="modal-config" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <span>⚙️ Cuenta de correo</span>
+        <button class="btn-icon" (click)="cerrarConfig()">✕</button>
+      </div>
+
+      <div class="config-form">
+        <p class="config-hint">Usa tu cuenta <strong>&#64;iglesiamqv.org</strong> y la contraseña del correo (no la del sistema).</p>
+
+        <div class="field-group">
+          <label>Cuenta</label>
+          <input type="email" [(ngModel)]="cfgCuenta" placeholder="tu@iglesiamqv.org" autocomplete="username" />
+        </div>
+        <div class="field-group">
+          <label>Contraseña</label>
+          <input type="password" [(ngModel)]="cfgPassword" placeholder="Contraseña del correo" autocomplete="current-password" />
+        </div>
+
+        @if (cfgError()) {
+          <div class="form-error">{{ cfgError() }}</div>
+        }
+
+        <div class="config-actions">
+          <button class="btn-secondary" (click)="cerrarConfig()">Cancelar</button>
+          <button class="btn-primary" (click)="guardarConfig()" [disabled]="cfgGuardando()">
+            @if (cfgGuardando()) { <span class="spinner-sm"></span> Verificando... }
+            @else { Guardar }
+          </button>
+        </div>
+
+        @if (configurado()) {
+          <hr class="config-sep" />
+          <button class="btn-desconectar-modal" (click)="desconectar()">Desconectar cuenta</button>
+        }
+      </div>
+    </div>
+  </div>
+}

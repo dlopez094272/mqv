@@ -13,6 +13,15 @@
 
     <nav class="sidebar-nav">
 
+      <!-- Correo -->
+      <a routerLink="/correo" class="nav-item" [class.active]="isActive('/correo')">
+        <span class="nav-icon">✉️</span>
+        <span class="nav-label">Correo</span>
+        @if (correoSvc.noLeidos() > 0) {
+          <span class="nav-badge">{{ correoSvc.noLeidos() }}</span>
+        }
+      </a>
+
       <!-- Personas -->
       @if (tienePersonas()) {
         <a routerLink="/personas" class="nav-item" [class.active]="isActive('/personas')">

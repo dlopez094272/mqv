@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { PermisosService } from '../../core/services/permisos.service';
 import { InactividadService } from '../../core/services/inactividad.service';
 import { SessionGuardComponent } from '../session-guard/session-guard';
+import { CorreoService } from '../../correo/correo.service';
 
 @Component({
   selector: 'app-shell',
@@ -23,9 +24,10 @@ export class ShellComponent {
   crecimientoOpen  = signal(false);
 
   constructor(
-    public auth: AuthService,
-    public permisos: PermisosService,
-    public router: Router,
+    public auth:       AuthService,
+    public permisos:   PermisosService,
+    public router:     Router,
+    public correoSvc:  CorreoService,
     private inactividad: InactividadService,
   ) {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe((e: any) => {
@@ -35,6 +37,8 @@ export class ShellComponent {
       if (e.url.startsWith('/reportes'))    this.reportesOpen.set(true);
       if (e.url.startsWith('/crecimiento')) this.crecimientoOpen.set(true);
     });
+    // Cargar no leídos al iniciar el shell
+    this.correoSvc.cargarNoLeidos().subscribe();
   }
 
   logout() { this.inactividad.detener(); this.permisos.limpiar(); this.auth.logout(); }

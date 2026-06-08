@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
 import { CrecimientoService, LogroItem } from '../crecimiento/crecimiento.service';
 import { PermisosService } from '../core/services/permisos.service';
+import { CorreoService } from '../correo/correo.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,14 +20,16 @@ export class DashboardComponent implements OnInit {
   cargandoLogros = signal(false);
 
   constructor(
-    public  auth:     AuthService,
-    public  permisos: PermisosService,
-    private router:   Router,
-    private crecSvc:  CrecimientoService,
+    public  auth:      AuthService,
+    public  permisos:  PermisosService,
+    public  correoSvc: CorreoService,
+    private router:    Router,
+    private crecSvc:   CrecimientoService,
   ) {}
 
   ngOnInit() {
     this.cargarLogros();
+    this.correoSvc.cargarNoLeidos().subscribe();
   }
 
   cargarLogros() {
@@ -37,6 +40,7 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  irACorreo()  { this.router.navigate(['/correo']); }
   irAMiPerfil() { this.router.navigate(['/mi-perfil']); }
   irACurso(idcursos: number) { this.router.navigate(['/crecimiento/mis-cursos', idcursos]); }
   verCertificado(idcursos: number) { window.open(`/certificado/${idcursos}`, '_blank'); }
