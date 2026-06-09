@@ -190,7 +190,7 @@ export class CorreoComponent implements OnInit {
     this.componiendo.set(true);
 
     const quoted = c.html || (c.texto?.replace(/\n/g, '<br>') ?? '');
-    const fechaStr = new Date(c.fecha).toLocaleString('es-GT', {
+    const fechaStr = new Date(c.fecha.replace(' ', 'T')).toLocaleString('es-GT', {
       day: '2-digit', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });

@@ -65,6 +65,8 @@ export interface PersonaDetalle extends PersonaLista {
 
 export interface Cumpleanero {
   idpersonas: number;
+  primer_nombre: string;
+  primer_apellido: string;
   nombre_completo: string;
   fechanacimiento: string;
   mes_nac: number;

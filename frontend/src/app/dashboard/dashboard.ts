@@ -48,6 +48,9 @@ export class DashboardComponent implements OnInit {
   logoUrl(filename: string) { return this.crecSvc.logoUrl(filename); }
 
   formatFecha(f: string): string {
-    return new Date(f).toLocaleDateString('es-GT', { year: 'numeric', month: 'short', day: 'numeric' });
+    // Forzar parseo en hora local: "YYYY-MM-DD" → "YYYY-MM-DDT00:00:00"
+    // "YYYY-MM-DD HH:MM:SS" (mysql2 dateStrings) → "YYYY-MM-DDTHH:MM:SS"
+    const iso = f.length <= 10 ? f + 'T00:00:00' : f.replace(' ', 'T');
+    return new Date(iso).toLocaleDateString('es-GT', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 }

@@ -61,7 +61,7 @@
                   } @else {
                     <span class="cal-avatar">{{ c.nombre_completo[0] }}</span>
                   }
-                  <span class="cal-nombre">{{ c.nombre_completo.split(' ')[0] }}</span>
+                  <span class="cal-nombre">{{ c.primer_nombre }}</span>
                 </div>
               }
               @if (dia.cumpleaneros.length > 3) {
@@ -157,7 +157,7 @@
             @for (c of item.personas.slice(0,5); track c.idpersonas) {
               <div class="anio-persona" (click)="abrirTarjeta(c)">
                 <span class="anio-dia">{{ c.dia_nac }}</span>
-                <span class="anio-nombre">{{ c.nombre_completo.split(' ')[0] }} {{ c.nombre_completo.split(' ')[2] }}</span>
+                <span class="anio-nombre">{{ c.primer_nombre }} {{ c.primer_apellido }}</span>
               </div>
             }
             @if (item.personas.length>5) {

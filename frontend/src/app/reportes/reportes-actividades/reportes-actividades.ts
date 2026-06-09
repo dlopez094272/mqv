@@ -147,11 +147,12 @@ export class ReportesActividadesComponent {
   }
 
   private _hoy(): string {
-    return new Date().toISOString().slice(0, 10);
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
   }
 
   private _primerDiaMes(): string {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-01`;
   }
 }

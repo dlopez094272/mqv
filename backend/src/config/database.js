@@ -11,6 +11,11 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
+  // Guatemala es UTC-6 sin cambio de horario de verano
+  timezone: '-06:00',
+  // Devolver fechas como strings "YYYY-MM-DD" en vez de objetos Date JS
+  // para evitar conversiones de zona horaria que desplazan el día
+  dateStrings: true,
 });
 
 async function testConnection() {

@@ -232,9 +232,8 @@ export class CumpleaneroesComponent implements OnInit {
     ctx.fillRect(-5,-5,10,10); ctx.restore();
 
     // --- NOMBRE ---
-    const partes = c.nombre_completo.split(' ');
-    const primerNombre   = partes[0]||'';
-    const primerApellido = partes[2]||partes[1]||'';
+    const primerNombre   = c.primer_nombre;
+    const primerApellido = c.primer_apellido;
     const nameRowY = sepY + 56;
 
     ctx.font='bold 30px "Nunito",Arial'; ctx.fillStyle=PURPLE;

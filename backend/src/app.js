@@ -1,3 +1,8 @@
+// Zona horaria de Guatemala (UTC-6, sin cambio de horario de verano)
+// Debe definirse antes de cualquier uso de Date para que CURDATE() y new Date()
+// sean consistentes con la hora local de la iglesia.
+process.env.TZ = 'America/Guatemala';
+
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
@@ -36,7 +41,8 @@ app.use('/api/files/actividades/logos', express.static(actLogosDir, { maxAge: '1
 app.use('/api', indexRouter);
 
 // Servir frontend Angular compilado
-const frontendDist = process.env.FRONTEND_DIST || path.join(__dirname, '..', 'public');
+// Angular 17+ genera el build en un subdirectorio "browser/" dentro del outputPath
+const frontendDist = process.env.FRONTEND_DIST || path.join(__dirname, '..', 'public', 'browser');
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
   app.get('/{*splat}', (req, res) => {

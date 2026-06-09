@@ -336,6 +336,7 @@ async function cumpleaneros(req, res, next) {
     const mesNum = req.query.mes ? parseInt(req.query.mes, 10) : new Date().getMonth() + 1;
     const [rows] = await pool.query(`
       SELECT idpersonas,
+        primer_nombre, primer_apellido,
         TRIM(CONCAT_WS(' ', primer_nombre, NULLIF(segundo_nombre,''),
                        primer_apellido, NULLIF(segundo_apellido,''))) AS nombre_completo,
         fechanacimiento,

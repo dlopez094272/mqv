@@ -11,6 +11,11 @@ import { CatalogosService } from '../../core/services/catalogos.service';
 import { confirmar } from '../../shared/confirmar.util';
 import { AuthService } from '../../core/services/auth.service';
 
+function hoyLocal(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
 type Tab = 'personales' | 'contacto' | 'eclesiastico' | 'direcciones' | 'laboral' | 'grupos' | 'crecimiento';
 interface ChipItem { id: number; nombre: string; }
 
@@ -65,7 +70,7 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   registrosCrecimiento = signal<RegistroCrecimiento[]>([]);
   cargandoCrecimiento  = signal(false);
   estadosCrecimiento:  { id: number; nombre: string }[] = [];
-  nuevoCrecimiento = { fecha: new Date().toISOString().split('T')[0], comentario: '', idestados_crecimiento: 0 };
+  nuevoCrecimiento = { fecha: hoyLocal(), comentario: '', idestados_crecimiento: 0 };
   guardandoCrecimiento = signal(false);
 
   // Foto — todas como signals para que Angular detecte cambios desde callbacks async
@@ -434,7 +439,7 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
     this.svc.agregarCrecimiento(this.idpersonas, this.nuevoCrecimiento).subscribe({
       next: () => {
         this.guardandoCrecimiento.set(false);
-        this.nuevoCrecimiento = { fecha: new Date().toISOString().split('T')[0], comentario: '', idestados_crecimiento: 0 };
+        this.nuevoCrecimiento = { fecha: hoyLocal(), comentario: '', idestados_crecimiento: 0 };
         this.cargarCrecimiento();
       },
       error: (err) => { this.error.set(err.message || 'Error al agregar'); this.guardandoCrecimiento.set(false); },
