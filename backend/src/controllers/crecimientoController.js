@@ -17,14 +17,18 @@ function safeDeleteFile(filePath) {
 
 async function listarCursos(req, res, next) {
   try {
+    const isSuperAdmin = req.user?.is_superadmin;
+    const where  = isSuperAdmin ? '' : 'WHERE c.created_by = ?';
+    const params = isSuperAdmin ? [] : [req.user.usuario];
     const [rows] = await pool.query(`
       SELECT c.*,
              (SELECT COUNT(*) FROM cursos_asignaciones ca WHERE ca.idcursos = c.idcursos) AS total_asignados,
              (SELECT COUNT(*) FROM cursos_preguntas cp WHERE cp.idcursos = c.idcursos)    AS total_preguntas,
              (SELECT COUNT(*) FROM cursos_contenido cc WHERE cc.idcursos = c.idcursos)    AS total_contenido
       FROM cursos c
+      ${where}
       ORDER BY c.nombre
-    `);
+    `, params);
     res.json(rows);
   } catch (err) { next(err); }
 }
@@ -34,6 +38,8 @@ async function obtenerCurso(req, res, next) {
     const id = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT * FROM cursos WHERE idcursos = ?', [id]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'No tienes permiso para ver este curso' });
 
     const [contenido] = await pool.query(
       'SELECT * FROM cursos_contenido WHERE idcursos = ? ORDER BY orden, idcontenido',
@@ -82,6 +88,8 @@ async function actualizarCurso(req, res, next) {
     const id = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT * FROM cursos WHERE idcursos = ?', [id]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     const { nombre, descripcion, color } = req.body;
     if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre del curso es requerido' });
@@ -103,8 +111,10 @@ async function actualizarCurso(req, res, next) {
 async function toggleCurso(req, res, next) {
   try {
     const id = parseInt(req.params.id);
-    const [[curso]] = await pool.query('SELECT activo FROM cursos WHERE idcursos = ?', [id]);
+    const [[curso]] = await pool.query('SELECT activo, created_by FROM cursos WHERE idcursos = ?', [id]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'No tienes permiso para modificar este curso' });
     await pool.query('UPDATE cursos SET activo = ? WHERE idcursos = ?', [curso.activo ? 0 : 1, id]);
     res.json({ message: curso.activo ? 'Curso inactivado' : 'Curso activado' });
   } catch (err) { next(err); }
