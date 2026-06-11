@@ -451,8 +451,29 @@
         <span class="asistencia-titulo">Registro de Asistencia</span>
         <span class="asistencia-act-nombre">{{ actividadAsistencia()?.nombre }}</span>
       </div>
-      <button class="btn-close" (click)="cerrarAsistencia()" title="Cerrar">✕</button>
+      <div class="asistencia-header-actions">
+        @if (permisos.puede('actividades_asistentes', 'A')) {
+          <button class="btn-camara"
+                  [class.btn-camara--activo]="mostrarCamara()"
+                  (click)="toggleCamara()"
+                  title="Tomar asistencia con reconocimiento facial">
+            📷 {{ mostrarCamara() ? 'Cerrar cámara' : 'Usar cámara' }}
+          </button>
+        }
+        <button class="btn-close" (click)="cerrarAsistencia()" title="Cerrar">✕</button>
+      </div>
     </div>
+
+    <!-- Componente de cámara con reconocimiento facial -->
+    @if (mostrarCamara() && actividadAsistencia()) {
+      <div class="asistencia-camara-wrap">
+        <app-camara-asistencia
+          [idActividad]="actividadAsistencia()!.idactividades"
+          [personasAsistentes]="asistenciaData()?.personas ?? []"
+          (asistenciaActualizada)="onAsistenciaActualizadaPorCamara()">
+        </app-camara-asistencia>
+      </div>
+    }
 
     <!-- Contadores -->
     @if (asistenciaData() && !cargandoAsistencia()) {

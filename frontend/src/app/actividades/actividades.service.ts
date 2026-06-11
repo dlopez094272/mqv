@@ -77,6 +77,14 @@ export interface AsistenciaResumen {
   };
 }
 
+export interface PersonaDescriptor {
+  idpersonas: number;
+  nombre:     string;
+  foto:       string | null;
+  descriptor: number[] | null;
+  foto_ref:   string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ActividadesService {
   private http = inject(HttpClient);
@@ -144,5 +152,13 @@ export class ActividadesService {
 
   listarGruposActividad(idActividad: number) {
     return this.http.get<number[]>(`${this.base}/${idActividad}/grupos`);
+  }
+
+  obtenerDescriptoresFaciales() {
+    return this.http.get<PersonaDescriptor[]>(`${this.base}/faces/descriptors`);
+  }
+
+  guardarDescriptorFacial(idpersonas: number, descriptor: number[], foto_ref?: string) {
+    return this.http.post<{ ok: boolean }>(`${this.base}/faces/descriptor`, { idpersonas, descriptor, foto_ref });
   }
 }

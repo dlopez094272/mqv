@@ -54,7 +54,7 @@ export class InactividadService implements OnDestroy {
     this.continuar();
   }
 
-  private registrarActividad() {
+  registrarActividad() {
     if (this.estado() === 'bloqueado') return;
     this.ultimaActividad = Date.now();
     if (this.estado() === 'advertencia') {

@@ -1,0 +1,140 @@
+.camara-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 10px;
+  color: #e2e8f0;
+}
+
+/* ── Estado ───────────────────────────────────────── */
+.camara-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #1e293b;
+
+  &--activo { background: #052e16; color: #86efac; }
+  &--error  { background: #450a0a; color: #fca5a5; }
+}
+
+.camara-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: #334155;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.camara-progress-fill {
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.3s;
+}
+
+/* ── Video ────────────────────────────────────────── */
+.camara-video-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 320px;
+}
+
+.camara-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camara-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.camara-overlay-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* ── Reconocidos ──────────────────────────────────── */
+.camara-reconocidos {
+  background: #052e16;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.camara-reconocidos-header {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #86efac;
+  background: #064e3b;
+  position: sticky;
+  top: 0;
+}
+
+.camara-reconocido-item {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #064e3b;
+  color: #d1fae5;
+
+  &:last-child { border-bottom: none; }
+}
+
+.camara-reconocido-nombre {
+  font-weight: 500;
+}
+
+/* ── Spinner ──────────────────────────────────────── */
+.camara-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+
+  &--lg {
+    width: 36px;
+    height: 36px;
+    border-width: 3px;
+  }
+}
+
+.camara-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}

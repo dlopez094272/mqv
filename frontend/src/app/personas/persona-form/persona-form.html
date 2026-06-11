@@ -516,7 +516,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Estado de Crecimiento <span class="req">*</span></label>
-              <select [(ngModel)]="nuevoCrecimiento.idestados_crecimiento">
+              <select [(ngModel)]="nuevoCrecimiento.crecimiento">
                 <option [ngValue]="0">Seleccionar estado...</option>
                 @for (e of estadosCrecimiento; track e.id) {
                   <option [value]="e.id">{{ e.nombre }}</option>

@@ -109,6 +109,11 @@ export class TesoreriaMovimientosComponent implements OnInit {
   saldoFinal = computed(() =>
     this.saldoInicial() + this.totalIngresos() - this.totalEgresos()
   );
+  // Saldo global de la tesorería (SUM ingresos - SUM egresos de todos los movimientos, igual al tesoreria.saldo del backend)
+  saldoTotal = computed(() => {
+    const t = this.tesoreria();
+    return t ? parseFloat(String(t.saldo || 0)) : 0;
+  });
 
   // ── Computed: puede escribir ──────────────────────────────────
   puedeAgregar = computed(() =>

@@ -414,10 +414,10 @@ async function enviarEmailCumpleaneros(req, res, next) {
 async function listarCrecimiento(req, res, next) {
   try {
     const [rows] = await pool.query(`
-      SELECT pc.idpersonas_crecimiento, pc.idpersonas, pc.idestados_crecimiento,
+      SELECT pc.idpersonas_crecimiento, pc.idpersonas, pc.crecimiento,
              pc.fecha, pc.comentario, ec.estado
       FROM personas_crecimiento pc
-      JOIN estados_crecimiento ec ON pc.idestados_crecimiento = ec.idestados_crecimiento
+      JOIN estados_crecimiento ec ON pc.crecimiento = ec.idestados_crecimiento
       WHERE pc.idpersonas = ?
       ORDER BY pc.fecha DESC`, [req.params.id]);
     res.json(rows);
@@ -426,13 +426,13 @@ async function listarCrecimiento(req, res, next) {
 
 async function agregarCrecimiento(req, res, next) {
   try {
-    const { fecha, comentario, idestados_crecimiento } = req.body;
-    if (!idestados_crecimiento) return res.status(400).json({ error: 'Estado de crecimiento es requerido' });
+    const { fecha, comentario, crecimiento } = req.body;
+    if (!crecimiento) return res.status(400).json({ error: 'Estado de crecimiento es requerido' });
     if (comentario && comentario.length > 245) return res.status(400).json({ error: 'El comentario no debe superar 245 caracteres' });
     const fechaFinal = fecha || new Date().toISOString().split('T')[0];
     await pool.query(
-      'INSERT INTO personas_crecimiento (idpersonas, idestados_crecimiento, fecha, comentario) VALUES (?, ?, ?, ?)',
-      [req.params.id, idestados_crecimiento, fechaFinal, comentario || null]
+      'INSERT INTO personas_crecimiento (idpersonas, crecimiento, fecha, comentario) VALUES (?, ?, ?, ?)',
+      [req.params.id, crecimiento, fechaFinal, comentario || null]
     );
     res.status(201).json({ message: 'Registro de crecimiento agregado' });
   } catch (err) { next(err); }

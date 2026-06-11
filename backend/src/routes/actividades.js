@@ -395,4 +395,51 @@ router.delete('/:id', checkPermission('actividades', 'D'), async (req, res, next
   } catch (err) { next(err); }
 });
 
+/* ── Reconocimiento facial: obtener descriptores almacenados ─── */
+router.get('/faces/descriptors', checkPermission('actividades_asistentes', 'S'), async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        p.idpersonas,
+        TRIM(CONCAT_WS(' ',
+          p.primer_nombre, NULLIF(p.segundo_nombre,''),
+          p.primer_apellido, NULLIF(p.segundo_apellido,'')
+        )) AS nombre,
+        CONVERT(p.foto USING utf8) AS foto,
+        d.descriptor,
+        d.foto_ref
+      FROM personas p
+      LEFT JOIN personas_descriptores_faciales d ON d.idpersonas = p.idpersonas
+      WHERE p.foto IS NOT NULL
+        AND CONVERT(p.foto USING utf8) != ''
+      ORDER BY p.primer_apellido, p.primer_nombre
+    `);
+
+    res.json(rows.map(r => ({
+      ...r,
+      descriptor: r.descriptor ? JSON.parse(r.descriptor) : null,
+    })));
+  } catch (err) { next(err); }
+});
+
+/* ── Reconocimiento facial: guardar/actualizar descriptor ───── */
+router.post('/faces/descriptor', checkPermission('actividades_asistentes', 'A'), async (req, res, next) => {
+  try {
+    const { idpersonas, descriptor, foto_ref } = req.body;
+    if (!idpersonas || !Array.isArray(descriptor) || descriptor.length !== 128)
+      return res.status(400).json({ error: 'idpersonas y descriptor (array[128]) son requeridos' });
+
+    await pool.query(`
+      INSERT INTO personas_descriptores_faciales (idpersonas, descriptor, foto_ref)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        descriptor     = VALUES(descriptor),
+        foto_ref       = VALUES(foto_ref),
+        actualizado_at = NOW()
+    `, [idpersonas, JSON.stringify(descriptor), foto_ref || null]);
+
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

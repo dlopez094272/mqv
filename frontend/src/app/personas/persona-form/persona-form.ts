@@ -70,7 +70,7 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   registrosCrecimiento = signal<RegistroCrecimiento[]>([]);
   cargandoCrecimiento  = signal(false);
   estadosCrecimiento:  { id: number; nombre: string }[] = [];
-  nuevoCrecimiento = { fecha: hoyLocal(), comentario: '', idestados_crecimiento: 0 };
+  nuevoCrecimiento = { fecha: hoyLocal(), comentario: '', crecimiento: 0 };
   guardandoCrecimiento = signal(false);
 
   // Foto — todas como signals para que Angular detecte cambios desde callbacks async
@@ -432,14 +432,14 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   }
 
   agregarCrecimiento() {
-    if (!this.nuevoCrecimiento.idestados_crecimiento) {
+    if (!this.nuevoCrecimiento.crecimiento) {
       this.error.set('Seleccione un estado de crecimiento'); return;
     }
     this.guardandoCrecimiento.set(true);
     this.svc.agregarCrecimiento(this.idpersonas, this.nuevoCrecimiento).subscribe({
       next: () => {
         this.guardandoCrecimiento.set(false);
-        this.nuevoCrecimiento = { fecha: hoyLocal(), comentario: '', idestados_crecimiento: 0 };
+        this.nuevoCrecimiento = { fecha: hoyLocal(), comentario: '', crecimiento: 0 };
         this.cargarCrecimiento();
       },
       error: (err) => { this.error.set(err.message || 'Error al agregar'); this.guardandoCrecimiento.set(false); },

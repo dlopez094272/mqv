@@ -11,6 +11,7 @@ import {
 import { PermisosService } from '../core/services/permisos.service';
 import { environment }     from '../../environments/environment';
 import { confirmar }       from '../shared/confirmar.util';
+import { CamaraAsistenciaComponent } from './camara-asistencia.component';
 
 interface DiaCalendario {
   fecha:        Date;
@@ -27,7 +28,7 @@ interface ActGantt extends Actividad {
 @Component({
   selector:    'app-actividades',
   standalone:  true,
-  imports:     [CommonModule, FormsModule],
+  imports:     [CommonModule, FormsModule, CamaraAsistenciaComponent],
   templateUrl: './actividades.component.html',
   styleUrl:    './actividades.component.scss',
 })
@@ -120,6 +121,7 @@ export class ActividadesComponent implements OnInit {
 
   // ── Asistencia ────────────────────────────────────────────────
   mostrarAsistencia    = signal(false);
+  mostrarCamara        = signal(false);
   actividadAsistencia  = signal<Actividad | null>(null);
   cargandoAsistencia   = signal(false);
   asistenciaData       = signal<AsistenciaResumen | null>(null);
@@ -429,11 +431,21 @@ export class ActividadesComponent implements OnInit {
 
   cerrarAsistencia() {
     this.mostrarAsistencia.set(false);
+    this.mostrarCamara.set(false);
     this.actividadAsistencia.set(null);
     this.asistenciaData.set(null);
     this.busquedaAsistencia.set('');
     this.mostrarFormVisitante.set(false);
     this.visitanteExpandido.set(null);
+  }
+
+  toggleCamara() {
+    this.mostrarCamara.update(v => !v);
+  }
+
+  onAsistenciaActualizadaPorCamara() {
+    const act = this.actividadAsistencia();
+    if (act) this._cargarAsistencia(act.idactividades);
   }
 
   toggleDetalleVisitante(id: number) {

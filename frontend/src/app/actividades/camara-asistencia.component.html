@@ -1,0 +1,56 @@
+<div class="camara-panel">
+
+  <!-- Barra de estado -->
+  <div class="camara-status" [class]="'camara-status--' + estado()">
+    @switch (estado()) {
+      @case ('cargando') {
+        <span class="camara-spinner"></span>
+        <span>{{ mensajeEstado() }}</span>
+      }
+      @case ('enrollando') {
+        <span class="camara-spinner"></span>
+        <span>{{ mensajeEstado() }}</span>
+        @if (totalProgreso() > 0) {
+          <div class="camara-progress-bar">
+            <div class="camara-progress-fill"
+                 [style.width.%]="(progreso() / totalProgreso()) * 100"></div>
+          </div>
+        }
+      }
+      @case ('activo') {
+        <span class="camara-dot"></span>
+        <span>{{ mensajeEstado() }}</span>
+      }
+      @case ('error') {
+        <span>⚠️ {{ mensajeEstado() }}</span>
+      }
+    }
+  </div>
+
+  <!-- Área de video + canvas -->
+  <div class="camara-video-wrap">
+    <video #video autoplay muted playsinline class="camara-video"></video>
+    <canvas #canvas class="camara-canvas"></canvas>
+
+    @if (estado() === 'cargando' || estado() === 'enrollando') {
+      <div class="camara-overlay-loading">
+        <span class="camara-spinner camara-spinner--lg"></span>
+      </div>
+    }
+  </div>
+
+  <!-- Lista de reconocidos en esta sesión -->
+  @if (reconocidos().length > 0) {
+    <div class="camara-reconocidos">
+      <div class="camara-reconocidos-header">
+        ✅ Registrados en esta sesión ({{ reconocidos().length }})
+      </div>
+      @for (p of reconocidos(); track p.idpersonas) {
+        <div class="camara-reconocido-item">
+          <span class="camara-reconocido-nombre">{{ p.nombre_completo }}</span>
+        </div>
+      }
+    </div>
+  }
+
+</div>

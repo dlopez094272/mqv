@@ -99,7 +99,7 @@ export interface PersonasPaginadas {
 export interface RegistroCrecimiento {
   idpersonas_crecimiento: number;
   idpersonas: number;
-  idestados_crecimiento: number;
+  crecimiento: number;
   estado: string;
   fecha: string;
   comentario: string;
@@ -165,7 +165,7 @@ export class PersonasService {
     return this.http.get<RegistroCrecimiento[]>(`${this.base}/${idpersonas}/crecimiento`);
   }
 
-  agregarCrecimiento(idpersonas: number, data: { fecha: string; comentario: string; idestados_crecimiento: number }) {
+  agregarCrecimiento(idpersonas: number, data: { fecha: string; comentario: string; crecimiento: number }) {
     return this.http.post<{ message: string }>(`${this.base}/${idpersonas}/crecimiento`, data);
   }
 

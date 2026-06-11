@@ -40,15 +40,19 @@ async function tienePermiso(usuario, tabla, operacion, isSuperadmin) {
 }
 
 async function recalcularSaldo(idtesoreria) {
+  const id = parseInt(idtesoreria, 10);
   await pool.query(
-    `UPDATE tesoreria
-     SET saldo = (
-       SELECT COALESCE(SUM(debito) - SUM(credito), 0)
+    `UPDATE tesoreria t
+     LEFT JOIN (
+       SELECT dtesoreria,
+              SUM(debito) - SUM(credito) AS saldo_calculado
        FROM tesoreria_movimientos
-       WHERE dtesoreria = ? AND anulado = 0
-     )
-     WHERE idtesoreria = ?`,
-    [idtesoreria, idtesoreria]
+       WHERE IFNULL(anulado, 0) = 0
+       GROUP BY dtesoreria
+     ) m ON t.idtesoreria = m.dtesoreria
+     SET t.saldo = COALESCE(m.saldo_calculado, 0)
+     WHERE t.idtesoreria = ?`,
+    [id]
   );
 }
 
@@ -121,17 +125,32 @@ router.get('/', async (req, res, next) => {
       if (!tiene) return res.status(403).json({ error: 'No tiene permiso para ver tesorería' });
     }
 
+    const saldoJoin = `
+      LEFT JOIN tesoreria_movimientos m
+        ON m.dtesoreria = t.idtesoreria AND m.anulado = 0`;
+    const saldoSelect = `
+      COALESCE(SUM(m.debito) - SUM(m.credito), 0) AS saldo`;
+    const groupBy = `
+      GROUP BY t.idtesoreria, t.nombre, t.responsable, t.activo, t.fecha_cracion, t.creador`;
+
     let sql, params = [];
     if (is_superadmin) {
-      sql = 'SELECT * FROM tesoreria ORDER BY nombre';
+      sql = `SELECT t.idtesoreria, t.nombre, t.responsable, t.activo,
+                    t.fecha_cracion, t.creador, ${saldoSelect}
+             FROM tesoreria t ${saldoJoin}
+             ${groupBy}
+             ORDER BY t.nombre`;
     } else {
       sql = `
-        SELECT DISTINCT t.* FROM tesoreria t
+        SELECT t.idtesoreria, t.nombre, t.responsable, t.activo,
+               t.fecha_cracion, t.creador, ${saldoSelect}
+        FROM tesoreria t ${saldoJoin}
         WHERE t.responsable = ?
            OR EXISTS (
              SELECT 1 FROM tesoreria_usuarios tu
              WHERE tu.idtesoreria = t.idtesoreria AND tu.usuario = ?
            )
+        ${groupBy}
         ORDER BY t.nombre`;
       params = [usuario, usuario];
     }
@@ -305,7 +324,14 @@ router.get('/:id/movimientos', async (req, res, next) => {
     }
 
     const [[teso]] = await pool.query(
-      'SELECT * FROM tesoreria WHERE idtesoreria = ?', [req.params.id]
+      `SELECT t.idtesoreria, t.nombre, t.responsable, t.activo, t.fecha_cracion, t.creador,
+              COALESCE(SUM(m.debito) - SUM(m.credito), 0) AS saldo
+       FROM tesoreria t
+       LEFT JOIN tesoreria_movimientos m
+         ON m.dtesoreria = t.idtesoreria AND m.anulado = 0
+       WHERE t.idtesoreria = ?
+       GROUP BY t.idtesoreria, t.nombre, t.responsable, t.activo, t.fecha_cracion, t.creador`,
+      [req.params.id]
     );
     if (!teso) return res.status(404).json({ error: 'Tesorería no encontrada' });
 

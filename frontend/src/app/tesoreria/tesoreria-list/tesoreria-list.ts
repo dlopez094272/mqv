@@ -1,8 +1,8 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Router, NavigationEnd } from '@angular/router';
+import { Observable, Subscription, filter } from 'rxjs';
 import {
   TesoreriaService, Tesoreria, TesoreriaUsuario, UsuarioLookup,
 } from '../tesoreria.service';
@@ -17,7 +17,8 @@ import { confirmar } from '../../shared/confirmar.util';
   templateUrl: './tesoreria-list.html',
   styleUrl: './tesoreria-list.scss',
 })
-export class TesoreriaListComponent implements OnInit {
+export class TesoreriaListComponent implements OnInit, OnDestroy {
+  private routerSub?: Subscription;
   // ── Lista ─────────────────────────────────────────────────────
   tesorerias   = signal<Tesoreria[]>([]);
   filtrados    = signal<Tesoreria[]>([]);
@@ -83,6 +84,16 @@ export class TesoreriaListComponent implements OnInit {
   ngOnInit() {
     this.cargar();
     this.svc.lookupUsuarios().subscribe({ next: u => this.todosUsuarios = u });
+    // Recargar saldos al volver desde la página de movimientos (incluso con back del navegador)
+    this.routerSub = this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => {
+        if (e.url === '/tesoreria') this.cargar();
+      });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   cargar() {

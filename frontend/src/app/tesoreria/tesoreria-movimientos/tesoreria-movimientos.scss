@@ -36,6 +36,15 @@
   font-size: 12px;
 }
 
+.saldo-total-badge {
+  background: var(--primary-light, #e8f5e9);
+  color: var(--primary-dark, #1b5e20);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .badge-anulado {
   background: #fce4e4;
   color: var(--danger);

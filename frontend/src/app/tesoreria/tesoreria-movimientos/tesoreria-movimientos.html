@@ -7,6 +7,9 @@
       <div class="header-meta">
         <span class="badge badge-id">ID: {{ tesoreria()!.idtesoreria }}</span>
         <span>Responsable: <strong>{{ tesoreria()!.responsable || '—' }}</strong></span>
+        <span class="saldo-total-badge">
+          Saldo total: <strong>{{ formatQ(saldoTotal()) }}</strong>
+        </span>
         @if (soloLectura()) {
           <span class="badge badge-warning">Solo lectura</span>
         }
