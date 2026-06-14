@@ -1498,23 +1498,41 @@ tfoot td {
 
 /* ── Print: sólo el modal de reporte ───────────────────────── */
 @media print {
+  /* Ocultar todo el contenido de la vista de actividades */
+  .actividades-contenido { display: none !important; }
+
   .reporte-modal-backdrop { display: none !important; }
   .reporte-modal-acciones { display: none !important; }
+  .reporte-modal-header   { display: none !important; }
 
+  /* El modal fluye normalmente para permitir múltiples páginas */
   .reporte-modal {
-    position: fixed !important;
-    left: 0 !important; top: 0 !important;
+    position: static !important;
     transform: none !important;
     width: 100% !important;
     max-height: none !important;
+    height: auto !important;
     overflow: visible !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    z-index: 9999 !important;
+    background: white !important;
+    display: block !important;
   }
 
-  .reporte-modal-body { overflow: visible !important; }
+  .reporte-modal-body {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
   .reporte-print-header { display: flex !important; }
+
+  /* Evitar cortar filas por la mitad */
+  tbody tr { break-inside: avoid; }
+
+  /* Encabezado de tabla se repite en cada página */
+  thead { display: table-header-group; }
 
   .reporte-resumen-cards .resumen-card {
     border: 1px solid #ddd;
@@ -1526,5 +1544,11 @@ tfoot td {
     background: #f0eaf7 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Configuración de página */
+  @page {
+    margin: 18mm 14mm;
+    size: A4 portrait;
   }
 }

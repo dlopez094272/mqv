@@ -341,9 +341,9 @@ router.get('/:id/movimientos', async (req, res, next) => {
     let saldoInicial = 0;
     if (desde) {
       const [[prev]] = await pool.query(
-        `SELECT COALESCE(SUM(debito) - SUM(credito), 0) AS dif
+        `SELECT COALESCE(SUM(debito), 0) - COALESCE(SUM(credito), 0) AS dif
          FROM tesoreria_movimientos
-         WHERE dtesoreria = ? AND anulado = 0 AND fecha < ?`,
+         WHERE dtesoreria = ? AND IFNULL(anulado, 0) = 0 AND fecha < ?`,
         [req.params.id, desde]
       );
       saldoInicial = parseFloat(prev.dif || 0);

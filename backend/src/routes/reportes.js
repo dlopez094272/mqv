@@ -180,7 +180,9 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
     `, [ids]);
 
     // ── Desglose por edad (solo personas registradas, no visitantes) ──
-    let edadQuery = `
+    // Las actividades en `ids` ya están filtradas por grupo vía actividades_grupos,
+    // por lo que se cuentan TODOS los asistentes de esas actividades.
+    const [porEdad] = await pool.query(`
       SELECT
         aa.idactividades,
         SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 0  AND  2  THEN 1 ELSE 0 END) AS bebes,
@@ -193,17 +195,11 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
       FROM actividades_asistentes aa
       JOIN personas p ON p.idpersonas = aa.idpersonas
       WHERE aa.idactividades IN (?)
-    `;
-    const edadParams = [ids];
-    if (idgrupo) {
-      edadQuery += ` AND EXISTS (SELECT 1 FROM grupos_personas gp WHERE gp.idpersonas = aa.idpersonas AND gp.idgrupos = ?)`;
-      edadParams.push(idgrupo);
-    }
-    edadQuery += ` GROUP BY aa.idactividades`;
-    const [porEdad] = await pool.query(edadQuery, edadParams);
+      GROUP BY aa.idactividades
+    `, [ids]);
 
     // ── Desglose por género ─────────────────────────────────────
-    let generoQuery = `
+    const [porGenero] = await pool.query(`
       SELECT
         aa.idactividades,
         SUM(CASE WHEN p.sexo = 'M'                              THEN 1 ELSE 0 END) AS hombres,
@@ -212,17 +208,11 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
       FROM actividades_asistentes aa
       JOIN personas p ON p.idpersonas = aa.idpersonas
       WHERE aa.idactividades IN (?)
-    `;
-    const generoParams = [ids];
-    if (idgrupo) {
-      generoQuery += ` AND EXISTS (SELECT 1 FROM grupos_personas gp WHERE gp.idpersonas = aa.idpersonas AND gp.idgrupos = ?)`;
-      generoParams.push(idgrupo);
-    }
-    generoQuery += ` GROUP BY aa.idactividades`;
-    const [porGenero] = await pool.query(generoQuery, generoParams);
+      GROUP BY aa.idactividades
+    `, [ids]);
 
     // ── Ranking de asistencia por persona ───────────────────────
-    let rankingQuery = `
+    const [ranking] = await pool.query(`
       SELECT
         p.idpersonas,
         TRIM(CONCAT_WS(' ',
@@ -234,14 +224,8 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
       FROM actividades_asistentes aa
       JOIN personas p ON p.idpersonas = aa.idpersonas
       WHERE aa.idactividades IN (?)
-    `;
-    const rankingParams = [ids];
-    if (idgrupo) {
-      rankingQuery += ` AND EXISTS (SELECT 1 FROM grupos_personas gp WHERE gp.idpersonas = aa.idpersonas AND gp.idgrupos = ?)`;
-      rankingParams.push(idgrupo);
-    }
-    rankingQuery += ` GROUP BY p.idpersonas ORDER BY total_asistencias DESC, nombre_completo ASC`;
-    const [ranking] = await pool.query(rankingQuery, rankingParams);
+      GROUP BY p.idpersonas ORDER BY total_asistencias DESC, nombre_completo ASC
+    `, [ids]);
 
     // ── Combinar resultados ─────────────────────────────────────
     const result = actividades.map(act => {

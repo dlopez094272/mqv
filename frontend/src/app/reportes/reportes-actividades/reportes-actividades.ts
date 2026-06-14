@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, NgZone } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -75,10 +75,13 @@ export class ReportesActividadesComponent implements OnInit {
     idgrupo:      null as number | null,
   };
 
+  private ngZone = inject(NgZone);
+
   // ── Estado ───────────────────────────────────────────────────
   cargando          = signal(false);
   error             = signal('');
   generado          = signal(false);
+  generandoPdf      = signal(false);
   actividades       = signal<ReporteActividad[]>([]);
   gruposDisponibles = signal<GrupoDisponible[]>([]);
   rankingAsistencia = signal<RankingPersona[]>([]);
@@ -132,6 +135,34 @@ export class ReportesActividadesComponent implements OnInit {
   // ── Acciones ─────────────────────────────────────────────────
   imprimir() {
     window.print();
+  }
+
+  async descargarPDF() {
+    this.generandoPdf.set(true);
+    const contenedor = document.getElementById('reporte-contenido')!;
+
+    // Mostrar elementos print-only, ocultar no-print
+    const printOnly = contenedor.querySelectorAll<HTMLElement>('.print-only');
+    const noPrint   = contenedor.querySelectorAll<HTMLElement>('.no-print');
+    printOnly.forEach(el => el.style.setProperty('display', 'flex', 'important'));
+    noPrint.forEach(el => el.style.setProperty('display', 'none', 'important'));
+
+    try {
+      await this.ngZone.runOutsideAngular(async () => {
+        const html2pdf = ((await import('html2pdf.js')) as any).default;
+        await html2pdf().set({
+          margin:      [14, 18, 14, 18],
+          filename:    'reporte-actividades.pdf',
+          image:       { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        }).from(contenedor).save();
+      });
+    } finally {
+      printOnly.forEach(el => el.style.removeProperty('display'));
+      noPrint.forEach(el => el.style.removeProperty('display'));
+      this.generandoPdf.set(false);
+    }
   }
 
   onFiltroGrupoChange() {

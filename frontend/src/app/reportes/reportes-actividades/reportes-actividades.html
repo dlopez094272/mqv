@@ -2,9 +2,14 @@
 <div class="page-header no-print">
   <h2>📊 Reporte de Actividades</h2>
   @if (generado() && actividades().length > 0) {
-    <button class="btn btn-outline btn-print" style="width:auto" (click)="imprimir()">
-      🖨️ Imprimir / PDF
-    </button>
+    <div class="btns-export">
+      <button class="btn btn-outline" style="width:auto" (click)="imprimir()">
+        🖨️ Imprimir
+      </button>
+      <button class="btn btn-primary" style="width:auto" (click)="descargarPDF()" [disabled]="generandoPdf()">
+        {{ generandoPdf() ? 'Generando...' : '📄 Descargar PDF' }}
+      </button>
+    </div>
   }
 </div>
 
@@ -46,6 +51,7 @@
 }
 
 @if (generado() && !cargando()) {
+<div id="reporte-contenido">
 
   <!-- Encabezado solo para impresión -->
   <div class="print-header print-only">
@@ -125,7 +131,7 @@
     </section>
 
     <!-- ══ SECCIÓN 2: Por grupos ════════════════════════════════ -->
-    @if (todosLosGrupos().length > 0) {
+    @if (todosLosGrupos().length > 1) {
       <section class="reporte-seccion">
         <h3 class="seccion-titulo">Asistencia por Grupos</h3>
         <div class="table-container">
@@ -298,6 +304,7 @@
     }
 
   }
+</div><!-- /reporte-contenido -->
 }
 
 <!-- ── Template reutilizable: logo ─────────────────────────── -->

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, NgZone } from '@angular/core';
 import { CommonModule }   from '@angular/common';
 import { FormsModule }    from '@angular/forms';
 import { HttpClient }     from '@angular/common/http';
@@ -157,11 +157,14 @@ export class ActividadesComponent implements OnInit {
   // ── Menú contextual ───────────────────────────────────────────
   menuAct = signal<{ act: Actividad; x: number; y: number } | null>(null);
 
+  private ngZone = inject(NgZone);
+
   // ── Reporte de actividad individual ──────────────────────────
   mostrarReporte  = signal(false);
   reporteAct      = signal<Actividad | null>(null);
   reporteData     = signal<ReporteActividadDetalle | null>(null);
   cargandoReporte = signal(false);
+  generandoPdf    = signal(false);
 
   // Drag & Drop dentro del modal de asistencia
   arrastandoPersona    = signal<AsistenciaPersona | null>(null);
@@ -501,6 +504,33 @@ export class ActividadesComponent implements OnInit {
   cerrarReporte() { this.mostrarReporte.set(false); }
 
   imprimirReporte() { window.print(); }
+
+  async descargarPDFReporte() {
+    const act = this.reporteAct();
+    if (!act) return;
+    this.generandoPdf.set(true);
+
+    const contenedor = document.getElementById('reporte-act-contenido')!;
+    // Mostrar el encabezado de impresión en el PDF
+    const printHeader = contenedor.querySelector<HTMLElement>('.reporte-print-header');
+    if (printHeader) printHeader.style.setProperty('display', 'flex', 'important');
+
+    try {
+      await this.ngZone.runOutsideAngular(async () => {
+        const html2pdf = ((await import('html2pdf.js')) as any).default;
+        await html2pdf().set({
+          margin:      [14, 18, 14, 18],
+          filename:    `reporte-${act.nombre.replace(/\s+/g, '-').toLowerCase()}.pdf`,
+          image:       { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        }).from(contenedor).save();
+      });
+    } finally {
+      if (printHeader) printHeader.style.removeProperty('display');
+      this.generandoPdf.set(false);
+    }
+  }
 
   toggleCamara() {
     this.mostrarCamara.update(v => !v);

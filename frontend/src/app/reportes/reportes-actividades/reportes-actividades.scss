@@ -20,10 +20,10 @@
   }
 }
 
-.btn-print {
+.btns-export {
   display: flex;
+  gap: 8px;
   align-items: center;
-  gap: 6px;
 }
 
 /* ── Secciones del reporte ───────────────────────────────── */
@@ -162,9 +162,48 @@ tfoot td {
   font-size: 15px;
 }
 
-/* ── Encabezado de impresión (oculto en pantalla) ────────── */
+/* ── Encabezado de impresión ─────────────────────────────── */
+/* Oculto en pantalla; visible en print/@media y en PDF (via JS).
+   Los estilos de layout están aquí (fuera de @media print) para
+   que html2canvas los aplique correctamente al generar el PDF. */
 .print-header {
   display: none;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #57446c;
+  margin-bottom: 24px;
+}
+
+.print-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.print-titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong {
+    font-size: 11px;
+    color: #57446c;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #1d3a47;
+  }
+}
+
+.print-rango {
+  font-size: 12px;
+  color: #666;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -177,55 +216,26 @@ tfoot td {
   /* Mostrar elementos solo para impresión */
   .print-only { display: flex !important; }
 
-  /* Encabezado del documento impreso */
-  .print-header {
-    align-items: center;
-    gap: 18px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #57446c;
-    margin-bottom: 24px;
-    page-break-inside: avoid;
-  }
-
-  .print-logo {
-    width: 60px;
-    height: 60px;
-    object-fit: contain;
-  }
-
-  .print-titulo {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-
-    strong {
-      font-size: 11px;
-      color: #57446c;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: 20px;
-      color: #1d3a47;
-    }
-  }
-
-  .print-rango {
-    font-size: 12px;
-    color: #666;
-  }
-
-  /* Secciones: evitar corte de página en medio de tabla pequeña */
+  /* Secciones: permitir salto de página pero evitar huérfanos */
   .reporte-seccion {
-    page-break-inside: avoid;
+    break-inside: auto;
     margin-bottom: 24px;
   }
 
-  /* Si una sección es larga, permitir el salto pero mantener el encabezado */
-  .reporte-seccion:not(:first-child) {
-    page-break-before: auto;
+  /* Título siempre junto a la tabla que le sigue */
+  .seccion-titulo {
+    break-after: avoid;
+  }
+
+  /* Encabezado de tabla se repite en cada página */
+  thead {
+    display: table-header-group;
+    break-inside: avoid;
+  }
+
+  /* Evitar cortar filas por la mitad */
+  tbody tr {
+    break-inside: avoid;
   }
 
   /* Estilos de tabla para impresión */

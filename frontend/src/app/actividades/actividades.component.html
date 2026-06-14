@@ -1,3 +1,6 @@
+<!-- Todo el contenido de la vista (se oculta en impresión del reporte) -->
+<div class="actividades-contenido">
+
 <!-- ── Cabecera ────────────────────────────────────────────── -->
 <div class="page-header">
   <h2>Actividades</h2>
@@ -723,6 +726,8 @@
   </div><!-- /asistencia-modal -->
 }
 
+</div><!-- /actividades-contenido -->
+
 <!-- ════════════════════════════════════════════════════════════ -->
 <!--  MODAL REPORTE DE ACTIVIDAD                                  -->
 <!-- ════════════════════════════════════════════════════════════ -->
@@ -749,14 +754,17 @@
         </div>
         <div class="reporte-modal-acciones">
           <button class="btn btn-outline" style="width:auto" (click)="imprimirReporte()">
-            🖨️ Imprimir / PDF
+            🖨️ Imprimir
+          </button>
+          <button class="btn btn-primary" style="width:auto" (click)="descargarPDFReporte()" [disabled]="generandoPdf()">
+            {{ generandoPdf() ? 'Generando...' : '📄 Descargar PDF' }}
           </button>
           <button class="btn-close-modal" (click)="cerrarReporte()">✕</button>
         </div>
       </div>
 
       <!-- Cuerpo -->
-      <div class="reporte-modal-body">
+      <div class="reporte-modal-body" id="reporte-act-contenido">
 
         <!-- Encabezado solo para impresión -->
         <div class="reporte-print-header">
@@ -790,7 +798,7 @@
           </div>
 
           <!-- Por grupos -->
-          @if (d.grupos.length > 0) {
+          @if (d.grupos.length > 1) {
             <div class="reporte-subtitulo">Por Grupos</div>
             <div class="table-container">
               <table>
