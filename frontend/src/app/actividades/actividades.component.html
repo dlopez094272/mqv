@@ -63,17 +63,12 @@
                    draggable="true"
                    (dragstart)="onDragStart($event, act)"
                    (dragend)="onDragEnd()"
-                   (click)="$event.stopPropagation(); abrirEditar(act)"
+                   (click)="$event.stopPropagation(); abrirMenu($event, act)"
                    [title]="act.nombre">
                 @if (act.logo) {
                   <img [src]="urlLogo(act.logo)" class="event-logo" [alt]="act.nombre" />
                 }
                 <span class="event-name">{{ act.nombre }}</span>
-                @if (permisos.puede('actividades_asistentes', 'S')) {
-                  <button class="event-asistencia-btn"
-                          (click)="abrirAsistencia(act, $event)"
-                          title="Registrar asistencia">👥</button>
-                }
               </div>
             }
             @if (dia.actividades.length > 3) {
@@ -101,16 +96,11 @@
         <div class="gantt-header-cell"></div>
         <div class="gantt-header-cell gantt-header-days-spacer"></div>
         @for (act of actividadesConGantt(); track act.idactividades) {
-          <div class="gantt-name-row" [title]="act.nombre">
+          <div class="gantt-name-row" [title]="act.nombre" (click)="abrirMenu($event, act)" style="cursor:pointer">
             @if (act.logo) {
               <img [src]="urlLogo(act.logo)" class="gantt-logo" [alt]="act.nombre" />
             }
-            <span class="gantt-act-name" (click)="abrirEditar(act)">{{ act.nombre }}</span>
-            @if (permisos.puede('actividades_asistentes', 'S')) {
-              <button class="gantt-asistencia-btn"
-                      (click)="abrirAsistencia(act)"
-                      title="Registrar asistencia">👥</button>
-            }
+            <span class="gantt-act-name">{{ act.nombre }}</span>
           </div>
         }
       </div>
@@ -143,7 +133,7 @@
                    [style.left.px]="act.leftPx"
                    [style.width.px]="act.widthPx"
                    [style.background]="act.categoria_color || '#3788d8'"
-                   (click)="abrirEditar(act)"
+                   (click)="abrirMenu($event, act)"
                    [title]="act.nombre + ' (' + formatFecha(act.fecha_inicio) + ' – ' + formatFecha(act.fecha_fin) + ')'">
                 <span class="gantt-bar-label">{{ act.nombre }}</span>
               </div>
@@ -206,21 +196,7 @@
             </td>
             <td>{{ act.usuario || '—' }}</td>
             <td>
-              <div class="action-buttons">
-                @if (permisos.puede('actividades_asistentes', 'S')) {
-                  <button class="btn btn-outline btn-sm btn-asistencia"
-                          (click)="abrirAsistencia(act)"
-                          title="Registrar asistencia">
-                    👥 Asistencia
-                  </button>
-                }
-                @if (permisos.puede('actividades', 'E')) {
-                  <button class="btn btn-outline btn-sm" (click)="abrirEditar(act)" title="Editar">✏️</button>
-                }
-                @if (permisos.puede('actividades', 'D')) {
-                  <button class="btn btn-danger btn-sm" (click)="eliminar(act)" title="Eliminar">🗑️</button>
-                }
-              </div>
+              <button class="btn-menu-dots" (click)="abrirMenu($event, act)" title="Opciones">⋮</button>
             </td>
           </tr>
         } @empty {
@@ -250,6 +226,36 @@
   } @else {
     <div class="table-footer">{{ actividades().length }} actividad(es)</div>
   }
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  MENÚ CONTEXTUAL DE ACTIVIDAD                               -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (menuAct(); as m) {
+  <div class="act-menu-overlay" (click)="cerrarMenu()"></div>
+  <div class="act-menu" [style.top.px]="m.y" [style.left.px]="m.x">
+    @if (permisos.puede('actividades', 'S')) {
+      <button class="act-menu-item" (click)="abrirReporte(m.act)">
+        <span class="menu-icon">📊</span> Reporte
+      </button>
+    }
+    @if (permisos.puede('actividades_asistentes', 'S')) {
+      <button class="act-menu-item" (click)="menuAsistencia()">
+        <span class="menu-icon">👥</span> Asistencia
+      </button>
+    }
+    @if (permisos.puede('actividades', 'E')) {
+      <button class="act-menu-item" (click)="menuEditar()">
+        <span class="menu-icon">✏️</span> Editar
+      </button>
+    }
+    @if (permisos.puede('actividades', 'D')) {
+      <div class="act-menu-sep"></div>
+      <button class="act-menu-item danger" (click)="menuEliminar()">
+        <span class="menu-icon">🗑️</span> Eliminar
+      </button>
+    }
+  </div>
 }
 
 <!-- ════════════════════════════════════════════════════════════ -->
@@ -715,4 +721,192 @@
       }
     </div><!-- /asistencia-body -->
   </div><!-- /asistencia-modal -->
+}
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  MODAL REPORTE DE ACTIVIDAD                                  -->
+<!-- ════════════════════════════════════════════════════════════ -->
+@if (mostrarReporte()) {
+  <div class="reporte-modal-backdrop" (click)="cerrarReporte()"></div>
+  <div class="reporte-modal">
+
+    @if (reporteAct(); as act) {
+      <!-- Encabezado (oculto en impresión) -->
+      <div class="reporte-modal-header">
+        <div class="reporte-modal-titulo">
+          @if (act.logo) {
+            <img [src]="urlLogo(act.logo)" [alt]="act.nombre" />
+          }
+          <div>
+            <h3>{{ act.nombre }}</h3>
+            <span class="reporte-modal-sub">
+              {{ formatFecha(act.fecha_inicio) }}
+              @if (act.fecha_fin !== act.fecha_inicio) { — {{ formatFecha(act.fecha_fin) }} }
+              @if (act.lugar) { &nbsp;·&nbsp; 📍 {{ act.lugar }} }
+              @if (act.categoria) { &nbsp;·&nbsp; {{ act.categoria }} }
+            </span>
+          </div>
+        </div>
+        <div class="reporte-modal-acciones">
+          <button class="btn btn-outline" style="width:auto" (click)="imprimirReporte()">
+            🖨️ Imprimir / PDF
+          </button>
+          <button class="btn-close-modal" (click)="cerrarReporte()">✕</button>
+        </div>
+      </div>
+
+      <!-- Cuerpo -->
+      <div class="reporte-modal-body">
+
+        <!-- Encabezado solo para impresión -->
+        <div class="reporte-print-header">
+          <strong>Iglesia del Nazareno · Más que Vencedores</strong>
+          <h2>{{ act.nombre }}</h2>
+          <span>
+            {{ formatFecha(act.fecha_inicio) }}
+            @if (act.fecha_fin !== act.fecha_inicio) { — {{ formatFecha(act.fecha_fin) }} }
+            @if (act.lugar) { &nbsp;·&nbsp; {{ act.lugar }} }
+          </span>
+        </div>
+
+        @if (cargandoReporte()) {
+          <div class="loading-state">Cargando reporte...</div>
+        } @else if (reporteData(); as d) {
+
+          <!-- Tarjetas resumen -->
+          <div class="reporte-resumen-cards">
+            <div class="resumen-card">
+              <div class="resumen-valor">{{ d.total_personas }}</div>
+              <div class="resumen-label">Miembros</div>
+            </div>
+            <div class="resumen-card">
+              <div class="resumen-valor">{{ d.total_visitantes }}</div>
+              <div class="resumen-label">Visitantes</div>
+            </div>
+            <div class="resumen-card accent">
+              <div class="resumen-valor">{{ d.total_asistentes }}</div>
+              <div class="resumen-label">Total asistentes</div>
+            </div>
+          </div>
+
+          <!-- Por grupos -->
+          @if (d.grupos.length > 0) {
+            <div class="reporte-subtitulo">Por Grupos</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr><th>Grupo</th><th class="num-col">Miembros</th></tr>
+                </thead>
+                <tbody>
+                  @for (g of d.grupos; track g.idgrupos) {
+                    <tr>
+                      <td>{{ g.grupo }}</td>
+                      <td class="num-col"><strong>{{ g.total_asistentes || '—' }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <!-- Edad y género en dos columnas -->
+          <div class="reporte-dos-cols">
+            <div>
+              <div class="reporte-subtitulo">Por Edad <span style="font-size:11px;font-weight:400">(miembros)</span></div>
+              <div class="table-container">
+                <table>
+                  <thead><tr><th>Rango</th><th class="num-col">Cant.</th></tr></thead>
+                  <tbody>
+                    <tr><td>Bebés (0–2)</td><td class="num-col">{{ d.por_edad.bebes || '—' }}</td></tr>
+                    <tr><td>Niños (3–12)</td><td class="num-col">{{ d.por_edad.ninos || '—' }}</td></tr>
+                    <tr><td>Adolescentes (13–17)</td><td class="num-col">{{ d.por_edad.adolescentes || '—' }}</td></tr>
+                    <tr><td>Jóvenes (18–25)</td><td class="num-col">{{ d.por_edad.jovenes || '—' }}</td></tr>
+                    <tr><td>Adultos (26–59)</td><td class="num-col">{{ d.por_edad.adultos || '—' }}</td></tr>
+                    <tr><td>Ad. Mayores (60+)</td><td class="num-col">{{ d.por_edad.adultos_mayores || '—' }}</td></tr>
+                    <tr><td>Sin fecha</td><td class="num-col">{{ d.por_edad.sin_fecha || '—' }}</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><td><strong>Total</strong></td><td class="num-col"><strong>{{ d.total_personas }}</strong></td></tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="reporte-subtitulo">Por Género <span style="font-size:11px;font-weight:400">(miembros)</span></div>
+              <div class="table-container">
+                <table>
+                  <thead><tr><th>Género</th><th class="num-col">Cant.</th></tr></thead>
+                  <tbody>
+                    <tr><td>Mujeres</td><td class="num-col">{{ d.por_genero.mujeres || '—' }}</td></tr>
+                    <tr><td>Hombres</td><td class="num-col">{{ d.por_genero.hombres || '—' }}</td></tr>
+                    <tr><td>Sin dato</td><td class="num-col">{{ d.por_genero.sin_dato || '—' }}</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><td><strong>Total</strong></td><td class="num-col"><strong>{{ d.total_personas }}</strong></td></tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista de asistentes -->
+          @if (d.asistentes.length > 0) {
+            <div class="reporte-subtitulo">Lista de Asistentes ({{ d.asistentes.length }})</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="num-col">#</th>
+                    <th>Nombre</th>
+                    <th>Grupo(s)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of d.asistentes; track p.idpersonas; let i = $index) {
+                    <tr>
+                      <td class="num-col">{{ i + 1 }}</td>
+                      <td>{{ p.nombre_completo }}</td>
+                      <td>{{ p.grupos_nombres || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else if (!cargandoReporte()) {
+            <div class="reporte-subtitulo">Lista de Asistentes</div>
+            <p style="color:var(--text-muted);font-size:14px">No hay asistentes registrados en esta actividad.</p>
+          }
+
+          <!-- Visitantes -->
+          @if (d.visitantes.length > 0) {
+            <div class="reporte-subtitulo">Visitantes ({{ d.visitantes.length }})</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="num-col">#</th>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (v of d.visitantes; track v.idactividades_asistentes; let i = $index) {
+                    <tr>
+                      <td class="num-col">{{ i + 1 }}</td>
+                      <td>{{ v.nombre_completo }}</td>
+                      <td>{{ v.telefono || '—' }}</td>
+                      <td>{{ v.comentarios || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+        }
+      </div><!-- /reporte-modal-body -->
+    }
+
+  </div><!-- /reporte-modal -->
 }

@@ -127,7 +127,7 @@ router.get('/', async (req, res, next) => {
 
     const saldoJoin = `
       LEFT JOIN tesoreria_movimientos m
-        ON m.dtesoreria = t.idtesoreria AND m.anulado = 0`;
+        ON m.dtesoreria = t.idtesoreria AND IFNULL(m.anulado, 0) = 0`;
     const saldoSelect = `
       COALESCE(SUM(m.debito) - SUM(m.credito), 0) AS saldo`;
     const groupBy = `
@@ -328,7 +328,7 @@ router.get('/:id/movimientos', async (req, res, next) => {
               COALESCE(SUM(m.debito) - SUM(m.credito), 0) AS saldo
        FROM tesoreria t
        LEFT JOIN tesoreria_movimientos m
-         ON m.dtesoreria = t.idtesoreria AND m.anulado = 0
+         ON m.dtesoreria = t.idtesoreria AND IFNULL(m.anulado, 0) = 0
        WHERE t.idtesoreria = ?
        GROUP BY t.idtesoreria, t.nombre, t.responsable, t.activo, t.fecha_cracion, t.creador`,
       [req.params.id]

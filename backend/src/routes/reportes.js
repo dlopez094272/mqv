@@ -53,18 +53,48 @@ router.get('/cumpleaneros', checkPermission('personas', 'S'), async (req, res, n
 });
 
 /* ─────────────────────────────────────────────────────────────
-   GET /reportes/actividades?fecha_inicio=&fecha_fin=
+   GET /reportes/grupos-disponibles
+   Permiso: actividades:S
+   Superadmin → todos los grupos; usuario → solo grupos donde es encargado
+   ───────────────────────────────────────────────────────────── */
+router.get('/grupos-disponibles', checkPermission('actividades', 'S'), async (req, res, next) => {
+  try {
+    let sql, params = [];
+    if (req.user.is_superadmin) {
+      sql = `SELECT idgrupos, grupo FROM grupos ORDER BY grupo`;
+    } else {
+      sql = `
+        SELECT g.idgrupos, g.grupo
+        FROM grupos_encargados ge
+        JOIN usuarios u ON u.idpersonas = ge.idpersonas
+        JOIN grupos g ON g.idgrupos = ge.idgrupos
+        WHERE u.usuario = ?
+        ORDER BY g.grupo
+      `;
+      params = [req.user.usuario];
+    }
+    const [rows] = await pool.query(sql, params);
+    res.json({ grupos: rows });
+  } catch (err) { next(err); }
+});
+
+/* ─────────────────────────────────────────────────────────────
+   GET /reportes/actividades?fecha_inicio=&fecha_fin=[&idgrupo=]
    Permiso: actividades:S
    Superadmin → todas; usuario normal → solo grupos donde es encargado
+   idgrupo opcional → filtra estadísticas a ese grupo en particular
    Devuelve por actividad:
      - resumen (nombre, logo, total_personas, total_visitantes, total_asistentes)
      - grupos relacionados con sus asistentes
      - desglose por edad
      - desglose por género
+   + ranking global de personas por asistencias (de mayor a menor)
    ───────────────────────────────────────────────────────────── */
 router.get('/actividades', checkPermission('actividades', 'S'), async (req, res, next) => {
   try {
     const { fecha_inicio, fecha_fin } = req.query;
+    const idgrupo = req.query.idgrupo ? parseInt(req.query.idgrupo) : null;
+
     if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Se requieren fecha_inicio y fecha_fin' });
     }
@@ -79,8 +109,16 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
         WHERE u.usuario = ?
       `, [req.user.usuario]);
       gruposFiltro = gRows.map(g => g.idgrupos);
-      if (!gruposFiltro.length) return res.json({ actividades: [] });
+      if (!gruposFiltro.length) return res.json({ actividades: [], ranking: [] });
+
+      // Validar que idgrupo pertenezca a los grupos del usuario
+      if (idgrupo && !gruposFiltro.includes(idgrupo)) {
+        return res.json({ actividades: [], ranking: [] });
+      }
     }
+
+    // Grupo efectivo: filtro específico tiene prioridad sobre el conjunto del usuario
+    const grupoEfectivo = idgrupo ? [idgrupo] : gruposFiltro;
 
     // ── Actividades en el rango ─────────────────────────────────
     let actQuery = `
@@ -96,12 +134,12 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
     `;
     const actParams = [];
 
-    if (gruposFiltro) {
+    if (grupoEfectivo) {
       actQuery += `
         JOIN actividades_grupos ag ON ag.idactividades = a.idactividades
          AND ag.idgrupos IN (?)
       `;
-      actParams.push(gruposFiltro);
+      actParams.push(grupoEfectivo);
     }
 
     actQuery += ` WHERE a.fecha_inicio >= ? AND a.fecha_inicio <= ?
@@ -109,7 +147,7 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
     actParams.push(fecha_inicio, fecha_fin);
 
     const [actividades] = await pool.query(actQuery, actParams);
-    if (!actividades.length) return res.json({ actividades: [] });
+    if (!actividades.length) return res.json({ actividades: [], ranking: [] });
 
     const ids = actividades.map(a => a.idactividades);
 
@@ -142,7 +180,7 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
     `, [ids]);
 
     // ── Desglose por edad (solo personas registradas, no visitantes) ──
-    const [porEdad] = await pool.query(`
+    let edadQuery = `
       SELECT
         aa.idactividades,
         SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 0  AND  2  THEN 1 ELSE 0 END) AS bebes,
@@ -155,21 +193,55 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
       FROM actividades_asistentes aa
       JOIN personas p ON p.idpersonas = aa.idpersonas
       WHERE aa.idactividades IN (?)
-      GROUP BY aa.idactividades
-    `, [ids]);
+    `;
+    const edadParams = [ids];
+    if (idgrupo) {
+      edadQuery += ` AND EXISTS (SELECT 1 FROM grupos_personas gp WHERE gp.idpersonas = aa.idpersonas AND gp.idgrupos = ?)`;
+      edadParams.push(idgrupo);
+    }
+    edadQuery += ` GROUP BY aa.idactividades`;
+    const [porEdad] = await pool.query(edadQuery, edadParams);
 
     // ── Desglose por género ─────────────────────────────────────
-    const [porGenero] = await pool.query(`
+    let generoQuery = `
       SELECT
         aa.idactividades,
-        SUM(CASE WHEN p.sexo = 'M'                      THEN 1 ELSE 0 END) AS hombres,
-        SUM(CASE WHEN p.sexo = 'F'                      THEN 1 ELSE 0 END) AS mujeres,
+        SUM(CASE WHEN p.sexo = 'M'                              THEN 1 ELSE 0 END) AS hombres,
+        SUM(CASE WHEN p.sexo = 'F'                              THEN 1 ELSE 0 END) AS mujeres,
         SUM(CASE WHEN p.sexo NOT IN ('M','F') OR p.sexo IS NULL THEN 1 ELSE 0 END) AS sin_dato
       FROM actividades_asistentes aa
       JOIN personas p ON p.idpersonas = aa.idpersonas
       WHERE aa.idactividades IN (?)
-      GROUP BY aa.idactividades
-    `, [ids]);
+    `;
+    const generoParams = [ids];
+    if (idgrupo) {
+      generoQuery += ` AND EXISTS (SELECT 1 FROM grupos_personas gp WHERE gp.idpersonas = aa.idpersonas AND gp.idgrupos = ?)`;
+      generoParams.push(idgrupo);
+    }
+    generoQuery += ` GROUP BY aa.idactividades`;
+    const [porGenero] = await pool.query(generoQuery, generoParams);
+
+    // ── Ranking de asistencia por persona ───────────────────────
+    let rankingQuery = `
+      SELECT
+        p.idpersonas,
+        TRIM(CONCAT_WS(' ',
+          p.primer_nombre, NULLIF(p.segundo_nombre,''),
+          p.primer_apellido, NULLIF(p.segundo_apellido,''),
+          NULLIF(p.apellidocasada,'')
+        )) AS nombre_completo,
+        COUNT(DISTINCT aa.idactividades) AS total_asistencias
+      FROM actividades_asistentes aa
+      JOIN personas p ON p.idpersonas = aa.idpersonas
+      WHERE aa.idactividades IN (?)
+    `;
+    const rankingParams = [ids];
+    if (idgrupo) {
+      rankingQuery += ` AND EXISTS (SELECT 1 FROM grupos_personas gp WHERE gp.idpersonas = aa.idpersonas AND gp.idgrupos = ?)`;
+      rankingParams.push(idgrupo);
+    }
+    rankingQuery += ` GROUP BY p.idpersonas ORDER BY total_asistencias DESC, nombre_completo ASC`;
+    const [ranking] = await pool.query(rankingQuery, rankingParams);
 
     // ── Combinar resultados ─────────────────────────────────────
     const result = actividades.map(act => {
@@ -189,13 +261,13 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
           .filter(x => x.idactividades === act.idactividades)
           .map(x => ({ idgrupos: x.idgrupos, grupo: x.grupo, total_asistentes: Number(x.total_asistentes) || 0 })),
         por_edad: {
-          bebes:          Number(e.bebes)          || 0,
-          ninos:          Number(e.ninos)          || 0,
-          adolescentes:   Number(e.adolescentes)   || 0,
-          jovenes:        Number(e.jovenes)        || 0,
-          adultos:        Number(e.adultos)        || 0,
-          adultos_mayores:Number(e.adultos_mayores)|| 0,
-          sin_fecha:      Number(e.sin_fecha)      || 0,
+          bebes:           Number(e.bebes)           || 0,
+          ninos:           Number(e.ninos)           || 0,
+          adolescentes:    Number(e.adolescentes)    || 0,
+          jovenes:         Number(e.jovenes)         || 0,
+          adultos:         Number(e.adultos)         || 0,
+          adultos_mayores: Number(e.adultos_mayores) || 0,
+          sin_fecha:       Number(e.sin_fecha)       || 0,
         },
         por_genero: {
           hombres:  Number(g.hombres)  || 0,
@@ -205,7 +277,157 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
       };
     });
 
-    res.json({ actividades: result });
+    res.json({
+      actividades: result,
+      ranking: ranking.map(r => ({
+        idpersonas:        r.idpersonas,
+        nombre_completo:   r.nombre_completo,
+        total_asistencias: Number(r.total_asistencias) || 0,
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
+/* ─────────────────────────────────────────────────────────────
+   GET /reportes/actividades/:id
+   Permiso: actividades:S
+   Devuelve reporte completo de una sola actividad:
+     resumen, grupos, edad, género y lista de asistentes
+   ───────────────────────────────────────────────────────────── */
+router.get('/actividades/:id', checkPermission('actividades', 'S'), async (req, res, next) => {
+  try {
+    const idactividades = parseInt(req.params.id);
+    if (!idactividades) return res.status(400).json({ error: 'ID inválido' });
+
+    // Verificar visibilidad para no-superadmin
+    if (!req.user.is_superadmin) {
+      const [gRows] = await pool.query(`
+        SELECT ge.idgrupos FROM grupos_encargados ge
+        JOIN usuarios u ON u.idpersonas = ge.idpersonas
+        WHERE u.usuario = ?
+      `, [req.user.usuario]);
+      const gruposFiltro = gRows.map(g => g.idgrupos);
+      if (!gruposFiltro.length) return res.status(403).json({ error: 'Sin acceso' });
+      const [check] = await pool.query(`
+        SELECT 1 FROM actividades_grupos ag
+        WHERE ag.idactividades = ? AND ag.idgrupos IN (?) LIMIT 1
+      `, [idactividades, gruposFiltro]);
+      if (!check.length) return res.status(403).json({ error: 'Sin acceso a esta actividad' });
+    }
+
+    // Datos de la actividad
+    const [[act]] = await pool.query(`
+      SELECT a.idactividades, a.nombre, a.logo,
+        a.fecha_inicio, a.fecha_fin, a.hora_inicio, a.hora_fin,
+        ac.categoria, IFNULL(ac.color,'#3788d8') AS categoria_color, l.lugar
+      FROM actividades a
+      LEFT JOIN actividades_categorias ac ON ac.idactividades_categorias = a.idcategorias
+      LEFT JOIN lugares l ON l.idlugares = a.idlugares
+      WHERE a.idactividades = ?
+    `, [idactividades]);
+    if (!act) return res.status(404).json({ error: 'Actividad no encontrada' });
+
+    // Totales
+    const [[tot]] = await pool.query(`
+      SELECT
+        COUNT(DISTINCT idactividades_asistentes) AS total,
+        COUNT(DISTINCT CASE WHEN idpersonas IS NOT NULL THEN idactividades_asistentes END) AS total_personas,
+        COUNT(DISTINCT CASE WHEN idpersonas IS NULL     THEN idactividades_asistentes END) AS total_visitantes
+      FROM actividades_asistentes WHERE idactividades = ?
+    `, [idactividades]);
+
+    // Grupos con conteo
+    const [grupos] = await pool.query(`
+      SELECT g.idgrupos, g.grupo,
+        COUNT(DISTINCT CASE WHEN gp.idpersonas IS NOT NULL THEN aa.idpersonas END) AS total_asistentes
+      FROM actividades_grupos ag
+      JOIN grupos g ON g.idgrupos = ag.idgrupos
+      LEFT JOIN actividades_asistentes aa ON aa.idactividades = ag.idactividades AND aa.idpersonas IS NOT NULL
+      LEFT JOIN grupos_personas gp ON gp.idpersonas = aa.idpersonas AND gp.idgrupos = ag.idgrupos
+      WHERE ag.idactividades = ?
+      GROUP BY ag.idgrupos, g.grupo ORDER BY g.grupo
+    `, [idactividades]);
+
+    // Por edad
+    const [[edad]] = await pool.query(`
+      SELECT
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 0  AND  2  THEN 1 ELSE 0 END) AS bebes,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 3  AND  12 THEN 1 ELSE 0 END) AS ninos,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 13 AND  17 THEN 1 ELSE 0 END) AS adolescentes,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 18 AND  25 THEN 1 ELSE 0 END) AS jovenes,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) BETWEEN 26 AND  59 THEN 1 ELSE 0 END) AS adultos,
+        SUM(CASE WHEN TIMESTAMPDIFF(YEAR,p.fechanacimiento,CURDATE()) >= 60              THEN 1 ELSE 0 END) AS adultos_mayores,
+        SUM(CASE WHEN p.fechanacimiento IS NULL                                          THEN 1 ELSE 0 END) AS sin_fecha
+      FROM actividades_asistentes aa
+      JOIN personas p ON p.idpersonas = aa.idpersonas
+      WHERE aa.idactividades = ?
+    `, [idactividades]);
+
+    // Por género
+    const [[gen]] = await pool.query(`
+      SELECT
+        SUM(CASE WHEN p.sexo = 'M'                              THEN 1 ELSE 0 END) AS hombres,
+        SUM(CASE WHEN p.sexo = 'F'                              THEN 1 ELSE 0 END) AS mujeres,
+        SUM(CASE WHEN p.sexo NOT IN ('M','F') OR p.sexo IS NULL THEN 1 ELSE 0 END) AS sin_dato
+      FROM actividades_asistentes aa
+      JOIN personas p ON p.idpersonas = aa.idpersonas
+      WHERE aa.idactividades = ?
+    `, [idactividades]);
+
+    // Lista de asistentes (personas registradas, orden alfabético)
+    const [asistentes] = await pool.query(`
+      SELECT
+        p.idpersonas,
+        TRIM(CONCAT_WS(' ',
+          p.primer_nombre, NULLIF(p.segundo_nombre,''),
+          p.primer_apellido, NULLIF(p.segundo_apellido,''),
+          NULLIF(p.apellidocasada,'')
+        )) AS nombre_completo,
+        GROUP_CONCAT(DISTINCT g.grupo ORDER BY g.grupo SEPARATOR ', ') AS grupos_nombres
+      FROM actividades_asistentes aa
+      JOIN personas p ON p.idpersonas = aa.idpersonas
+      LEFT JOIN grupos_personas gp ON gp.idpersonas = p.idpersonas
+      LEFT JOIN grupos g ON g.idgrupos = gp.idgrupos
+      WHERE aa.idactividades = ?
+      GROUP BY p.idpersonas
+      ORDER BY nombre_completo ASC
+    `, [idactividades]);
+
+    // Lista de visitantes (sin persona registrada, orden alfabético)
+    const [visitantes] = await pool.query(`
+      SELECT
+        idactividades_asistentes,
+        nombre_completo,
+        telefono,
+        comentarios
+      FROM actividades_asistentes
+      WHERE idactividades = ? AND idpersonas IS NULL
+      ORDER BY nombre_completo ASC
+    `, [idactividades]);
+
+    res.json({
+      ...act,
+      total_asistentes:  Number(tot.total)            || 0,
+      total_personas:    Number(tot.total_personas)   || 0,
+      total_visitantes:  Number(tot.total_visitantes) || 0,
+      grupos: grupos.map(g => ({ idgrupos: g.idgrupos, grupo: g.grupo, total_asistentes: Number(g.total_asistentes) || 0 })),
+      por_edad: {
+        bebes:           Number(edad?.bebes)           || 0,
+        ninos:           Number(edad?.ninos)           || 0,
+        adolescentes:    Number(edad?.adolescentes)    || 0,
+        jovenes:         Number(edad?.jovenes)         || 0,
+        adultos:         Number(edad?.adultos)         || 0,
+        adultos_mayores: Number(edad?.adultos_mayores) || 0,
+        sin_fecha:       Number(edad?.sin_fecha)       || 0,
+      },
+      por_genero: {
+        hombres:  Number(gen?.hombres)  || 0,
+        mujeres:  Number(gen?.mujeres)  || 0,
+        sin_dato: Number(gen?.sin_dato) || 0,
+      },
+      asistentes,
+      visitantes,
+    });
   } catch (err) { next(err); }
 });
 

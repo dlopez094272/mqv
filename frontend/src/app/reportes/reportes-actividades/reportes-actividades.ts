@@ -1,9 +1,20 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ActividadesService } from '../../actividades/actividades.service';
+
+interface GrupoDisponible {
+  idgrupos: number;
+  grupo:    string;
+}
+
+interface RankingPersona {
+  idpersonas:        number;
+  nombre_completo:   string;
+  total_asistencias: number;
+}
 
 interface GrupoActividad {
   idgrupos:          number;
@@ -53,7 +64,7 @@ interface ReporteActividad {
   templateUrl: './reportes-actividades.html',
   styleUrl:    './reportes-actividades.scss',
 })
-export class ReportesActividadesComponent {
+export class ReportesActividadesComponent implements OnInit {
   private http = inject(HttpClient);
   private svc  = inject(ActividadesService);
 
@@ -61,13 +72,16 @@ export class ReportesActividadesComponent {
   filtro = {
     fecha_inicio: this._primerDiaMes(),
     fecha_fin:    this._hoy(),
+    idgrupo:      null as number | null,
   };
 
   // ── Estado ───────────────────────────────────────────────────
-  cargando  = signal(false);
-  error     = signal('');
-  generado  = signal(false);
-  actividades = signal<ReporteActividad[]>([]);
+  cargando          = signal(false);
+  error             = signal('');
+  generado          = signal(false);
+  actividades       = signal<ReporteActividad[]>([]);
+  gruposDisponibles = signal<GrupoDisponible[]>([]);
+  rankingAsistencia = signal<RankingPersona[]>([]);
 
   // ── Totales globales ─────────────────────────────────────────
   totalPersonas   = computed(() => this.actividades().reduce((s, a) => s + a.total_personas, 0));
@@ -103,9 +117,29 @@ export class ReportesActividadesComponent {
     return Array.from(set).sort();
   });
 
+  // ── Nombre del grupo seleccionado para encabezado impresión ──
+  nombreGrupoSeleccionado = computed<string>(() => {
+    if (!this.filtro.idgrupo) return '';
+    return this.gruposDisponibles().find(g => g.idgrupos === this.filtro.idgrupo)?.grupo ?? '';
+  });
+
+  // ── Ciclo de vida ─────────────────────────────────────────────
+  ngOnInit() {
+    this.http.get<{ grupos: GrupoDisponible[] }>(`${environment.apiUrl}/reportes/grupos-disponibles`)
+      .subscribe({ next: d => this.gruposDisponibles.set(d.grupos) });
+  }
+
   // ── Acciones ─────────────────────────────────────────────────
   imprimir() {
     window.print();
+  }
+
+  onFiltroGrupoChange() {
+    if (this.generado()) {
+      this.generado.set(false);
+      this.actividades.set([]);
+      this.rankingAsistencia.set([]);
+    }
   }
 
   generar() {
@@ -117,12 +151,16 @@ export class ReportesActividadesComponent {
     this.error.set('');
     this.generado.set(false);
 
-    const url = `${environment.apiUrl}/reportes/actividades`
+    let url = `${environment.apiUrl}/reportes/actividades`
       + `?fecha_inicio=${this.filtro.fecha_inicio}&fecha_fin=${this.filtro.fecha_fin}`;
+    if (this.filtro.idgrupo) {
+      url += `&idgrupo=${this.filtro.idgrupo}`;
+    }
 
-    this.http.get<{ actividades: ReporteActividad[] }>(url).subscribe({
+    this.http.get<{ actividades: ReporteActividad[]; ranking: RankingPersona[] }>(url).subscribe({
       next: d => {
         this.actividades.set(d.actividades);
+        this.rankingAsistencia.set(d.ranking || []);
         this.generado.set(true);
         this.cargando.set(false);
       },

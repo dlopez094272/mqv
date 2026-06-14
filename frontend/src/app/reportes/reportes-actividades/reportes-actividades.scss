@@ -141,6 +141,19 @@ tfoot td {
   color: var(--text-muted);
 }
 
+/* ── Ranking ─────────────────────────────────────────────── */
+.ranking-pos {
+  width: 48px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.ranking-top td {
+  background: rgba(87,68,108,.04);
+
+  &.ranking-pos { color: var(--primary); }
+}
+
 /* ── Empty ───────────────────────────────────────────────── */
 .empty-state {
   text-align: center;
@@ -285,6 +298,12 @@ tfoot td {
 
   .genero-f { color: #c2185b !important; }
   .genero-m { color: #1565c0 !important; }
+
+  .ranking-top td {
+    background: #f8f5ff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
   /* Configuración de página */
   @page {

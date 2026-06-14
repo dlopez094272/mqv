@@ -19,6 +19,17 @@
       <label>Fecha fin</label>
       <input type="date" class="form-control" [(ngModel)]="filtro.fecha_fin" />
     </div>
+    @if (gruposDisponibles().length > 0) {
+      <div class="form-group">
+        <label>Grupo</label>
+        <select class="form-control" [(ngModel)]="filtro.idgrupo" (change)="onFiltroGrupoChange()">
+          <option [ngValue]="null">Todos los grupos</option>
+          @for (g of gruposDisponibles(); track g.idgrupos) {
+            <option [ngValue]="g.idgrupos">{{ g.grupo }}</option>
+          }
+        </select>
+      </div>
+    }
     <button class="btn btn-primary" style="width:auto;align-self:flex-end"
             (click)="generar()" [disabled]="cargando()">
       {{ cargando() ? 'Generando...' : '🔍 Generar reporte' }}
@@ -45,6 +56,9 @@
       <h2>Reporte de Actividades</h2>
       <span class="print-rango">
         {{ formatFecha(filtro.fecha_inicio) }} — {{ formatFecha(filtro.fecha_fin) }}
+        @if (nombreGrupoSeleccionado()) {
+          &nbsp;·&nbsp; {{ nombreGrupoSeleccionado() }}
+        }
       </span>
     </div>
   </div>
@@ -246,6 +260,42 @@
         </table>
       </div>
     </section>
+
+    <!-- ══ SECCIÓN 5: Ranking de asistencia por persona ══════════ -->
+    @if (rankingAsistencia().length > 0) {
+      <section class="reporte-seccion">
+        <h3 class="seccion-titulo">
+          Ranking de Asistencia por Persona
+          <span class="seccion-nota">(miembros registrados, de mayor a menor asistencia)</span>
+        </h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="num-col ranking-pos">#</th>
+                <th>Nombre</th>
+                <th class="num-col">Asistencias</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of rankingAsistencia(); track p.idpersonas; let i = $index) {
+                <tr [class.ranking-top]="i < 3">
+                  <td class="num-col ranking-pos">{{ i + 1 }}</td>
+                  <td>{{ p.nombre_completo }}</td>
+                  <td class="num-col total-col"><strong>{{ p.total_asistencias }}</strong></td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="totales-row">
+                <td colspan="2"><strong>TOTAL PERSONAS</strong></td>
+                <td class="num-col total-col"><strong>{{ rankingAsistencia().length }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    }
 
   }
 }

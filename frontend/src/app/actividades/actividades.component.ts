@@ -25,6 +25,27 @@ interface ActGantt extends Actividad {
   widthPx: number;
 }
 
+interface ReporteActividadDetalle {
+  idactividades:    number;
+  nombre:           string;
+  logo:             string | null;
+  fecha_inicio:     string;
+  fecha_fin:        string;
+  hora_inicio:      string | null;
+  hora_fin:         string | null;
+  categoria:        string | null;
+  categoria_color:  string | null;
+  lugar:            string | null;
+  total_asistentes: number;
+  total_personas:   number;
+  total_visitantes: number;
+  grupos:           { idgrupos: number; grupo: string; total_asistentes: number }[];
+  por_edad:         { bebes: number; ninos: number; adolescentes: number; jovenes: number; adultos: number; adultos_mayores: number; sin_fecha: number };
+  por_genero:       { hombres: number; mujeres: number; sin_dato: number };
+  asistentes:       { idpersonas: number; nombre_completo: string; grupos_nombres: string | null }[];
+  visitantes:       { idactividades_asistentes: number; nombre_completo: string; telefono: string | null; comentarios: string | null }[];
+}
+
 @Component({
   selector:    'app-actividades',
   standalone:  true,
@@ -132,6 +153,15 @@ export class ActividadesComponent implements OnInit {
   visitanteExpandido    = signal<number | null>(null);
 
   formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
+
+  // ── Menú contextual ───────────────────────────────────────────
+  menuAct = signal<{ act: Actividad; x: number; y: number } | null>(null);
+
+  // ── Reporte de actividad individual ──────────────────────────
+  mostrarReporte  = signal(false);
+  reporteAct      = signal<Actividad | null>(null);
+  reporteData     = signal<ReporteActividadDetalle | null>(null);
+  cargandoReporte = signal(false);
 
   // Drag & Drop dentro del modal de asistencia
   arrastandoPersona    = signal<AsistenciaPersona | null>(null);
@@ -438,6 +468,39 @@ export class ActividadesComponent implements OnInit {
     this.mostrarFormVisitante.set(false);
     this.visitanteExpandido.set(null);
   }
+
+  // ── Menú contextual ──────────────────────────────────────────
+  abrirMenu(event: MouseEvent, act: Actividad) {
+    event.stopPropagation();
+    const mw = 195, mh = 185;
+    const x = Math.min(event.clientX, window.innerWidth  - mw - 8);
+    const y = Math.min(event.clientY, window.innerHeight - mh - 8);
+    this.menuAct.set({ act, x, y });
+  }
+
+  cerrarMenu() { this.menuAct.set(null); }
+
+  menuEditar()     { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirEditar(a); }
+  menuAsistencia() { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirAsistencia(a); }
+  menuEliminar()   { const a = this.menuAct()!.act; this.cerrarMenu(); this.eliminar(a); }
+
+  // ── Reporte de actividad ─────────────────────────────────────
+  abrirReporte(act: Actividad) {
+    this.cerrarMenu();
+    this.reporteAct.set(act);
+    this.reporteData.set(null);
+    this.mostrarReporte.set(true);
+    this.cargandoReporte.set(true);
+    this.http.get<ReporteActividadDetalle>(`${environment.apiUrl}/reportes/actividades/${act.idactividades}`)
+      .subscribe({
+        next:  d => { this.reporteData.set(d); this.cargandoReporte.set(false); },
+        error: () => { this.cargandoReporte.set(false); },
+      });
+  }
+
+  cerrarReporte() { this.mostrarReporte.set(false); }
+
+  imprimirReporte() { window.print(); }
 
   toggleCamara() {
     this.mostrarCamara.update(v => !v);
