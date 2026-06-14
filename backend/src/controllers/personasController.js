@@ -341,7 +341,7 @@ async function cumpleaneros(req, res, next) {
                        primer_apellido, NULLIF(segundo_apellido,''))) AS nombre_completo,
         fechanacimiento,
         MONTH(fechanacimiento) AS mes_nac, DAY(fechanacimiento) AS dia_nac,
-        TIMESTAMPDIFF(YEAR, fechanacimiento, CURDATE()) AS edad,
+        (YEAR(CURDATE()) - YEAR(fechanacimiento)) AS edad,
         sexo, celular, foto
       FROM personas
       WHERE MONTH(fechanacimiento) = ?

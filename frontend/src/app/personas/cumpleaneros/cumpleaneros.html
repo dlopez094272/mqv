@@ -93,7 +93,7 @@
             </div>
             <div class="cumple-info">
               <strong>{{ c.nombre_completo }}</strong>
-              <span>Cumple {{ c.edad+1 }} años</span>
+              <span>Cumple {{ c.edad }} años</span>
               @if (c.celular) { <span>📱 {{ c.celular }}</span> }
             </div>
             @if (cumpleHoy(c)) { <span class="hoy-badge">🎉 ¡Hoy!</span> }
@@ -131,7 +131,7 @@
               }
               <div class="semana-info">
                 <strong>{{ c.nombre_completo }}</strong>
-                <span>{{ c.edad+1 }} años</span>
+                <span>{{ c.edad }} años</span>
               </div>
             </div>
           } @empty {
