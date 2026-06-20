@@ -277,7 +277,7 @@
     }
 
     /* scroll-margin so sections don't hide under navbar */
-    #info, #nosotros, #ministerios, #serie { scroll-margin-top: 72px; }
+    #info, #nosotros, #ministerios, #tema { scroll-margin-top: 72px; }
 
     /* ── HAMBURGER ──────────────────────────────────────── */
     .nav-hamburger {
@@ -712,6 +712,32 @@
     }
     .series-img:hover { transform: scale(1.01); }
 
+    .tema-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 56px;
+      align-items: center;
+      margin-top: 36px;
+    }
+    .tema-video-wrap {
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      background: #000;
+    }
+    .tema-video {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      object-fit: cover;
+      display: block;
+    }
+    .tema-body p {
+      font-size: 16px;
+      line-height: 1.85;
+      color: rgba(255,255,255,.6);
+      margin-bottom: 14px;
+    }
+
     /* ── SOCIAL STRIP ──────────────────────────────────── */
     .social-strip {
       padding: 56px 40px;
@@ -879,9 +905,21 @@
     }
     .modal-close-btn:hover { background: rgba(255,255,255,.22); }
 
+    .modal-photo {
+      width: 100%;
+      height: 180px;
+      overflow: hidden;
+    }
+    .modal-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
     .modal-map {
       width: 100%;
-      height: 280px;
+      height: 220px;
       border: none;
       display: block;
     }
@@ -958,6 +996,12 @@
       gap: 20px;
       padding: 24px 28px 28px;
     }
+    .events-grid-single {
+      grid-template-columns: 1fr;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .events-grid-single .event-img-wrap { height: 280px; }
 
     .event-card {
       border-radius: 16px;
@@ -1034,6 +1078,7 @@
     }
     .event-meta svg { width: 13px; height: 13px; fill: currentColor; }
     .event-body p { font-size: 13px; line-height: 1.75; color: rgba(255,255,255,.52); }
+    .event-body p + p { margin-top: 10px; }
 
     /* ── ANIMATIONS ────────────────────────────────────── */
     @keyframes fadeUp {
@@ -1197,6 +1242,8 @@
       .welcome-grid { grid-template-columns: 1fr; }
       .welcome-img-wrap { order: -1; }
       .welcome-img-wrap img { height: 260px; }
+      .tema-grid { grid-template-columns: 1fr; gap: 28px; }
+      .tema-video-wrap { max-width: 280px; margin: 0 auto; }
       .info-strip, .welcome, .series, .ministerios, .social-strip, .footer { padding-left: 20px; padding-right: 20px; }
       .info-strip, .welcome, .series, .ministerios { padding-top: 56px; padding-bottom: 56px; }
       .nav-links { display: none; }
@@ -1204,6 +1251,7 @@
       .ministerios-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
       .events-grid { grid-template-columns: 1fr; }
       .events-modal-box { max-height: 88vh; display: flex; flex-direction: column; }
+      .modal-box { max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
       .events-modal-header { padding: 20px; flex-shrink: 0; }
       .events-modal-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
       .events-grid { padding: 16px 20px 20px; }
@@ -1238,7 +1286,7 @@
       <ul class="nav-links" id="navLinks">
         <li><a href="#nosotros">Nosotros</a></li>
         <li><a href="#ministerios">Comunidad</a></li>
-        <li><a href="#serie">Serie Actual</a></li>
+        <li><a href="#tema">Tema del Mes</a></li>
         <li><a href="#info">Contáctanos</a></li>
       </ul>
 
@@ -1267,7 +1315,7 @@
       <ul class="nav-mobile-list">
         <li><a href="#nosotros"    onclick="closeMobileMenu()">Nosotros</a></li>
         <li><a href="#ministerios" onclick="closeMobileMenu()">Comunidad</a></li>
-        <li><a href="#serie"       onclick="closeMobileMenu()">Serie Actual</a></li>
+        <li><a href="#tema"        onclick="closeMobileMenu()">Tema del Mes</a></li>
         <li><a href="#info"        onclick="closeMobileMenu()">Contáctanos</a></li>
       </ul>
     </div>
@@ -1310,7 +1358,7 @@
             </div>
             <h3>Horarios</h3>
             <p>Domingos 9:30 AM</p>
-            <p class="sub">Presencial y en línea</p>
+            <p class="sub">Presencial</p>
           </div>
           <div class="info-card reveal" style="transition-delay:.1s">
             <div class="info-icon-wrap">
@@ -1412,13 +1460,21 @@
       </div>
     </section>
 
-    <!-- SERIE ACTUAL -->
-    <section class="series" id="serie">
+    <!-- TEMA DEL MES -->
+    <section class="series" id="tema">
       <div class="container series-inner">
-        <p class="section-eyebrow reveal">Serie actual</p>
-        <h2 class="series-title reveal">Lo que Dios tiene para ti este domingo</h2>
-        <div class="reveal" style="transition-delay:.1s">
-          <img src="assets/img/banner-discipulos.jpg" alt="Discípulos de Jesucristo — Nueva serie EBD" class="series-img">
+        <p class="section-eyebrow reveal">Tema del mes — Junio</p>
+        <h2 class="series-title reveal">La importancia del hombre en la familia</h2>
+        <div class="tema-grid">
+          <div class="tema-video-wrap reveal">
+            <video class="tema-video" controls playsinline preload="metadata">
+              <source src="assets/video/tema-junio.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="tema-body reveal" style="transition-delay:.15s">
+            <p>En este mes de junio celebramos el Día del Padre y queremos detenernos a reflexionar sobre el rol que Dios le ha dado al hombre dentro de la familia. Un padre presente es un padre que guía, que protege y que ama con el ejemplo, tal como Cristo nos enseñó.</p>
+            <p>Te invitamos a ver este video y a reflexionar sobre la importancia de estar siempre presentes en nuestro hogar: nuestros hijos y nuestra familia necesitan tiempo, cercanía y un corazón dispuesto a servir. Que este mes nos motive a ser hombres comprometidos con el propósito que Dios tiene para nuestro hogar.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -1479,6 +1535,9 @@
   <div class="modal-backdrop" id="locationModal">
     <div class="modal-box">
       <button class="modal-close-btn" onclick="closeModal()" title="Cerrar">×</button>
+      <div class="modal-photo">
+        <img src="assets/img/entrada-iglesia.jpg" alt="Entrada de la Iglesia del Nazareno Más que Vencedores">
+      </div>
       <iframe
         class="modal-map"
         src="https://maps.google.com/maps?q=14.5941045,-90.5495152&z=16&output=embed"
@@ -1499,7 +1558,7 @@
           </div>
           <div class="modal-info-row">
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-            <span>Domingos 9:30 AM — Presencial y en línea</span>
+            <span>Domingos 9:30 AM — Presencial</span>
           </div>
         </div>
         <div class="modal-actions">
@@ -1530,45 +1589,26 @@
       </div>
 
       <div class="events-modal-scroll">
-      <div class="events-grid">
+      <div class="events-grid events-grid-single">
 
-        <!-- Evento 1: Los Testigos -->
+        <!-- Evento: Día del Maestro -->
         <div class="event-card">
           <div class="event-img-wrap">
-            <span class="event-tag">Ministerio Teatral</span>
-            <img src="assets/img/evento-testigos.jpg" alt="Los Testigos — Domingo de Resurrección 2026">
+            <span class="event-tag">Vencedores Kids</span>
+            <img src="assets/img/evento-dia-maestro.jpg" alt="Feliz Día del Maestro — Desayuno especial">
             <div class="event-date-badge">
-              <div class="day">05</div>
-              <div class="month">Abr 2026</div>
+              <div class="day">28</div>
+              <div class="month">Jun 2026</div>
             </div>
           </div>
           <div class="event-body">
-            <h4>Los Testigos</h4>
+            <h4>Feliz Día del Maestro</h4>
             <div class="event-meta">
               <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-              Domingo de Resurrección
+              7:30 AM en punto — Domingo 28 de junio
             </div>
-            <p>El Ministerio Teatral de MQV presenta "Los Testigos", una obra dramática que te transportará al acontecimiento más poderoso de la historia: la resurrección de Cristo. A través del arte teatral vivirás en primera persona el testimonio de quienes estuvieron presentes en la tumba vacía. Una experiencia que renovará tu fe.</p>
-          </div>
-        </div>
-
-        <!-- Evento 2: Domingo Familiar -->
-        <div class="event-card">
-          <div class="event-img-wrap">
-            <span class="event-tag">Evento Especial</span>
-            <img src="assets/img/evento-familiar.jpg" alt="Domingo Familiar — Pastor Carlos Cordero">
-            <div class="event-date-badge">
-              <div class="day">29</div>
-              <div class="month">Mar 2026</div>
-            </div>
-          </div>
-          <div class="event-body">
-            <h4>Domingo Familiar</h4>
-            <div class="event-meta">
-              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-              11:00 AM — Pastor Carlos Cordero
-            </div>
-            <p>La familia es el diseño más hermoso de Dios. Este domingo especial, el Pastor invitado Carlos Cordero nos ministrará sobre <em>"La Familia en las Misiones"</em> — cómo Dios quiere usar a nuestras familias como instrumento de bendición y misión para el mundo. ¡Ven con toda tu familia y prepárate para ser transformado!</p>
+            <p>Te invitamos a ser parte de un desayuno preparado especialmente para ti, en agradecimiento a tu labor en la Escuela Dominical y el Ministerio Infantil. Te esperamos el domingo 28 de junio a las 7:30 am en punto, en las instalaciones de nuestra iglesia.</p>
+            <p>Si quieres unirte a bendecir la vida de los niños sirviendo en las clases, ¡contáctanos! Hay un lugar para ti en este ministerio.</p>
           </div>
         </div>
 
@@ -1644,7 +1684,7 @@
 
     /* ── Active link highlight on scroll ───────────────── */
     const navAnchorLinks = document.querySelectorAll('.nav-links li a');
-    const sectionIds = ['info', 'nosotros', 'ministerios', 'serie'];
+    const sectionIds = ['info', 'nosotros', 'ministerios', 'tema'];
 
     const activeSectionObs = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -1675,6 +1715,11 @@
 
     eventsModal.addEventListener('click', e => { if (e.target === eventsModal) closeEventsModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeEventsModal(); } });
+
+    /* ── Deep link: abrir modal de eventos si la URL trae #eventos ── */
+    if (window.location.hash === '#eventos') {
+      window.addEventListener('load', openEventsModal);
+    }
   </script>
 </body>
 </html>
