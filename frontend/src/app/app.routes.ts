@@ -232,6 +232,22 @@ export const routes: Routes = [
         canActivate: [permissionGuard('correo', 'S')],
         loadComponent: () => import('./correo/correo.component').then(m => m.CorreoComponent),
       },
+      // Publicaciones / Noticias (permiso: publicaciones)
+      {
+        path: 'publicaciones',
+        canActivate: [permissionGuard('publicaciones', 'S')],
+        loadComponent: () => import('./publicaciones/publicaciones/publicaciones').then(m => m.PublicacionesComponent),
+      },
+      {
+        path: 'publicaciones/nuevo',
+        canActivate: [permissionGuard('publicaciones', 'A')],
+        loadComponent: () => import('./publicaciones/publicaciones-form/publicaciones-form').then(m => m.PublicacionesFormComponent),
+      },
+      {
+        path: 'publicaciones/:id/editar',
+        canActivate: [permissionGuard('publicaciones', 'E')],
+        loadComponent: () => import('./publicaciones/publicaciones-form/publicaciones-form').then(m => m.PublicacionesFormComponent),
+      },
       // Personas
       {
         path: 'personas',

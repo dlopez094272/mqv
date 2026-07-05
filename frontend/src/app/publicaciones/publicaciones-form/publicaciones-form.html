@@ -1,0 +1,104 @@
+<div class="page-header">
+  <button class="btn-back" (click)="volver()">← Volver</button>
+  <h2>{{ modoEdicion ? 'Editar Publicación' : 'Nueva Publicación' }}</h2>
+</div>
+
+@if (exito()) {
+  <div class="alert-success">{{ exito() }}</div>
+}
+@if (error()) {
+  <div class="alert-error">{{ error() }}</div>
+}
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else {
+  <div class="form-card">
+    <div class="form-group">
+      <label>Dónde publicar *</label>
+      <div class="tipo-media-toggle">
+        <button type="button" class="btn-toggle" [class.active]="tipoPublicacion === 'noticia'"
+                (click)="seleccionarTipoPublicacion('noticia')">📰 Noticia</button>
+        <button type="button" class="btn-toggle" [class.active]="tipoPublicacion === 'evento'"
+                (click)="seleccionarTipoPublicacion('evento')">📅 Próximo Evento</button>
+      </div>
+      @if (tipoPublicacion === 'evento') {
+        <div class="form-group" style="margin-top:12px">
+          <label>Fecha y hora del evento *</label>
+          <input type="datetime-local" [(ngModel)]="fechaEvento" name="fechaEvento" class="input" />
+        </div>
+      }
+    </div>
+
+    <div class="form-group">
+      <label>Título *</label>
+      <input type="text" [(ngModel)]="form.titulo" class="input" placeholder="Título de la publicación" />
+    </div>
+
+    <div class="form-group">
+      <label>Resumen</label>
+      <textarea [(ngModel)]="form.resumen" class="input" rows="2"
+                placeholder="Descripción corta (se usa en la tarjeta de la landing y como vista previa al compartir)"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Contenido</label>
+      <app-html-editor [(ngModel)]="form.contenido_html" name="contenido_html"></app-html-editor>
+    </div>
+
+    <div class="form-group">
+      <label>Multimedia (varias fotos o un video)</label>
+      <div class="tipo-media-toggle">
+        <button type="button" class="btn-toggle" [class.active]="tipoMediaSeleccionado === 'imagen'"
+                (click)="seleccionarTipo('imagen')">🖼️ Fotos</button>
+        <button type="button" class="btn-toggle" [class.active]="tipoMediaSeleccionado === 'video'"
+                (click)="seleccionarTipo('video')">🎬 Video</button>
+      </div>
+
+      @if (tipoMediaSeleccionado === 'video') {
+        <input type="file" accept="video/*" (change)="onVideoChange($event)" class="input-file" />
+
+        @if (nuevoVideoPreview) {
+          <div class="media-preview">
+            <video [src]="nuevoVideoPreview" controls></video>
+          </div>
+        } @else if (videoActual) {
+          <div class="media-preview">
+            <video [src]="videoActualUrl()" controls></video>
+            <span class="text-muted">Video actual — selecciona uno nuevo para reemplazarlo</span>
+          </div>
+        }
+      }
+
+      @if (tipoMediaSeleccionado === 'imagen') {
+        <input type="file" accept="image/*" multiple (change)="onFotosChange($event)" class="input-file" />
+
+        @if (fotosExistentes().length || nuevasFotos().length) {
+          <div class="fotos-grid">
+            @for (foto of fotosExistentes(); track foto.idfoto) {
+              <div class="foto-item">
+                <img [src]="fotoUrl(foto)" alt="" />
+                <button type="button" class="btn-quitar-foto" (click)="eliminarFotoExistente(foto)" title="Eliminar foto">✕</button>
+              </div>
+            }
+            @for (nf of nuevasFotos(); track $index) {
+              <div class="foto-item foto-nueva">
+                <img [src]="nf.preview" alt="" />
+                <button type="button" class="btn-quitar-foto" (click)="quitarFotoNueva($index)" title="Quitar">✕</button>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-secondary" [disabled]="guardando()" (click)="guardar(false)">
+        {{ guardando() ? 'Guardando...' : 'Guardar como borrador' }}
+      </button>
+      <button class="btn-primary" [disabled]="guardando()" (click)="guardar(true)">
+        {{ guardando() ? 'Guardando...' : '🚀 Guardar y publicar' }}
+      </button>
+    </div>
+  </div>
+}

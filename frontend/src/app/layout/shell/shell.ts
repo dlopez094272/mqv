@@ -80,6 +80,10 @@ export class ShellComponent {
     return this.permisos.puede('actividades', 'S') || this.permisos.puede('personas', 'S');
   }
 
+  tienePublicaciones(): boolean {
+    return this.permisos.puede('publicaciones', 'S');
+  }
+
   tieneCrecimiento(): boolean {
     return this.permisos.puede('cursos', 'S') || this.permisos.puede('mis_cursos', 'S');
   }

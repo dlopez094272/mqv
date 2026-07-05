@@ -20,5 +20,6 @@ router.use('/reportes',    require('./reportes'));
 router.use('/tesoreria',   require('./tesoreria'));
 router.use('/crecimiento', require('./crecimiento'));
 router.use('/correo',      require('./correo'));
+router.use('/publicaciones', require('./publicaciones'));
 
 module.exports = router;

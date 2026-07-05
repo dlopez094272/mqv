@@ -37,6 +37,9 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use('/api/uploads', express.static(uploadsDir, { maxAge: '1h' }));
 // Logos de actividades (imágenes públicas, filenames no predecibles)
 app.use('/api/files/actividades/logos', express.static(actLogosDir, { maxAge: '1h' }));
+// Logo de marca para la página de "compartir" (copia propia dentro de backend/
+// para no depender de LANDING_URL ni de que landing/ esté desplegada junto al backend)
+app.use('/api/brand', express.static(path.join(__dirname, '..', 'assets', 'brand'), { maxAge: '1d' }));
 
 app.use('/api', indexRouter);
 

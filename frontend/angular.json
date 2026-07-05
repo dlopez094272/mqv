@@ -42,12 +42,14 @@
             ],
             "styles": [
               "node_modules/leaflet/dist/leaflet.css",
+              "node_modules/quill/dist/quill.snow.css",
               "src/styles.scss"
             ],
             "allowedCommonJsDependencies": [
               "sweetalert2",
               "leaflet",
-              "@vladmandic/face-api"
+              "@vladmandic/face-api",
+              "quill-delta"
             ]
           },
           "configurations": {

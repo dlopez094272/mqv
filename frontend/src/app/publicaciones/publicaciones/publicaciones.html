@@ -1,0 +1,94 @@
+<div class="page-header">
+  <h2>Publicaciones / Noticias</h2>
+  @if (permisos.puede('publicaciones', 'A')) {
+    <button class="btn-primary" (click)="nuevo()">+ Nueva Publicación</button>
+  }
+</div>
+
+@if (exito()) {
+  <div class="alert-success">{{ exito() }}</div>
+}
+@if (error()) {
+  <div class="alert-error">{{ error() }}</div>
+}
+
+<div class="search-bar">
+  <input type="text" [(ngModel)]="busqueda" (ngModelChange)="filtrar()"
+         placeholder="Buscar publicación..." class="input-search" />
+</div>
+
+<div class="tipo-media-toggle" style="margin-bottom:16px">
+  <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'todas'" (click)="cambiarFiltroTipo('todas')">Todas</button>
+  <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'noticia'" (click)="cambiarFiltroTipo('noticia')">📰 Noticias</button>
+  <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'evento'" (click)="cambiarFiltroTipo('evento')">📅 Próximos Eventos</button>
+</div>
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else if (!filtrados().length) {
+  <div class="empty-state">
+    <span class="empty-icon">📰</span>
+    <p>{{ publicaciones().length ? 'No hay publicaciones que coincidan con la búsqueda.' : 'No hay publicaciones creadas aún.' }}</p>
+    @if (!publicaciones().length && permisos.puede('publicaciones', 'A')) {
+      <button class="btn-primary" (click)="nuevo()">Crear primera publicación</button>
+    }
+  </div>
+} @else {
+  <div class="publicaciones-grid">
+    @for (p of paginados(); track p.idpublicaciones) {
+      <div class="pub-card" [class.borrador]="p.estado === 'borrador'">
+        <div class="pub-card-media">
+          @if (p.tipo_media === 'imagen' && p.primera_foto) {
+            <img [src]="fotoUrlDe(p.primera_foto)" alt="" />
+          } @else if (p.tipo_media === 'video' && p.media_filename) {
+            <video [src]="mediaUrlDe(p)" muted></video>
+          } @else {
+            <div class="pub-placeholder">📰</div>
+          }
+          @if ((p.total_fotos ?? 0) > 1) {
+            <span class="badge-fotos">🖼️ {{ p.total_fotos }}</span>
+          }
+          <span class="badge-tipo">{{ p.tipo_publicacion === 'evento' ? '📅 Evento' : '📰 Noticia' }}</span>
+          <span class="badge-estado" [class.publicado]="p.estado === 'publicado'">
+            {{ p.estado === 'publicado' ? 'Publicado' : 'Borrador' }}
+          </span>
+        </div>
+        <div class="pub-card-body">
+          <h3 class="pub-titulo">{{ p.titulo }}</h3>
+          @if (p.resumen) {
+            <p class="pub-resumen">{{ p.resumen }}</p>
+          }
+        </div>
+        <div class="pub-card-footer">
+          @if (permisos.puede('publicaciones', 'E')) {
+            <button class="btn-action" (click)="editar(p)" title="Editar">✏️ Editar</button>
+            <button class="btn-action" (click)="cambiarEstado(p)">
+              {{ p.estado === 'publicado' ? '🔽 Pasar a borrador' : '🚀 Publicar' }}
+            </button>
+          }
+          @if (p.estado === 'publicado') {
+            <button class="btn-action" (click)="copiarLink(p)" title="Copiar link para compartir">🔗 Copiar link</button>
+          }
+          @if (permisos.puede('publicaciones', 'D')) {
+            <button class="btn-action btn-danger" (click)="eliminar(p)" title="Eliminar">🗑️</button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+  @if (totalPaginas() > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Página {{ paginaActual() }} de {{ totalPaginas() }} · {{ filtrados().length }} publicaciones</span>
+      <div class="pagination-controls">
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(1)">«</button>
+        <button class="btn-page" [disabled]="paginaActual() === 1"              (click)="irPagina(paginaActual() - 1)">‹</button>
+        @for (p of paginas(); track $index) {
+          @if (p === '...') { <span class="page-dots">…</span> }
+          @else { <button class="btn-page" [class.active]="p === paginaActual()" (click)="irPagina(p)">{{ p }}</button> }
+        }
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(paginaActual() + 1)">›</button>
+        <button class="btn-page" [disabled]="paginaActual() === totalPaginas()" (click)="irPagina(totalPaginas())">»</button>
+      </div>
+    </div>
+  }
+}
