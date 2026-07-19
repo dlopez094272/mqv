@@ -2,7 +2,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CrecimientoService, Curso, AsignacionItem, UsuarioLookup } from '../crecimiento.service';
+import { CrecimientoService, Curso, AsignacionItem, UsuarioLookup, EditorItem } from '../crecimiento.service';
 import { PermisosService } from '../../core/services/permisos.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -51,6 +51,15 @@ export class GestionCursosComponent implements OnInit {
   seleccionados   = signal<Set<string>>(new Set());
   cargandoAsig    = signal(false);
   errorAsig       = signal('');
+
+  // ── Modal de editores ────────────────────────────────────────
+  modalEditores      = signal(false);
+  cursoEditores      = signal<Curso | null>(null);
+  editores            = signal<EditorItem[]>([]);
+  disponiblesEditor   = signal<UsuarioLookup[]>([]);
+  seleccionadosEditor = signal<Set<string>>(new Set());
+  cargandoEditores    = signal(false);
+  errorEditores       = signal('');
 
   constructor(
     private svc:     CrecimientoService,
@@ -146,6 +155,66 @@ export class GestionCursosComponent implements OnInit {
   }
 
   cerrarAsig() { this.modalAsig.set(false); }
+
+  // ── Editores ──────────────────────────────────────────────────
+  puedeGestionarEditores(c: Curso) {
+    return this.auth.superadmin() || !!c.es_propietario;
+  }
+
+  abrirEditores(c: Curso) {
+    this.cursoEditores.set(c);
+    this.seleccionadosEditor.set(new Set());
+    this.errorEditores.set('');
+    this.cargandoEditores.set(true);
+    this.modalEditores.set(true);
+    this.svc.listarEditores(c.idcursos).subscribe({
+      next: e => { this.editores.set(e); this.cargarDisponiblesEditor(c.idcursos); },
+      error: () => this.cargandoEditores.set(false),
+    });
+  }
+
+  cargarDisponiblesEditor(id: number) {
+    this.svc.usuariosDisponiblesEditor(id).subscribe({
+      next: d => { this.disponiblesEditor.set(d); this.cargandoEditores.set(false); },
+      error: () => this.cargandoEditores.set(false),
+    });
+  }
+
+  toggleSeleccionEditor(usuario: string) {
+    const s = new Set(this.seleccionadosEditor());
+    s.has(usuario) ? s.delete(usuario) : s.add(usuario);
+    this.seleccionadosEditor.set(s);
+  }
+
+  guardarEditores() {
+    const c = this.cursoEditores();
+    if (!c || !this.seleccionadosEditor().size) { this.errorEditores.set('Selecciona al menos un usuario'); return; }
+    this.errorEditores.set('');
+    this.svc.agregarEditores(c.idcursos, [...this.seleccionadosEditor()]).subscribe({
+      next: r => {
+        this.mostrarExito(r.message);
+        this.seleccionadosEditor.set(new Set());
+        this.svc.listarEditores(c.idcursos).subscribe({ next: e => this.editores.set(e) });
+        this.cargarDisponiblesEditor(c.idcursos);
+      },
+      error: (e: any) => this.errorEditores.set(e.message || 'Error al agregar editor'),
+    });
+  }
+
+  quitarEditor(e: EditorItem) {
+    this.svc.quitarEditor(e.ideditor).subscribe({
+      next: () => {
+        const c = this.cursoEditores();
+        if (c) {
+          this.svc.listarEditores(c.idcursos).subscribe({ next: d => this.editores.set(d) });
+          this.cargarDisponiblesEditor(c.idcursos);
+        }
+      },
+      error: (err: any) => this.errorEditores.set(err.message || 'Error'),
+    });
+  }
+
+  cerrarEditores() { this.modalEditores.set(false); }
 
   private mostrarExito(msg: string) {
     this.exito.set(msg);

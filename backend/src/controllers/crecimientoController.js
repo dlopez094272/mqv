@@ -11,6 +11,34 @@ function safeDeleteFile(filePath) {
   try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
 }
 
+// ── Autorización por curso (propietario, editor asignado o superadmin) ──
+async function esPropietarioOEditor(idcursos, usuario) {
+  const [[row]] = await pool.query(
+    `SELECT 1 FROM cursos c
+     WHERE c.idcursos = ?
+       AND (c.created_by = ? OR EXISTS (
+         SELECT 1 FROM cursos_editores ce WHERE ce.idcursos = c.idcursos AND ce.usuario = ?
+       ))`,
+    [idcursos, usuario, usuario]
+  );
+  return !!row;
+}
+
+async function tieneAccesoCurso(idcursos, user) {
+  if (user?.is_superadmin) return true;
+  return esPropietarioOEditor(idcursos, user.usuario);
+}
+
+// Resuelve idcursos a partir del id de un sub-recurso (contenido/pregunta/archivo)
+async function idcursosDeContenido(idcontenido) {
+  const [[row]] = await pool.query('SELECT idcursos FROM cursos_contenido WHERE idcontenido = ?', [idcontenido]);
+  return row?.idcursos ?? null;
+}
+async function idcursosDePregunta(idpregunta) {
+  const [[row]] = await pool.query('SELECT idcursos FROM cursos_preguntas WHERE idpregunta = ?', [idpregunta]);
+  return row?.idcursos ?? null;
+}
+
 // ════════════════════════════════════════════════════════════════
 // GESTIÓN DE CURSOS
 // ════════════════════════════════════════════════════════════════
@@ -18,10 +46,14 @@ function safeDeleteFile(filePath) {
 async function listarCursos(req, res, next) {
   try {
     const isSuperAdmin = req.user?.is_superadmin;
-    const where  = isSuperAdmin ? '' : 'WHERE c.created_by = ?';
-    const params = isSuperAdmin ? [] : [req.user.usuario];
+    const usuario = req.user.usuario;
+    const where  = isSuperAdmin ? '' : `WHERE (c.created_by = ? OR EXISTS (
+      SELECT 1 FROM cursos_editores ce WHERE ce.idcursos = c.idcursos AND ce.usuario = ?
+    ))`;
+    const params = isSuperAdmin ? [usuario] : [usuario, usuario, usuario];
     const [rows] = await pool.query(`
       SELECT c.*,
+             (c.created_by = ?) AS es_propietario,
              (SELECT COUNT(*) FROM cursos_asignaciones ca WHERE ca.idcursos = c.idcursos) AS total_asignados,
              (SELECT COUNT(*) FROM cursos_preguntas cp WHERE cp.idcursos = c.idcursos)    AS total_preguntas,
              (SELECT COUNT(*) FROM cursos_contenido cc WHERE cc.idcursos = c.idcursos)    AS total_contenido
@@ -38,7 +70,7 @@ async function obtenerCurso(req, res, next) {
     const id = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT * FROM cursos WHERE idcursos = ?', [id]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
-    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+    if (!(await tieneAccesoCurso(id, req.user)))
       return res.status(403).json({ error: 'No tienes permiso para ver este curso' });
 
     const [contenido] = await pool.query(
@@ -88,7 +120,7 @@ async function actualizarCurso(req, res, next) {
     const id = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT * FROM cursos WHERE idcursos = ?', [id]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
-    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+    if (!(await tieneAccesoCurso(id, req.user)))
       return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     const { nombre, descripcion, color } = req.body;
@@ -113,7 +145,7 @@ async function toggleCurso(req, res, next) {
     const id = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT activo, created_by FROM cursos WHERE idcursos = ?', [id]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
-    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+    if (!(await tieneAccesoCurso(id, req.user)))
       return res.status(403).json({ error: 'No tienes permiso para modificar este curso' });
     await pool.query('UPDATE cursos SET activo = ? WHERE idcursos = ?', [curso.activo ? 0 : 1, id]);
     res.json({ message: curso.activo ? 'Curso inactivado' : 'Curso activado' });
@@ -129,6 +161,8 @@ async function crearContenido(req, res, next) {
     const idcursos = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT idcursos FROM cursos WHERE idcursos = ?', [idcursos]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!(await tieneAccesoCurso(idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     const { titulo, descripcion, orden } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'El título es requerido' });
@@ -163,6 +197,8 @@ async function actualizarContenido(req, res, next) {
     const id = parseInt(req.params.id);
     const [[cont]] = await pool.query('SELECT * FROM cursos_contenido WHERE idcontenido = ?', [id]);
     if (!cont) return res.status(404).json({ error: 'Contenido no encontrado' });
+    if (!(await tieneAccesoCurso(cont.idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     const { titulo, descripcion, orden } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'El título es requerido' });
@@ -200,6 +236,8 @@ async function eliminarContenido(req, res, next) {
     const id = parseInt(req.params.id);
     const [[cont]] = await pool.query('SELECT * FROM cursos_contenido WHERE idcontenido = ?', [id]);
     if (!cont) return res.status(404).json({ error: 'Contenido no encontrado' });
+    if (!(await tieneAccesoCurso(cont.idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     if (cont.video_filename) safeDeleteFile(path.join(videosDir, cont.video_filename));
 
@@ -216,6 +254,8 @@ async function eliminarVideo(req, res, next) {
     const id = parseInt(req.params.id);
     const [[cont]] = await pool.query('SELECT * FROM cursos_contenido WHERE idcontenido = ?', [id]);
     if (!cont) return res.status(404).json({ error: 'Contenido no encontrado' });
+    if (!(await tieneAccesoCurso(cont.idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     if (cont.video_filename) safeDeleteFile(path.join(videosDir, cont.video_filename));
     await pool.query('UPDATE cursos_contenido SET video_filename = NULL, video_nombre_original = NULL WHERE idcontenido = ?', [id]);
@@ -228,6 +268,9 @@ async function eliminarArchivo(req, res, next) {
     const id = parseInt(req.params.id);
     const [[arch]] = await pool.query('SELECT * FROM cursos_archivos WHERE idarchivo = ?', [id]);
     if (!arch) return res.status(404).json({ error: 'Archivo no encontrado' });
+    const idcursos = await idcursosDeContenido(arch.idcontenido);
+    if (!(await tieneAccesoCurso(idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     safeDeleteFile(path.join(archivosDir, arch.filename));
     await pool.query('DELETE FROM cursos_archivos WHERE idarchivo = ?', [id]);
@@ -244,6 +287,8 @@ async function crearPregunta(req, res, next) {
     const idcursos = parseInt(req.params.id);
     const [[curso]] = await pool.query('SELECT idcursos FROM cursos WHERE idcursos = ?', [idcursos]);
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!(await tieneAccesoCurso(idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     const { pregunta, orden, opciones } = req.body;
     if (!pregunta?.trim()) return res.status(400).json({ error: 'La pregunta es requerida' });
@@ -278,6 +323,8 @@ async function actualizarPregunta(req, res, next) {
     const id = parseInt(req.params.id);
     const [[preg]] = await pool.query('SELECT * FROM cursos_preguntas WHERE idpregunta = ?', [id]);
     if (!preg) return res.status(404).json({ error: 'Pregunta no encontrada' });
+    if (!(await tieneAccesoCurso(preg.idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
 
     const { pregunta, orden, opciones } = req.body;
     if (!pregunta?.trim()) return res.status(400).json({ error: 'La pregunta es requerida' });
@@ -311,6 +358,11 @@ async function actualizarPregunta(req, res, next) {
 async function eliminarPregunta(req, res, next) {
   try {
     const id = parseInt(req.params.id);
+    const idcursos = await idcursosDePregunta(id);
+    if (!idcursos) return res.status(404).json({ error: 'Pregunta no encontrada' });
+    if (!(await tieneAccesoCurso(idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
+
     const [r] = await pool.query('DELETE FROM cursos_preguntas WHERE idpregunta = ?', [id]);
     if (!r.affectedRows) return res.status(404).json({ error: 'Pregunta no encontrada' });
     res.json({ message: 'Pregunta eliminada' });
@@ -324,6 +376,8 @@ async function eliminarPregunta(req, res, next) {
 async function listarAsignaciones(req, res, next) {
   try {
     const id = parseInt(req.params.id);
+    if (!(await tieneAccesoCurso(id, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para ver este curso' });
     const [rows] = await pool.query(`
       SELECT ca.idasignacion, ca.usuario, ca.asignado_at,
              u.nombre_completo,
@@ -342,6 +396,8 @@ async function listarAsignaciones(req, res, next) {
 async function asignarUsuarios(req, res, next) {
   try {
     const idcursos = parseInt(req.params.id);
+    if (!(await tieneAccesoCurso(idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
     const { usuarios } = req.body;
     if (!Array.isArray(usuarios) || !usuarios.length)
       return res.status(400).json({ error: 'Debe seleccionar al menos un usuario' });
@@ -363,6 +419,11 @@ async function asignarUsuarios(req, res, next) {
 async function quitarAsignacion(req, res, next) {
   try {
     const id = parseInt(req.params.id);
+    const [[asig]] = await pool.query('SELECT idcursos FROM cursos_asignaciones WHERE idasignacion = ?', [id]);
+    if (!asig) return res.status(404).json({ error: 'Asignación no encontrada' });
+    if (!(await tieneAccesoCurso(asig.idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para editar este curso' });
+
     const [r] = await pool.query('DELETE FROM cursos_asignaciones WHERE idasignacion = ?', [id]);
     if (!r.affectedRows) return res.status(404).json({ error: 'Asignación no encontrada' });
     res.json({ message: 'Asignación eliminada' });
@@ -372,6 +433,8 @@ async function quitarAsignacion(req, res, next) {
 async function usuariosDisponibles(req, res, next) {
   try {
     const idcursos = parseInt(req.params.id);
+    if (!(await tieneAccesoCurso(idcursos, req.user)))
+      return res.status(403).json({ error: 'No tienes permiso para ver este curso' });
     const [rows] = await pool.query(`
       SELECT u.usuario, u.nombre_completo
       FROM usuarios u
@@ -382,6 +445,96 @@ async function usuariosDisponibles(req, res, next) {
       ORDER BY u.nombre_completo
     `, [idcursos]);
     res.json(rows);
+  } catch (err) { next(err); }
+}
+
+// ════════════════════════════════════════════════════════════════
+// EDITORES (solo el propietario del curso o superadmin puede gestionar)
+// ════════════════════════════════════════════════════════════════
+
+async function listarEditores(req, res, next) {
+  try {
+    const idcursos = parseInt(req.params.id);
+    const [[curso]] = await pool.query('SELECT created_by FROM cursos WHERE idcursos = ?', [idcursos]);
+    if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'Solo el propietario del curso puede gestionar los editores' });
+
+    const [rows] = await pool.query(`
+      SELECT ce.ideditor, ce.usuario, ce.agregado_at, u.nombre_completo
+      FROM cursos_editores ce
+      LEFT JOIN usuarios u ON u.usuario = ce.usuario
+      WHERE ce.idcursos = ?
+      ORDER BY u.nombre_completo
+    `, [idcursos]);
+    res.json(rows);
+  } catch (err) { next(err); }
+}
+
+async function usuariosDisponiblesEditor(req, res, next) {
+  try {
+    const idcursos = parseInt(req.params.id);
+    const [[curso]] = await pool.query('SELECT created_by FROM cursos WHERE idcursos = ?', [idcursos]);
+    if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'Solo el propietario del curso puede gestionar los editores' });
+
+    const [rows] = await pool.query(`
+      SELECT u.usuario, u.nombre_completo
+      FROM usuarios u
+      WHERE u.activo = 1
+        AND u.usuario <> ?
+        AND u.usuario NOT IN (
+          SELECT usuario FROM cursos_editores WHERE idcursos = ?
+        )
+      ORDER BY u.nombre_completo
+    `, [curso.created_by, idcursos]);
+    res.json(rows);
+  } catch (err) { next(err); }
+}
+
+async function agregarEditores(req, res, next) {
+  try {
+    const idcursos = parseInt(req.params.id);
+    const [[curso]] = await pool.query('SELECT created_by FROM cursos WHERE idcursos = ?', [idcursos]);
+    if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+    if (!req.user?.is_superadmin && curso.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'Solo el propietario del curso puede gestionar los editores' });
+
+    const { usuarios } = req.body;
+    if (!Array.isArray(usuarios) || !usuarios.length)
+      return res.status(400).json({ error: 'Debe seleccionar al menos un usuario' });
+
+    let insertados = 0;
+    for (const u of usuarios) {
+      if (u === curso.created_by) continue;
+      try {
+        await pool.query(
+          'INSERT IGNORE INTO cursos_editores (idcursos, usuario, agregado_por) VALUES (?, ?, ?)',
+          [idcursos, u, req.user.usuario]
+        );
+        insertados++;
+      } catch (_) {}
+    }
+    res.status(201).json({ message: `${insertados} editor(es) agregado(s)` });
+  } catch (err) { next(err); }
+}
+
+async function quitarEditor(req, res, next) {
+  try {
+    const id = parseInt(req.params.id);
+    const [[editor]] = await pool.query(
+      `SELECT ce.idcursos, c.created_by
+       FROM cursos_editores ce JOIN cursos c ON c.idcursos = ce.idcursos
+       WHERE ce.ideditor = ?`,
+      [id]
+    );
+    if (!editor) return res.status(404).json({ error: 'Editor no encontrado' });
+    if (!req.user?.is_superadmin && editor.created_by !== req.user.usuario)
+      return res.status(403).json({ error: 'Solo el propietario del curso puede gestionar los editores' });
+
+    await pool.query('DELETE FROM cursos_editores WHERE ideditor = ?', [id]);
+    res.json({ message: 'Editor eliminado' });
   } catch (err) { next(err); }
 }
 
@@ -578,5 +731,6 @@ module.exports = {
   crearContenido, actualizarContenido, eliminarContenido, eliminarVideo, eliminarArchivo,
   crearPregunta, actualizarPregunta, eliminarPregunta,
   listarAsignaciones, asignarUsuarios, quitarAsignacion, usuariosDisponibles,
+  listarEditores, usuariosDisponiblesEditor, agregarEditores, quitarEditor,
   misCursos, miCursoDetalle, obtenerPreguntas, evaluarCurso, datosCertificado, misLogros,
 };

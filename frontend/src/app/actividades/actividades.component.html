@@ -359,37 +359,17 @@
       <!-- Grupos -->
       <div class="form-group">
         <label>Grupos involucrados</label>
-        <div class="multiselect-wrap">
-          <button type="button" class="multiselect-trigger"
-                  (click)="mostrarDropdownGrupos.set(!mostrarDropdownGrupos())">
-            <span class="multiselect-label">{{ gruposLabel() }}</span>
-            <span class="multiselect-arrow">{{ mostrarDropdownGrupos() ? '▲' : '▼' }}</span>
-          </button>
-          @if (mostrarDropdownGrupos()) {
-            <div class="multiselect-dropdown">
-              @if (grupos().length === 0) {
-                <div class="multiselect-empty">No hay grupos disponibles</div>
-              }
-              @for (g of grupos(); track g.id) {
-                <label class="multiselect-option"
-                       [class.selected]="gruposSeleccionados().includes(g.id)">
-                  <input type="checkbox"
-                         [checked]="gruposSeleccionados().includes(g.id)"
-                         (change)="toggleGrupo(g.id)" />
-                  {{ g.nombre }}
-                </label>
-              }
-            </div>
-          }
-        </div>
-        @if (gruposSeleccionados().length > 0) {
-          <div class="grupos-badges">
-            @for (id of gruposSeleccionados(); track id) {
-              <span class="grupo-badge">
-                {{ grupos().find(g => g.id === id)?.nombre }}
-                <button type="button" class="grupo-badge-remove"
-                        (click)="toggleGrupo(id)">✕</button>
-              </span>
+        @if (grupos().length === 0) {
+          <div class="grupos-empty">No hay grupos disponibles</div>
+        } @else {
+          <div class="grupos-chips">
+            @for (g of grupos(); track g.id) {
+              <button type="button" class="grupo-chip"
+                      [class.selected]="gruposSeleccionados().includes(g.id)"
+                      (click)="toggleGrupo(g.id)">
+                <span class="chip-check">✓</span>
+                {{ g.nombre }}
+              </button>
             }
           </div>
         }

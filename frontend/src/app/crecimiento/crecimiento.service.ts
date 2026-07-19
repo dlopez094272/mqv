@@ -13,6 +13,7 @@ export interface Curso {
   activo:           number;
   created_by:       string | null;
   created_at:       string;
+  es_propietario?:  number;
   total_asignados?: number;
   total_preguntas?: number;
   total_contenido?: number;
@@ -67,6 +68,13 @@ export interface AsignacionItem {
 export interface UsuarioLookup {
   usuario:         string;
   nombre_completo: string;
+}
+
+export interface EditorItem {
+  ideditor:        number;
+  usuario:         string;
+  nombre_completo: string;
+  agregado_at:     string;
 }
 
 export interface MiCurso {
@@ -149,6 +157,12 @@ export class CrecimientoService {
   usuariosDisponibles(idCurso: number)        { return this.http.get<UsuarioLookup[]>(`${BASE}/cursos/${idCurso}/usuarios-disponibles`); }
   asignarUsuarios(idCurso: number, usuarios: string[]) { return this.http.post<any>(`${BASE}/cursos/${idCurso}/asignaciones`, { usuarios }); }
   quitarAsignacion(idasignacion: number)      { return this.http.delete<any>(`${BASE}/asignaciones/${idasignacion}`); }
+
+  // ── Editores ──────────────────────────────────────────────────
+  listarEditores(idCurso: number)             { return this.http.get<EditorItem[]>(`${BASE}/cursos/${idCurso}/editores`); }
+  usuariosDisponiblesEditor(idCurso: number)  { return this.http.get<UsuarioLookup[]>(`${BASE}/cursos/${idCurso}/usuarios-disponibles-editor`); }
+  agregarEditores(idCurso: number, usuarios: string[]) { return this.http.post<any>(`${BASE}/cursos/${idCurso}/editores`, { usuarios }); }
+  quitarEditor(ideditor: number)              { return this.http.delete<any>(`${BASE}/editores/${ideditor}`); }
 
   // ── Mis cursos ────────────────────────────────────────────────
   misCursos()                      { return this.http.get<MiCurso[]>(`${BASE}/mis-cursos`); }

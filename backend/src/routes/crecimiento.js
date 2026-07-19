@@ -130,6 +130,12 @@ router.get('/cursos/:id/usuarios-disponibles', checkPermission('cursos', 'S'), c
 router.post('/cursos/:id/asignaciones',        checkPermission('cursos', 'E'), ctrl.asignarUsuarios);
 router.delete('/asignaciones/:id',             checkPermission('cursos', 'E'), ctrl.quitarAsignacion);
 
+// ── Editores (solo el propietario del curso) ───────────────────────
+router.get('/cursos/:id/editores',                    checkPermission('cursos', 'S'), ctrl.listarEditores);
+router.get('/cursos/:id/usuarios-disponibles-editor',  checkPermission('cursos', 'S'), ctrl.usuariosDisponiblesEditor);
+router.post('/cursos/:id/editores',                    checkPermission('cursos', 'E'), ctrl.agregarEditores);
+router.delete('/editores/:id',                         checkPermission('cursos', 'E'), ctrl.quitarEditor);
+
 // ════════════════════════════════════════════════════════════════
 // MIS CURSOS (permiso: mis_cursos — solo autenticación basta)
 // ════════════════════════════════════════════════════════════════

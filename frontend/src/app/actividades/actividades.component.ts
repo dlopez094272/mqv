@@ -100,16 +100,8 @@ export class ActividadesComponent implements OnInit {
     this.tabPagina.set(p as number);
   }
 
-  // ── Grupos multiselect ────────────────────────────────────────
+  // ── Grupos involucrados ────────────────────────────────────────
   gruposSeleccionados    = signal<number[]>([]);
-  mostrarDropdownGrupos  = signal(false);
-
-  gruposLabel = computed(() => {
-    const sel = this.gruposSeleccionados();
-    if (!sel.length) return 'Sin grupos asignados';
-    const g = this.grupos();
-    return sel.map(id => g.find(x => x.id === id)?.nombre || id).join(', ');
-  });
 
   // ── Calendar ─────────────────────────────────────────────────
   mesActual = signal(new Date());
@@ -318,7 +310,6 @@ export class ActividadesComponent implements OnInit {
     this.logoActual = null; this.eliminarLogo = false;
     this.adjuntosNuevos = []; this.adjuntosActuales = [];
     this.gruposSeleccionados.set([]);
-    this.mostrarDropdownGrupos.set(false);
     this.modoEdicion.set(false); this.editandoId.set(null);
     this.errorForm.set(''); this.mostrarForm.set(true);
   }
@@ -339,7 +330,6 @@ export class ActividadesComponent implements OnInit {
     this.adjuntosNuevos = [];
     this.adjuntosActuales = this.parseAdjuntos(act.adjuntos);
     this.gruposSeleccionados.set([]);
-    this.mostrarDropdownGrupos.set(false);
     this.modoEdicion.set(true); this.editandoId.set(act.idactividades);
     this.errorForm.set(''); this.mostrarForm.set(true);
     // Cargar grupos previamente asignados
@@ -358,7 +348,6 @@ export class ActividadesComponent implements OnInit {
   cerrarForm() {
     this.mostrarForm.set(false);
     this.logoPreview = null; this.adjuntosNuevos = [];
-    this.mostrarDropdownGrupos.set(false);
   }
 
   onLogoChange(event: Event) {

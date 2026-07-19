@@ -234,7 +234,7 @@
 
 .form-panel {
   position: fixed; top: 0; right: 0;
-  width: 460px; max-width: 100vw; height: 100vh;
+  width: 460px; max-width: 100vw; height: 100vh; height: 100dvh;
   background: var(--card);
   border-left: 1px solid var(--border);
   z-index: 101; display: flex; flex-direction: column;
@@ -252,8 +252,10 @@
 
   &-footer {
     padding: 16px 24px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
     display: flex; gap: 10px; justify-content: flex-end;
+    flex-shrink: 0;
   }
 }
 

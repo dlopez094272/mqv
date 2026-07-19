@@ -4,6 +4,7 @@ $topbar-h:  58px;
 .shell {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -263,6 +264,7 @@ $topbar-h:  58px;
     top: 0;
     left: 0;
     height: 100vh;
+    height: 100dvh;
     z-index: 300;
     transform: translateX(-100%);
     transition: transform .25s ease, width .25s ease;

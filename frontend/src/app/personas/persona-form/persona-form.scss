@@ -406,6 +406,7 @@
   background: var(--card);
   border-top: 2px solid var(--border);
   padding: 14px 28px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: flex-end;
   gap: 12px;

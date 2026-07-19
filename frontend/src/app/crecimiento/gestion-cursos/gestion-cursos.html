@@ -58,6 +58,9 @@
           }
           @if (permisos.puede('cursos', 'E')) {
             <button class="btn-action" (click)="abrirAsig(c)" title="Asignar usuarios">👥 Asignar</button>
+            @if (puedeGestionarEditores(c)) {
+              <button class="btn-action" (click)="abrirEditores(c)" title="Asignar acceso de editor">🛡️ Editores</button>
+            }
             <button class="btn-action" [class.btn-danger]="c.activo" (click)="toggle(c)">
               {{ c.activo ? '🔴 Inactivar' : '🟢 Activar' }}
             </button>
@@ -152,6 +155,78 @@
         @if (permisos.puede('cursos', 'E') && seleccionados().size) {
           <button class="btn-primary" (click)="guardarAsig()">
             Asignar {{ seleccionados().size }} usuario(s)
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal editores -->
+@if (modalEditores()) {
+  <div class="modal-overlay" (click)="cerrarEditores()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Acceso de Editor — {{ cursoEditores()?.nombre }}</h3>
+        <button class="btn-close" (click)="cerrarEditores()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Los editores pueden ver y modificar este curso (contenido, evaluación y asignaciones) igual que el propietario.</p>
+        @if (errorEditores()) {
+          <div class="alert-error">{{ errorEditores() }}</div>
+        }
+
+        @if (cargandoEditores()) {
+          <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+        } @else {
+          <!-- Editores actuales -->
+          <div class="asig-section">
+            <h4>Editores actuales ({{ editores().length }})</h4>
+            @if (!editores().length) {
+              <p class="text-muted">Ningún editor asignado aún.</p>
+            } @else {
+              <ul class="asig-list">
+                @for (e of editores(); track e.ideditor) {
+                  <li class="asig-item">
+                    <span class="asig-avatar">{{ (e.nombre_completo || e.usuario)[0].toUpperCase() }}</span>
+                    <div class="asig-info">
+                      <strong>{{ e.nombre_completo }}</strong>
+                      <span class="text-muted">{{ e.usuario }}</span>
+                    </div>
+                    <button class="btn-icon btn-danger" (click)="quitarEditor(e)" title="Quitar">✕</button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <!-- Agregar nuevos -->
+          @if (disponiblesEditor().length) {
+            <div class="asig-section">
+              <h4>Agregar editores</h4>
+              <ul class="asig-list disponibles-list">
+                @for (u of disponiblesEditor(); track u.usuario) {
+                  <li class="asig-item clickable"
+                      [class.selected]="seleccionadosEditor().has(u.usuario)"
+                      (click)="toggleSeleccionEditor(u.usuario)">
+                    <input type="checkbox" [checked]="seleccionadosEditor().has(u.usuario)" />
+                    <span class="asig-avatar">{{ (u.nombre_completo || u.usuario)[0].toUpperCase() }}</span>
+                    <div class="asig-info">
+                      <strong>{{ u.nombre_completo }}</strong>
+                      <span class="text-muted">{{ u.usuario }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="cerrarEditores()">Cerrar</button>
+        @if (seleccionadosEditor().size) {
+          <button class="btn-primary" (click)="guardarEditores()">
+            Agregar {{ seleccionadosEditor().size }} editor(es)
           </button>
         }
       </div>
