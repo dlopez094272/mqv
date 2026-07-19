@@ -143,6 +143,7 @@ export class ActividadesComponent implements OnInit {
   guardandoVisitante    = signal(false);
   errorAsistencia       = signal('');
   visitanteExpandido    = signal<number | null>(null);
+  gruposDisponiblesExpandidos = signal<Set<string>>(new Set());
 
   formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
 
@@ -258,6 +259,33 @@ export class ActividadesComponent implements OnInit {
   personasDisponibles = computed<AsistenciaPersona[]>(() =>
     this.personasFiltradas().filter(p => !p.asiste)
   );
+
+  personasDisponiblesPorGrupo = computed<{ grupo: string; personas: AsistenciaPersona[] }[]>(() => {
+    const mapa = new Map<string, AsistenciaPersona[]>();
+    for (const p of this.personasDisponibles()) {
+      const grupos = p.grupos_nombres
+        ? p.grupos_nombres.split(',').map(g => g.trim()).filter(Boolean)
+        : ['Sin grupo'];
+      for (const g of grupos) {
+        const arr = mapa.get(g);
+        if (arr) arr.push(p); else mapa.set(g, [p]);
+      }
+    }
+    return Array.from(mapa.entries())
+      .map(([grupo, personas]) => ({ grupo, personas }))
+      .sort((a, b) => a.grupo === 'Sin grupo' ? 1 : b.grupo === 'Sin grupo' ? -1
+        : a.grupo.localeCompare(b.grupo, 'es'));
+  });
+
+  grupoDisponibleExpandido(grupo: string): boolean {
+    return !!this.busquedaAsistencia() || this.gruposDisponiblesExpandidos().has(grupo);
+  }
+
+  toggleGrupoDisponible(grupo: string) {
+    const set = new Set(this.gruposDisponiblesExpandidos());
+    if (set.has(grupo)) set.delete(grupo); else set.add(grupo);
+    this.gruposDisponiblesExpandidos.set(set);
+  }
 
   // ── Lifecycle ─────────────────────────────────────────────────
   ngOnInit() {
@@ -448,6 +476,7 @@ export class ActividadesComponent implements OnInit {
     this.formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
     this.errorAsistencia.set('');
     this.visitanteExpandido.set(null);
+    this.gruposDisponiblesExpandidos.set(new Set());
     this._cargarAsistencia(act.idactividades);
   }
 
