@@ -55,34 +55,27 @@
                 <span class="badge badge-inactive">Inactivo</span>
               }
             </td>
-            <td>
-              <div class="action-buttons">
-                <button class="btn btn-sm btn-secondary" (click)="verMovimientos(t)"
-                        title="Ver movimientos">📊</button>
-
-                <button class="btn btn-sm btn-outline" (click)="abrirModalPdf(t)"
-                        title="Generar estado de cuenta PDF">📄</button>
-
-                @if (esResponsable(t)) {
-                  <button class="btn btn-sm btn-outline" (click)="abrirUsuarios(t)"
-                          title="Gestionar accesos">👥</button>
-                }
-
-                @if (permisos.puede('tesoreria', 'E')) {
-                  <button class="btn btn-sm btn-outline" (click)="abrirEditar(t)"
-                          title="Editar">✏️</button>
-                  @if (t.activo) {
-                    <button class="btn btn-sm btn-danger" (click)="toggleActivo(t)"
-                            title="Desactivar">🚫</button>
-                  } @else {
-                    <button class="btn btn-sm btn-success" (click)="toggleActivo(t)"
-                            title="Activar">✅</button>
-                  }
-                }
-
-                @if (permisos.puede('tesoreria', 'D')) {
-                  <button class="btn btn-sm btn-danger" (click)="eliminar(t)"
-                          title="Eliminar">🗑️</button>
+            <td class="col-acciones">
+              <div class="menu-acciones">
+                <button class="btn btn-sm btn-outline btn-menu-toggle"
+                        (click)="toggleMenu(t.idtesoreria, $event)" title="Acciones">⋮</button>
+                @if (menuAbiertoId() === t.idtesoreria) {
+                  <div class="menu-dropdown"
+                       [style.top.px]="menuPos().top" [style.right.px]="menuPos().right">
+                    <button class="menu-item" (click)="verMovimientos(t)">📋 Gestionar</button>
+                    <button class="menu-item" (click)="abrirModalPdf(t)">📄 Estado de Cuenta</button>
+                    @if (esResponsable(t)) {
+                      <button class="menu-item" (click)="abrirUsuarios(t)">👥 Accesos</button>
+                    }
+                    @if (permisos.puede('tesoreria', 'E')) {
+                      <button class="menu-item" (click)="abrirEditar(t)">✏️ Editar</button>
+                      @if (t.activo) {
+                        <button class="menu-item menu-item-danger" (click)="toggleActivo(t)">🚫 Desactivar</button>
+                      } @else {
+                        <button class="menu-item menu-item-success" (click)="toggleActivo(t)">✅ Activar</button>
+                      }
+                    }
+                  </div>
                 }
               </div>
             </td>

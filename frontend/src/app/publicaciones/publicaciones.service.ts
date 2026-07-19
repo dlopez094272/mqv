@@ -6,7 +6,7 @@ const BASE = environment.apiUrl + '/publicaciones';
 
 export type TipoMedia = 'imagen' | 'video' | 'ninguno';
 export type EstadoPublicacion = 'borrador' | 'publicado';
-export type TipoPublicacion = 'noticia' | 'evento';
+export type TipoPublicacion = 'noticia' | 'evento' | 'tema_mes';
 
 export interface FotoPublicacion {
   idfoto:        number;

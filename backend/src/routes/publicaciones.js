@@ -42,6 +42,8 @@ const uploadMedia = multer({
   { name: 'fotos', maxCount: 15 },
 ]);
 
+const TIPOS_PUBLICACION = ['noticia', 'evento', 'tema_mes'];
+
 function tipoMediaDe(files) {
   if (files?.video?.[0]) return 'video';
   if (files?.fotos?.length) return 'imagen';
@@ -343,8 +345,8 @@ router.post('/', checkPermission('publicaciones', 'A'), (req, res, next) => {
     try {
       const { titulo, resumen, contenido_html, tipo_publicacion, fecha_evento } = req.body;
       if (!titulo?.trim()) return res.status(400).json({ error: 'El título es requerido' });
-      if (tipo_publicacion && !['noticia', 'evento'].includes(tipo_publicacion)) {
-        return res.status(400).json({ error: "tipo_publicacion inválido, debe ser 'noticia' o 'evento'" });
+      if (tipo_publicacion && !TIPOS_PUBLICACION.includes(tipo_publicacion)) {
+        return res.status(400).json({ error: `tipo_publicacion inválido, debe ser uno de: ${TIPOS_PUBLICACION.join(', ')}` });
       }
       if (tipo_publicacion === 'evento' && !fecha_evento) {
         return res.status(400).json({ error: 'La fecha del evento es requerida' });
@@ -355,13 +357,14 @@ router.post('/', checkPermission('publicaciones', 'A'), (req, res, next) => {
       const media_filename      = videoFile ? videoFile.filename : null;
       const media_original_name = videoFile ? videoFile.originalname : null;
       const slugBase = generarSlugBase(titulo);
+      const tipoPublicacionFinal = TIPOS_PUBLICACION.includes(tipo_publicacion) ? tipo_publicacion : 'noticia';
 
       const [r] = await pool.query(
         `INSERT INTO publicaciones
            (titulo, slug, resumen, contenido_html, tipo_media, media_filename, media_original_name, tipo_publicacion, fecha_evento, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [titulo.trim(), slugBase, resumen || null, contenido_html || null, tipo_media, media_filename, media_original_name,
-         tipo_publicacion === 'evento' ? 'evento' : 'noticia', tipo_publicacion === 'evento' ? fecha_evento : null, req.user.usuario]
+         tipoPublicacionFinal, tipoPublicacionFinal === 'evento' ? fecha_evento : null, req.user.usuario]
       );
       // El slug definitivo incluye el id para garantizar unicidad sin condición de carrera
       const slug = `${slugBase}-${r.insertId}`;
@@ -384,8 +387,8 @@ router.put('/:id', checkPermission('publicaciones', 'E'), (req, res, next) => {
 
       const { titulo, resumen, contenido_html, tipo_publicacion, fecha_evento } = req.body;
       if (!titulo?.trim()) return res.status(400).json({ error: 'El título es requerido' });
-      if (tipo_publicacion && !['noticia', 'evento'].includes(tipo_publicacion)) {
-        return res.status(400).json({ error: "tipo_publicacion inválido, debe ser 'noticia' o 'evento'" });
+      if (tipo_publicacion && !TIPOS_PUBLICACION.includes(tipo_publicacion)) {
+        return res.status(400).json({ error: `tipo_publicacion inválido, debe ser uno de: ${TIPOS_PUBLICACION.join(', ')}` });
       }
       if (tipo_publicacion === 'evento' && !fecha_evento) {
         return res.status(400).json({ error: 'La fecha del evento es requerida' });
@@ -417,7 +420,7 @@ router.put('/:id', checkPermission('publicaciones', 'E'), (req, res, next) => {
         await insertarFotos(id, fotosFiles, maxOrden + 1);
       }
 
-      const tipoPublicacionFinal = tipo_publicacion === 'evento' ? 'evento' : 'noticia';
+      const tipoPublicacionFinal = TIPOS_PUBLICACION.includes(tipo_publicacion) ? tipo_publicacion : 'noticia';
 
       await pool.query(
         `UPDATE publicaciones

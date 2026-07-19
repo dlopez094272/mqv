@@ -20,7 +20,7 @@ export class PublicacionesComponent implements OnInit {
   error         = signal('');
   exito         = signal('');
   busqueda      = '';
-  filtroTipo: 'todas' | 'noticia' | 'evento' = 'todas';
+  filtroTipo: 'todas' | 'noticia' | 'evento' | 'tema_mes' = 'todas';
 
   readonly LIMITE = 25;
   paginaActual = signal(1);
@@ -70,7 +70,7 @@ export class PublicacionesComponent implements OnInit {
     this.paginaActual.set(1);
   }
 
-  cambiarFiltroTipo(tipo: 'todas' | 'noticia' | 'evento') {
+  cambiarFiltroTipo(tipo: 'todas' | 'noticia' | 'evento' | 'tema_mes') {
     this.filtroTipo = tipo;
     this.filtrar();
   }

@@ -21,6 +21,7 @@
   <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'todas'" (click)="cambiarFiltroTipo('todas')">Todas</button>
   <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'noticia'" (click)="cambiarFiltroTipo('noticia')">📰 Noticias</button>
   <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'evento'" (click)="cambiarFiltroTipo('evento')">📅 Próximos Eventos</button>
+  <button type="button" class="btn-toggle" [class.active]="filtroTipo === 'tema_mes'" (click)="cambiarFiltroTipo('tema_mes')">🎬 Tema del Mes</button>
 </div>
 
 @if (cargando()) {
@@ -43,12 +44,14 @@
           } @else if (p.tipo_media === 'video' && p.media_filename) {
             <video [src]="mediaUrlDe(p)" muted></video>
           } @else {
-            <div class="pub-placeholder">📰</div>
+            <div class="pub-placeholder">{{ p.tipo_publicacion === 'evento' ? '📅' : p.tipo_publicacion === 'tema_mes' ? '🎬' : '📰' }}</div>
           }
           @if ((p.total_fotos ?? 0) > 1) {
             <span class="badge-fotos">🖼️ {{ p.total_fotos }}</span>
           }
-          <span class="badge-tipo">{{ p.tipo_publicacion === 'evento' ? '📅 Evento' : '📰 Noticia' }}</span>
+          <span class="badge-tipo">
+            {{ p.tipo_publicacion === 'evento' ? '📅 Evento' : p.tipo_publicacion === 'tema_mes' ? '🎬 Tema del Mes' : '📰 Noticia' }}
+          </span>
           <span class="badge-estado" [class.publicado]="p.estado === 'publicado'">
             {{ p.estado === 'publicado' ? 'Publicado' : 'Borrador' }}
           </span>

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd } from '@angular/router';
@@ -27,6 +27,8 @@ export class TesoreriaListComponent implements OnInit, OnDestroy {
   successMsg   = signal('');
   busqueda     = '';
   mostrarExtra = signal(false);
+  menuAbiertoId = signal<number | null>(null);
+  menuPos = signal<{ top: number; right: number }>({ top: 0, right: 0 });
 
   readonly LIMITE = 25;
   paginaActual = signal(1);
@@ -94,6 +96,25 @@ export class TesoreriaListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routerSub?.unsubscribe();
+  }
+
+  toggleMenu(id: number, event: Event) {
+    event.stopPropagation();
+    if (this.menuAbiertoId() === id) {
+      this.menuAbiertoId.set(null);
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menuPos.set({
+      top: rect.bottom + 4,
+      right: window.innerWidth - rect.right,
+    });
+    this.menuAbiertoId.set(id);
+  }
+
+  @HostListener('document:click')
+  cerrarMenu() {
+    this.menuAbiertoId.set(null);
   }
 
   cargar() {
@@ -189,16 +210,6 @@ export class TesoreriaListComponent implements OnInit, OnDestroy {
     this.svc.toggle(t.idtesoreria).subscribe({
       next: () => this.cargar(),
       error: (err: any) => this.error.set(err.message || 'Error'),
-    });
-  }
-
-  async eliminar(t: Tesoreria) {
-    if (!await confirmar(
-        `¿Eliminar la tesorería <b>"${t.nombre}"</b>?<br>Esta acción no se puede deshacer.`,
-        { peligro: true })) return;
-    this.svc.eliminar(t.idtesoreria).subscribe({
-      next: () => { this.mostrarExito('Tesorería eliminada'); this.cargar(); },
-      error: (err: any) => this.error.set(err.message || 'Error al eliminar'),
     });
   }
 

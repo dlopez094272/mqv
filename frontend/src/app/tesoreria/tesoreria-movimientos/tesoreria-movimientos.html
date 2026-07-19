@@ -16,6 +16,9 @@
       </div>
     </div>
   }
+  @if (puedeAgregar()) {
+    <button class="btn btn-primary btn-sm" (click)="abrirNuevo()">+ Movimiento</button>
+  }
 </div>
 
 @if (error())      { <div class="alert alert-error">{{ error() }}</div> }
@@ -36,9 +39,6 @@
   <div class="filter-spacer"></div>
 
   <button class="btn btn-outline btn-sm" (click)="exportarExcel()">⬇ Exportar Excel</button>
-  @if (puedeAgregar()) {
-    <button class="btn btn-primary" (click)="abrirNuevo()">+ Movimiento</button>
-  }
 </div>
 
 <!-- ── Tabla de movimientos ───────────────────────────────────── -->
@@ -83,10 +83,10 @@
                   <span class="adjuntos-tag">
                     📎
                     @for (adj of getAdjuntos(m); track adj.filename) {
-                      <a [href]="urlAdjunto(adj.filename)" target="_blank"
+                      <button type="button" (click)="descargarAdjunto(adj)"
                          class="adj-link" [title]="adj.originalname || adj.filename">
                         {{ (adj.originalname || adj.filename) | slice:0:20 }}{{ (adj.originalname || adj.filename || '').length > 20 ? '…' : '' }}
-                      </a>
+                      </button>
                     }
                   </span>
                 }
@@ -238,9 +238,9 @@
         @if (adjuntosActuales.length > 0) {
           <div class="adjuntos-existentes">
             @for (adj of adjuntosActuales; track adj.filename) {
-              <a [href]="urlAdjunto(adj.filename)" target="_blank" class="adjunto-link">
+              <button type="button" (click)="descargarAdjunto(adj)" class="adjunto-link">
                 📎 {{ adj.originalname }}
-              </a>
+              </button>
             }
           </div>
         }

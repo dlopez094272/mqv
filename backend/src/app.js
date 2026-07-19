@@ -26,6 +26,12 @@ fs.mkdirSync(actLogosDir, { recursive: true });
 
 const app = express();
 
+// Detrás de Apache/Passenger (cPanel) el SSL se termina en el proxy y las peticiones
+// llegan al proceso Node por HTTP interno. Sin esto, req.protocol siempre da 'http'
+// y las URLs absolutas generadas para imágenes (ver publicaciones.js -> absUrl) quedan
+// en http://, causando contenido mixto/errores de SSL en la landing (https://).
+app.set('trust proxy', true);
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:4200',
   credentials: true,

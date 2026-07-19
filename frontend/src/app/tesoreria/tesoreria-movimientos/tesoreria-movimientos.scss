@@ -17,6 +17,9 @@
     font-size: 14px;
     color: var(--text-muted);
   }
+
+  // El botón "+ Movimiento" no debe estirarse a lo ancho del header
+  > .btn-primary { width: auto; flex-shrink: 0; white-space: nowrap; }
 }
 
 .badge-id {
@@ -65,6 +68,9 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+
+  // "Aplicar" y "Exportar Excel" no deben estirarse a lo ancho del contenedor
+  .btn { width: auto; flex-shrink: 0; white-space: nowrap; }
 }
 
 .filter-group {
@@ -81,6 +87,24 @@
 }
 
 .filter-spacer { flex: 1; }
+
+// ── Responsive (móvil) ──────────────────────────────────────────
+@media (max-width: 767px) {
+  .mov-header {
+    flex-wrap: wrap;
+
+    .header-info { flex: 1 1 100%; order: 3; }
+    .header-meta { flex-wrap: wrap; gap: 8px; }
+
+    // "+ Movimiento" pasa a la derecha del botón Volver, sin estirarse
+    > .btn-primary { order: 2; margin-left: auto; }
+  }
+
+  .filter-bar {
+    // Fuerza que "Exportar Excel" pase a su propia línea en pantallas angostas
+    .filter-spacer { flex-basis: 100%; height: 0; }
+  }
+}
 
 .form-control-sm {
   padding: 7px 10px;
@@ -179,6 +203,8 @@
   color: var(--blue);
   text-decoration: none;
   font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
   background: var(--bg);
   padding: 1px 6px;
   border-radius: 4px;
@@ -318,6 +344,8 @@ select.form-control { cursor: pointer; resize: none; }
 
 .adjunto-link {
   font-size: 13px; color: var(--blue); text-decoration: none;
+  font-family: inherit; cursor: pointer;
+  background: none; border: none; padding: 0; text-align: left;
   &:hover { text-decoration: underline; }
 }
 

@@ -1524,21 +1524,14 @@
       </div>
     </section>
 
-    <!-- TEMA DEL MES -->
-    <section class="series" id="tema">
+    <!-- TEMA DEL MES: se alimenta del sistema interno (admin.iglesiamqv.org), igual que Noticias -->
+    <section class="series" id="tema" style="display:none;">
       <div class="container series-inner">
-        <p class="section-eyebrow reveal">Tema del mes — Junio</p>
-        <h2 class="series-title reveal">La importancia del hombre en la familia</h2>
+        <p class="section-eyebrow reveal" id="temaEyebrow">Tema del mes</p>
+        <h2 class="series-title reveal" id="temaTitulo"></h2>
         <div class="tema-grid">
-          <div class="tema-video-wrap reveal">
-            <video class="tema-video" controls playsinline preload="metadata">
-              <source src="assets/video/tema-junio.mp4" type="video/mp4">
-            </video>
-          </div>
-          <div class="tema-body reveal" style="transition-delay:.15s">
-            <p>En este mes de junio celebramos el Día del Padre y queremos detenernos a reflexionar sobre el rol que Dios le ha dado al hombre dentro de la familia. Un padre presente es un padre que guía, que protege y que ama con el ejemplo, tal como Cristo nos enseñó.</p>
-            <p>Te invitamos a ver este video y a reflexionar sobre la importancia de estar siempre presentes en nuestro hogar: nuestros hijos y nuestra familia necesitan tiempo, cercanía y un corazón dispuesto a servir. Que este mes nos motive a ser hombres comprometidos con el propósito que Dios tiene para nuestro hogar.</p>
-          </div>
+          <div class="tema-video-wrap reveal" id="temaMediaWrap"></div>
+          <div class="tema-body reveal" id="temaBody" style="transition-delay:.15s"></div>
         </div>
       </div>
     </section>
@@ -1814,17 +1807,43 @@
     fetch(PUBLICACIONES_API)
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(publicaciones => {
-        // Ambas listas ya vienen ordenadas por publicado_at DESC (más recientes primero) desde el backend.
-        const noticias = publicaciones.filter(p => p.tipo_publicacion !== 'evento');
+        // Las tres listas ya vienen ordenadas por publicado_at DESC (más recientes primero) desde el backend.
+        const noticias = publicaciones.filter(p => p.tipo_publicacion === 'noticia' || !p.tipo_publicacion);
         const eventos  = publicaciones.filter(p => p.tipo_publicacion === 'evento');
+        const temasMes = publicaciones.filter(p => p.tipo_publicacion === 'tema_mes');
 
         renderNoticias(noticias);
         renderEventos(eventos);
+        renderTemaMes(temasMes[0]);
       })
       .catch(() => {
         document.getElementById('noticiasEmpty').style.display = 'block';
         document.getElementById('eventsEmpty').style.display = 'block';
       });
+
+    // Muestra la publicación de tipo "Tema del Mes" más reciente; si no hay ninguna, la sección permanece oculta.
+    function renderTemaMes(tema) {
+      const section = document.getElementById('tema');
+      if (!tema) return;
+
+      const fechaPub = tema.publicado_at ? new Date(tema.publicado_at.replace(' ', 'T')) : null;
+      document.getElementById('temaEyebrow').textContent = fechaPub
+        ? `Tema del mes — ${MESES[fechaPub.getMonth()].replace(/^\w/, c => c.toUpperCase())}`
+        : 'Tema del mes';
+      document.getElementById('temaTitulo').textContent = tema.titulo;
+
+      document.getElementById('temaMediaWrap').innerHTML =
+        tema.tipo_media === 'video' && tema.media_url
+          ? `<video class="tema-video" controls playsinline preload="metadata"><source src="${tema.media_url}" type="video/mp4"></video>`
+          : tema.tipo_media === 'imagen' && tema.media_url
+            ? `<img class="tema-video" src="${tema.media_url}" alt="${escapeHtmlNoticia(tema.titulo)}">`
+            : '';
+
+      document.getElementById('temaBody').innerHTML =
+        tema.contenido_html || (tema.resumen ? `<p>${escapeHtmlNoticia(tema.resumen)}</p>` : '');
+
+      section.style.display = '';
+    }
 
     function renderNoticias(noticias) {
       const grid  = document.getElementById('noticiasGrid');

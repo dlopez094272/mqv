@@ -290,7 +290,9 @@ export class TesoreriaMovimientosComponent implements OnInit {
     });
   }
 
-  urlAdjunto(filename: string): string { return this.svc.urlAdjunto(filename); }
+  descargarAdjunto(adj: { filename: string; originalname: string }) {
+    this.svc.descargarAdjunto(adj.filename, adj.originalname);
+  }
 
   // ── Exportar Excel ────────────────────────────────────────────
   exportarExcel() {

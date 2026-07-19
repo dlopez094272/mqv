@@ -132,7 +132,18 @@ export class TesoreriaService {
     );
   }
 
-  urlAdjunto(filename: string): string {
-    return `${this.base}/adjuntos/${filename}`;
+  descargarAdjunto(filename: string, originalname: string) {
+    this.http.get(`${this.base}/adjuntos/${filename}`, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href     = url;
+        a.download = originalname || filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      },
+    });
   }
 }

@@ -21,6 +21,8 @@
                 (click)="seleccionarTipoPublicacion('noticia')">📰 Noticia</button>
         <button type="button" class="btn-toggle" [class.active]="tipoPublicacion === 'evento'"
                 (click)="seleccionarTipoPublicacion('evento')">📅 Próximo Evento</button>
+        <button type="button" class="btn-toggle" [class.active]="tipoPublicacion === 'tema_mes'"
+                (click)="seleccionarTipoPublicacion('tema_mes')">🎬 Tema del Mes</button>
       </div>
       @if (tipoPublicacion === 'evento') {
         <div class="form-group" style="margin-top:12px">
