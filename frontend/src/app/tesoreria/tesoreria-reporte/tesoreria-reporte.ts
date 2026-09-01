@@ -121,8 +121,6 @@ export class TesoreriaReporteComponent implements OnInit {
           adjuntos: null, // no se necesita en el reporte
         })));
         this.cargando.set(false);
-        // Auto-imprimir después de que Angular renderice
-        setTimeout(() => window.print(), 600);
       },
       error: (err: any) => {
         this.error.set(err.message || 'Error al cargar datos');

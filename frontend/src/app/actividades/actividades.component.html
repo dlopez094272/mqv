@@ -247,6 +247,11 @@
         <span class="menu-icon">👥</span> Asistencia
       </button>
     }
+    @if (permisos.puede('tesoreria', 'S')) {
+      <button class="act-menu-item" (click)="menuTesoreria()">
+        <span class="menu-icon">💰</span> Tesorería
+      </button>
+    }
     @if (permisos.puede('actividades', 'E')) {
       <button class="act-menu-item" (click)="menuEditar()">
         <span class="menu-icon">✏️</span> Editar
@@ -262,186 +267,18 @@
 }
 
 <!-- ════════════════════════════════════════════════════════════ -->
-<!--  PANEL FORMULARIO                                           -->
+<!--  MODAL GESTIONAR ACTIVIDAD (fichas: datos / asistencia / tesorería) -->
 <!-- ════════════════════════════════════════════════════════════ -->
-@if (mostrarForm()) {
-  <div class="form-backdrop" (click)="cerrarForm()"></div>
-  <aside class="form-panel">
-    <div class="form-panel-header">
-      <h3>{{ modoEdicion() ? 'Editar' : 'Nueva' }} Actividad</h3>
-      <button class="btn-close" (click)="cerrarForm()" title="Cerrar">✕</button>
-    </div>
-
-    <div class="form-panel-body">
-      @if (errorForm()) {
-        <div class="alert alert-error" style="margin-bottom:16px">{{ errorForm() }}</div>
-      }
-
-      <!-- Logo -->
-      <div class="form-group">
-        <label>Logo (solo imágenes)</label>
-        @if (logoPreview || logoActual) {
-          <div class="logo-preview-wrap">
-            <img [src]="logoPreview ?? urlLogo(logoActual!)" class="logo-preview" alt="Logo" />
-            <button class="btn btn-danger btn-sm" (click)="quitarLogo()" type="button">Quitar logo</button>
-          </div>
-        } @else {
-          <input type="file" accept="image/*" (change)="onLogoChange($event)" class="file-input" />
-        }
-      </div>
-
-      <!-- Categoría -->
-      <div class="form-group">
-        <label>Categoría</label>
-        <div class="select-color-row">
-          <select class="form-control" [(ngModel)]="form.idcategorias">
-            <option value="">-- Sin categoría --</option>
-            @for (cat of categorias(); track cat.id) {
-              <option [value]="cat.id">{{ cat.nombre }}</option>
-            }
-          </select>
-          @if (form.idcategorias) {
-            <span class="cat-color-indicator"
-                  [style.background]="categoriaColor(form.idcategorias)"></span>
-          }
-        </div>
-      </div>
-
-      <!-- Nombre -->
-      <div class="form-group">
-        <label>Nombre <span class="req">*</span></label>
-        <input type="text" class="form-control" [(ngModel)]="form.nombre"
-               placeholder="Nombre de la actividad" />
-      </div>
-
-      <!-- Descripción -->
-      <div class="form-group">
-        <label>Descripción</label>
-        <textarea class="form-control" [(ngModel)]="form.descripcion"
-                  rows="4" placeholder="Descripción detallada..."></textarea>
-      </div>
-
-      <!-- Fechas -->
-      <div class="form-row-2">
-        <div class="form-group">
-          <label>Fecha inicio <span class="req">*</span></label>
-          <input type="date" class="form-control" [(ngModel)]="form.fecha_inicio" />
-        </div>
-        <div class="form-group">
-          <label>Fecha fin <span class="req">*</span></label>
-          <input type="date" class="form-control" [(ngModel)]="form.fecha_fin" />
-        </div>
-      </div>
-
-      <!-- Horas -->
-      <div class="form-row-2">
-        <div class="form-group">
-          <label>Hora inicio <span class="req">*</span></label>
-          <input type="time" class="form-control" [(ngModel)]="form.hora_inicio" />
-        </div>
-        <div class="form-group">
-          <label>Hora fin <span class="req">*</span></label>
-          <input type="time" class="form-control" [(ngModel)]="form.hora_fin" />
-        </div>
-      </div>
-
-      <!-- Lugar -->
-      <div class="form-group">
-        <label>Lugar</label>
-        <select class="form-control" [(ngModel)]="form.idlugares">
-          <option value="">-- Sin lugar --</option>
-          @for (lug of lugares(); track lug.id) {
-            <option [value]="lug.id">{{ lug.nombre }}</option>
-          }
-        </select>
-      </div>
-
-      <!-- Grupos -->
-      <div class="form-group">
-        <label>Grupos involucrados</label>
-        @if (grupos().length === 0) {
-          <div class="grupos-empty">No hay grupos disponibles</div>
-        } @else {
-          <div class="grupos-chips">
-            @for (g of grupos(); track g.id) {
-              <button type="button" class="grupo-chip"
-                      [class.selected]="gruposSeleccionados().includes(g.id)"
-                      (click)="toggleGrupo(g.id)">
-                <span class="chip-check">✓</span>
-                {{ g.nombre }}
-              </button>
-            }
-          </div>
-        }
-      </div>
-
-      <!-- Adjuntos existentes -->
-      @if (adjuntosActuales.length > 0) {
-        <div class="form-group">
-          <label>Archivos adjuntos</label>
-          <div class="adjuntos-list">
-            @for (adj of adjuntosActuales; track adj.filename; let i = $index) {
-              <div class="adjunto-item">
-                <button class="adjunto-link-btn" type="button" (click)="descargar(adj)">
-                  📎 {{ adj.originalname }}
-                  <span class="adj-size">({{ formatBytes(adj.size) }})</span>
-                </button>
-                <button class="btn-remove-adj" type="button" (click)="quitarAdjuntoActual(i)"
-                        title="Quitar adjunto">✕</button>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Nuevos adjuntos a subir -->
-      @if (adjuntosNuevos.length > 0) {
-        <div class="form-group">
-          <label>Archivos a subir</label>
-          <div class="adjuntos-list">
-            @for (f of adjuntosNuevos; track f.name; let i = $index) {
-              <div class="adjunto-item">
-                <span>📄 {{ f.name }} <span class="adj-size">({{ formatBytes(f.size) }})</span></span>
-                <button class="btn-remove-adj" type="button" (click)="quitarAdjuntoNuevo(i)">✕</button>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Subir adjuntos -->
-      <div class="form-group">
-        <label>Adjuntar archivos (máx. 200 MB por archivo)</label>
-        <input type="file" multiple (change)="onAdjuntosChange($event)" class="file-input" />
-      </div>
-    </div>
-
-    <div class="form-panel-footer">
-      <button class="btn btn-outline" (click)="cerrarForm()" [disabled]="guardando()">
-        Cancelar
-      </button>
-      <button class="btn btn-primary" style="width:auto" (click)="guardar()" [disabled]="guardando()">
-        {{ guardando() ? 'Guardando...' : 'Guardar' }}
-      </button>
-    </div>
-  </aside>
-}
-
-<!-- ════════════════════════════════════════════════════════════ -->
-<!--  MODAL ASISTENCIA                                           -->
-<!-- ════════════════════════════════════════════════════════════ -->
-@if (mostrarAsistencia()) {
-  <div class="asistencia-backdrop" (click)="cerrarAsistencia()"></div>
-  <div class="asistencia-modal" role="dialog">
-
-    <!-- Header -->
-    <div class="asistencia-header">
+@if (mostrarGestion()) {
+  <div class="gestion-backdrop" (click)="cerrarGestion()"></div>
+  <div class="gestion-modal" role="dialog" [style.max-width]="anchoGestion()">
+    <div class="gestion-header">
       <div class="asistencia-header-info">
-        <span class="asistencia-titulo">Registro de Asistencia</span>
-        <span class="asistencia-act-nombre">{{ actividadAsistencia()?.nombre }}</span>
+        <span class="asistencia-titulo">{{ actividadGestion() ? 'Gestionar actividad' : 'Nueva actividad' }}</span>
+        <span class="asistencia-act-nombre">{{ actividadGestion()?.nombre || form.nombre || 'Sin nombre aún' }}</span>
       </div>
       <div class="asistencia-header-actions">
-        @if (permisos.puede('actividades_asistentes', 'A')) {
+        @if (tabGestion() === 'asistencia' && permisos.puede('actividades_asistentes', 'A')) {
           <button class="btn-camara"
                   [class.btn-camara--activo]="mostrarCamara()"
                   (click)="toggleCamara()"
@@ -449,274 +286,580 @@
             📷 {{ mostrarCamara() ? 'Cerrar cámara' : 'Usar cámara' }}
           </button>
         }
-        <button class="btn-close" (click)="cerrarAsistencia()" title="Cerrar">✕</button>
+        <button class="btn-close" (click)="cerrarGestion()" title="Cerrar">✕</button>
       </div>
     </div>
 
-    <!-- Componente de cámara con reconocimiento facial -->
-    @if (mostrarCamara() && actividadAsistencia()) {
-      <div class="asistencia-camara-wrap">
-        <app-camara-asistencia
-          [idActividad]="actividadAsistencia()!.idactividades"
-          [personasAsistentes]="asistenciaData()?.personas ?? []"
-          (asistenciaActualizada)="onAsistenciaActualizadaPorCamara()">
-        </app-camara-asistencia>
-      </div>
-    }
-
-    <!-- Contadores -->
-    @if (asistenciaData() && !cargandoAsistencia()) {
-      <div class="asistencia-counters">
-        <div class="counter-badge counter-total">
-          👥 Total: {{ asistenciaData()!.contadores.total }}
-        </div>
-        <div class="counter-badge counter-personas">
-          🧑 Miembros: {{ asistenciaData()!.contadores.personas }}
-        </div>
-        @if (asistenciaData()!.contadores.visitantes > 0) {
-          <div class="counter-badge counter-visitantes">
-            🌟 Visitantes: {{ asistenciaData()!.contadores.visitantes }}
-          </div>
-        }
-        @for (g of asistenciaData()!.contadores.porGrupo; track g.grupo) {
-          <div class="counter-badge counter-grupo">
-            {{ g.grupo }}: {{ g.count }}
-          </div>
-        }
-      </div>
-    }
-
-    <!-- Buscador -->
-    <div class="asistencia-search">
-      <div class="search-input-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text"
-               class="search-input"
-               placeholder="Buscar persona por nombre..."
-               [ngModel]="busquedaAsistencia()"
-               (ngModelChange)="busquedaAsistencia.set($event)" />
-        @if (busquedaAsistencia()) {
-          <button class="search-clear" (click)="busquedaAsistencia.set('')">✕</button>
-        }
-      </div>
-    </div>
-
-    <!-- Cuerpo -->
-    <div class="asistencia-body">
-
-      @if (errorAsistencia()) {
-        <div class="alert alert-error" style="margin-bottom:12px">{{ errorAsistencia() }}</div>
+    <div class="gestion-tabs">
+      <button type="button" class="gestion-tab" [class.active]="tabGestion()==='datos'"
+              (click)="seleccionarTab('datos')">
+        📋 Datos de la reunión
+      </button>
+      @if (permisos.puede('actividades_asistentes', 'S')) {
+        <button type="button" class="gestion-tab" [class.active]="tabGestion()==='asistencia'"
+                [disabled]="!actividadGestion()"
+                [title]="!actividadGestion() ? 'Guarda los datos de la reunión primero' : ''"
+                (click)="seleccionarTab('asistencia')">
+          👥 Asistencia
+        </button>
       }
+      @if (puedeOfrecerTesoreria()) {
+        <button type="button" class="gestion-tab" [class.active]="tabGestion()==='tesoreria'"
+                [disabled]="!actividadGestion()"
+                [title]="!actividadGestion() ? 'Guarda los datos de la reunión primero' : ''"
+                (click)="seleccionarTab('tesoreria')">
+          💰 Tesorería
+        </button>
+      }
+    </div>
 
-      @if (cargandoAsistencia()) {
-        <div class="loading-state">Cargando personas...</div>
-      } @else if (asistenciaData()) {
+    <div class="gestion-body">
 
-        <!-- ══ Sección Visitantes ════════════════════════════ -->
-        <div class="visitantes-seccion">
-          <div class="seccion-label">
-            <span class="seccion-titulo">🌟 Visitantes</span>
-            <span class="seccion-count">{{ asistenciaData()!.visitantes.length }}</span>
-          </div>
+      <!-- ══════════ FICHA: DATOS DE LA REUNIÓN ══════════ -->
+      @if (tabGestion() === 'datos') {
+        @if (errorForm()) {
+          <div class="alert alert-error" style="margin-bottom:16px">{{ errorForm() }}</div>
+        }
 
-          @if (mostrarFormVisitante()) {
-            <div class="form-visitante">
-              <div class="form-group" style="margin-bottom:10px">
-                <label>Nombre completo <span class="req">*</span></label>
-                <input type="text" class="form-control"
-                       [(ngModel)]="formVisitante.nombre_completo"
-                       placeholder="Nombre del visitante" />
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>Teléfono</label>
-                <input type="tel" class="form-control"
-                       [(ngModel)]="formVisitante.telefono"
-                       placeholder="Número de teléfono (opcional)" />
-              </div>
-              <div class="form-group" style="margin-bottom:12px">
-                <label>Comentarios</label>
-                <input type="text" class="form-control"
-                       [(ngModel)]="formVisitante.comentarios"
-                       placeholder="Observaciones (opcional)" />
-              </div>
-              <div class="form-visitante-btns">
-                <button class="btn btn-outline btn-sm"
-                        (click)="mostrarFormVisitante.set(false)"
-                        [disabled]="guardandoVisitante()">
-                  Cancelar
-                </button>
-                <button class="btn btn-primary btn-sm"
-                        style="width:auto"
-                        (click)="agregarVisitante()"
-                        [disabled]="guardandoVisitante() || !formVisitante.nombre_completo.trim()">
-                  {{ guardandoVisitante() ? 'Guardando...' : 'Agregar visitante' }}
-                </button>
-              </div>
+        <!-- Logo -->
+        <div class="form-group">
+          <label>Logo (solo imágenes)</label>
+          @if (logoPreview || logoActual) {
+            <div class="logo-preview-wrap">
+              <img [src]="logoPreview ?? urlLogo(logoActual!)" class="logo-preview" alt="Logo" />
+              <button class="btn btn-danger btn-sm" (click)="quitarLogo()" type="button">Quitar logo</button>
             </div>
-          } @else if (permisos.puede('actividades_asistentes', 'A')) {
-            <button class="btn-agregar-visitante"
-                    (click)="mostrarFormVisitante.set(true)">
-              + Agregar visitante
-            </button>
+          } @else {
+            <input type="file" accept="image/*" (change)="onLogoChange($event)" class="file-input" />
           }
+        </div>
 
-          @if (asistenciaData()!.visitantes.length > 0) {
-            <div class="visitantes-lista">
-              @for (v of asistenciaData()!.visitantes; track v.idactividades_asistentes) {
-                <div class="visitante-item" [class.visitante-item--expandido]="visitanteExpandido() === v.idactividades_asistentes">
-                  <div class="visitante-avatar">{{ inicialAsistencia(v.nombre_completo) }}</div>
-                  <div class="visitante-info">
-                    <span class="visitante-nombre">{{ v.nombre_completo }}</span>
-                    @if (visitanteExpandido() === v.idactividades_asistentes) {
-                      <div class="visitante-detalles">
-                        @if (v.telefono) {
-                          <span class="visitante-detalle-item">📞 {{ v.telefono }}</span>
-                        }
-                        @if (v.comentarios) {
-                          <span class="visitante-detalle-item">💬 {{ v.comentarios }}</span>
-                        }
-                        @if (!v.telefono && !v.comentarios) {
-                          <span class="visitante-detalle-item visitante-sin-datos">Sin datos adicionales</span>
-                        }
-                      </div>
-                    }
-                  </div>
-                  <div class="visitante-acciones">
-                    <button class="btn-detalle-visitante"
-                            (click)="toggleDetalleVisitante(v.idactividades_asistentes)"
-                            [title]="visitanteExpandido() === v.idactividades_asistentes ? 'Ocultar detalles' : 'Ver detalles'">
-                      {{ visitanteExpandido() === v.idactividades_asistentes ? '▲' : '▼' }}
-                    </button>
-                    @if (permisos.puede('actividades_asistentes', 'D')) {
-                      <button class="btn-remove-adj"
-                              (click)="eliminarVisitante(v.idactividades_asistentes)"
-                              title="Eliminar visitante">✕</button>
-                    }
-                  </div>
-                </div>
+        <!-- Categoría -->
+        <div class="form-group">
+          <label>Categoría</label>
+          <div class="select-color-row">
+            <select class="form-control" [(ngModel)]="form.idcategorias">
+              <option value="">-- Sin categoría --</option>
+              @for (cat of categorias(); track cat.id) {
+                <option [value]="cat.id">{{ cat.nombre }}</option>
+              }
+            </select>
+            @if (form.idcategorias) {
+              <span class="cat-color-indicator"
+                    [style.background]="categoriaColor(form.idcategorias)"></span>
+            }
+          </div>
+        </div>
+
+        <!-- Nombre -->
+        <div class="form-group">
+          <label>Nombre <span class="req">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="form.nombre"
+                 placeholder="Nombre de la actividad" />
+        </div>
+
+        <!-- Descripción -->
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea class="form-control" [(ngModel)]="form.descripcion"
+                    rows="4" placeholder="Descripción detallada..."></textarea>
+        </div>
+
+        <!-- Fechas -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Fecha inicio <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="form.fecha_inicio" />
+          </div>
+          <div class="form-group">
+            <label>Fecha fin <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="form.fecha_fin" />
+          </div>
+        </div>
+
+        <!-- Horas -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Hora inicio <span class="req">*</span></label>
+            <input type="time" class="form-control" [(ngModel)]="form.hora_inicio" />
+          </div>
+          <div class="form-group">
+            <label>Hora fin <span class="req">*</span></label>
+            <input type="time" class="form-control" [(ngModel)]="form.hora_fin" />
+          </div>
+        </div>
+
+        <!-- Lugar -->
+        <div class="form-group">
+          <label>Lugar</label>
+          <select class="form-control" [(ngModel)]="form.idlugares">
+            <option value="">-- Sin lugar --</option>
+            @for (lug of lugares(); track lug.id) {
+              <option [value]="lug.id">{{ lug.nombre }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Grupos -->
+        <div class="form-group">
+          <label>Grupos involucrados</label>
+          @if (grupos().length === 0) {
+            <div class="grupos-empty">No hay grupos disponibles</div>
+          } @else {
+            <div class="grupos-chips">
+              <button type="button" class="grupo-chip grupo-chip--todos"
+                      [class.selected]="todosGruposSeleccionados()"
+                      (click)="toggleTodosGrupos()">
+                <span class="chip-check">✓</span>
+                Todos los grupos
+              </button>
+              @for (g of grupos(); track g.id) {
+                <button type="button" class="grupo-chip"
+                        [class.selected]="gruposSeleccionados().includes(g.id)"
+                        (click)="toggleGrupo(g.id)">
+                  <span class="chip-check">✓</span>
+                  {{ g.nombre }}
+                </button>
               }
             </div>
           }
         </div>
 
-        <!-- ══ Sección Asistentes ══════════════════════════════ -->
-        <div class="personas-seccion"
-             [class.drop-zona-activa]="sobreZonaAsistentes()"
-             (dragover)="onZonaDragOver($event, 'asistentes')"
-             (dragleave)="sobreZonaAsistentes.set(false)"
-             (drop)="onZonaDrop($event, 'asistentes')">
+        <!-- Adjuntos existentes -->
+        @if (adjuntosActuales.length > 0) {
+          <div class="form-group">
+            <label>Archivos adjuntos</label>
+            <div class="adjuntos-list">
+              @for (adj of adjuntosActuales; track adj.filename; let i = $index) {
+                <div class="adjunto-item">
+                  <button class="adjunto-link-btn" type="button" (click)="descargar(adj)">
+                    📎 {{ adj.originalname }}
+                    <span class="adj-size">({{ formatBytes(adj.size) }})</span>
+                  </button>
+                  <button class="btn-remove-adj" type="button" (click)="quitarAdjuntoActual(i)"
+                          title="Quitar adjunto">✕</button>
+                </div>
+              }
+            </div>
+          </div>
+        }
 
-          <div class="seccion-label">
-            <span class="seccion-titulo seccion-titulo--asiste">
-              ✅ Asistentes confirmados
-            </span>
-            <span class="seccion-count">{{ personasAsistentes().length }}</span>
-            @if (sobreZonaAsistentes()) {
-              <span class="drop-hint">Suelta aquí para confirmar asistencia</span>
+        <!-- Nuevos adjuntos a subir -->
+        @if (adjuntosNuevos.length > 0) {
+          <div class="form-group">
+            <label>Archivos a subir</label>
+            <div class="adjuntos-list">
+              @for (f of adjuntosNuevos; track f.name; let i = $index) {
+                <div class="adjunto-item">
+                  <span>📄 {{ f.name }} <span class="adj-size">({{ formatBytes(f.size) }})</span></span>
+                  <button class="btn-remove-adj" type="button" (click)="quitarAdjuntoNuevo(i)">✕</button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Subir adjuntos -->
+        <div class="form-group">
+          <label>Adjuntar archivos (máx. 200 MB por archivo)</label>
+          <input type="file" multiple (change)="onAdjuntosChange($event)" class="file-input" />
+        </div>
+      }
+
+      <!-- ══════════ FICHA: ASISTENCIA ══════════ -->
+      @if (tabGestion() === 'asistencia') {
+
+        <!-- Componente de cámara con reconocimiento facial -->
+        @if (mostrarCamara() && actividadGestion()) {
+          <div class="asistencia-camara-wrap">
+            <app-camara-asistencia
+              [idActividad]="actividadGestion()!.idactividades"
+              [personasAsistentes]="asistenciaData()?.personas ?? []"
+              (asistenciaActualizada)="onAsistenciaActualizadaPorCamara()">
+            </app-camara-asistencia>
+          </div>
+        }
+
+        <!-- Contadores -->
+        @if (asistenciaData() && !cargandoAsistencia()) {
+          <div class="asistencia-counters">
+            <div class="counter-badge counter-total">
+              👥 Total: {{ asistenciaData()!.contadores.total }}
+            </div>
+            <div class="counter-badge counter-personas">
+              🧑 Miembros: {{ asistenciaData()!.contadores.personas }}
+            </div>
+            @if (asistenciaData()!.contadores.visitantes > 0) {
+              <div class="counter-badge counter-visitantes">
+                🌟 Visitantes: {{ asistenciaData()!.contadores.visitantes }}
+              </div>
+            }
+            @for (g of asistenciaData()!.contadores.porGrupo; track g.grupo) {
+              <div class="counter-badge counter-grupo">
+                {{ g.grupo }}: {{ g.count }}
+              </div>
             }
           </div>
+        }
 
-          @if (personasAsistentes().length === 0 && !busquedaAsistencia()) {
-            <div class="seccion-vacia">Aún no hay asistentes confirmados. Haz clic en una persona para agregarla.</div>
+        <!-- Buscador -->
+        <div class="asistencia-search">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text"
+                   class="search-input"
+                   placeholder="Buscar persona por nombre..."
+                   [ngModel]="busquedaAsistencia()"
+                   (ngModelChange)="buscarAsistencia($event)" />
+            @if (busquedaAsistencia()) {
+              <button class="search-clear" (click)="buscarAsistencia('')">✕</button>
+            }
+          </div>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="asistencia-body">
+
+          @if (errorAsistencia()) {
+            <div class="alert alert-error" style="margin-bottom:12px">{{ errorAsistencia() }}</div>
           }
 
-          <div class="personas-grid">
-            @for (p of personasAsistentes(); track p.idpersonas) {
-              <div class="persona-card persona-card--asiste"
-                   draggable="true"
-                   (dragstart)="onPersonaDragStart($event, p)"
-                   (dragend)="onPersonaDragEnd()"
-                   [class.dragging]="arrastandoPersona()?.idpersonas === p.idpersonas"
-                   (click)="toggleAsistente(p)"
-                   [title]="'Quitar: ' + p.nombre_completo">
-                <div class="persona-foto-wrap">
-                  @if (p.foto) {
-                    <img [src]="urlFotoPersona(p.foto)"
-                         class="persona-foto"
-                         [alt]="p.nombre_completo"
-                         (error)="$any($event.target).style.display='none'" />
-                  } @else {
-                    <div class="persona-foto persona-foto-placeholder">
-                      {{ inicialAsistencia(p.nombre_completo) }}
+          @if (cargandoAsistencia()) {
+            <div class="loading-state">Cargando personas...</div>
+          } @else if (asistenciaData()) {
+
+            <!-- ══ Sección Visitantes ════════════════════════════ -->
+            <div class="visitantes-seccion">
+              <div class="seccion-label">
+                <span class="seccion-titulo">🌟 Visitantes</span>
+                <span class="seccion-count">{{ asistenciaData()!.visitantes.length }}</span>
+              </div>
+
+              @if (mostrarFormVisitante()) {
+                <div class="form-visitante">
+                  <div class="form-group" style="margin-bottom:10px">
+                    <label>Nombre completo <span class="req">*</span></label>
+                    <input type="text" class="form-control"
+                           [(ngModel)]="formVisitante.nombre_completo"
+                           placeholder="Nombre del visitante" />
+                  </div>
+                  <div class="form-group" style="margin-bottom:10px">
+                    <label>Teléfono</label>
+                    <input type="tel" class="form-control"
+                           [(ngModel)]="formVisitante.telefono"
+                           placeholder="Número de teléfono (opcional)" />
+                  </div>
+                  <div class="form-group" style="margin-bottom:12px">
+                    <label>Comentarios</label>
+                    <input type="text" class="form-control"
+                           [(ngModel)]="formVisitante.comentarios"
+                           placeholder="Observaciones (opcional)" />
+                  </div>
+                  <div class="form-visitante-btns">
+                    <button class="btn btn-outline btn-sm"
+                            (click)="mostrarFormVisitante.set(false)"
+                            [disabled]="guardandoVisitante()">
+                      Cancelar
+                    </button>
+                    <button class="btn btn-primary btn-sm"
+                            style="width:auto"
+                            (click)="agregarVisitante()"
+                            [disabled]="guardandoVisitante() || !formVisitante.nombre_completo.trim()">
+                      {{ guardandoVisitante() ? 'Guardando...' : 'Agregar visitante' }}
+                    </button>
+                  </div>
+                </div>
+              } @else if (permisos.puede('actividades_asistentes', 'A')) {
+                <button class="btn-agregar-visitante"
+                        (click)="mostrarFormVisitante.set(true)">
+                  + Agregar visitante
+                </button>
+              }
+
+              @if (asistenciaData()!.visitantes.length > 0) {
+                <div class="visitantes-lista">
+                  @for (v of asistenciaData()!.visitantes; track v.idactividades_asistentes) {
+                    <div class="visitante-item" [class.visitante-item--expandido]="visitanteExpandido() === v.idactividades_asistentes">
+                      <div class="visitante-avatar">{{ inicialAsistencia(v.nombre_completo) }}</div>
+                      <div class="visitante-info">
+                        <span class="visitante-nombre">{{ v.nombre_completo }}</span>
+                        @if (visitanteExpandido() === v.idactividades_asistentes) {
+                          <div class="visitante-detalles">
+                            @if (v.telefono) {
+                              <span class="visitante-detalle-item">📞 {{ v.telefono }}</span>
+                            }
+                            @if (v.comentarios) {
+                              <span class="visitante-detalle-item">💬 {{ v.comentarios }}</span>
+                            }
+                            @if (!v.telefono && !v.comentarios) {
+                              <span class="visitante-detalle-item visitante-sin-datos">Sin datos adicionales</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <div class="visitante-acciones">
+                        <button class="btn-detalle-visitante"
+                                (click)="toggleDetalleVisitante(v.idactividades_asistentes)"
+                                [title]="visitanteExpandido() === v.idactividades_asistentes ? 'Ocultar detalles' : 'Ver detalles'">
+                          {{ visitanteExpandido() === v.idactividades_asistentes ? '▲' : '▼' }}
+                        </button>
+                        @if (permisos.puede('actividades_asistentes', 'D')) {
+                          <button class="btn-remove-adj"
+                                  (click)="eliminarVisitante(v.idactividades_asistentes)"
+                                  title="Eliminar visitante">✕</button>
+                        }
+                      </div>
                     </div>
                   }
-                  <div class="persona-check">✓</div>
-                </div>
-                <span class="persona-nombre">{{ p.nombre_completo }}</span>
-                @if (p.grupos_nombres) {
-                  <span class="persona-grupo">{{ p.grupos_nombres }}</span>
-                }
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- ══ Sección Disponibles ════════════════════════════ -->
-        <div class="personas-seccion personas-seccion--disponibles"
-             [class.drop-zona-activa]="sobreZonaDisponibles()"
-             (dragover)="onZonaDragOver($event, 'disponibles')"
-             (dragleave)="sobreZonaDisponibles.set(false)"
-             (drop)="onZonaDrop($event, 'disponibles')">
-
-          <div class="seccion-label">
-            <span class="seccion-titulo">👤 Personas disponibles</span>
-            <span class="seccion-count">{{ personasDisponibles().length }}</span>
-            @if (sobreZonaDisponibles()) {
-              <span class="drop-hint">Suelta aquí para quitar de asistentes</span>
-            }
-          </div>
-
-          @if (personasDisponibles().length === 0 && !busquedaAsistencia()) {
-            <div class="seccion-vacia">Todas las personas están marcadas como asistentes.</div>
-          }
-          @if (personasDisponibles().length === 0 && busquedaAsistencia()) {
-            <div class="seccion-vacia">Sin resultados para "{{ busquedaAsistencia() }}".</div>
-          }
-
-          @for (grp of personasDisponiblesPorGrupo(); track grp.grupo) {
-            <div class="subgrupo-label"
-                 [class.subgrupo-label--expandido]="grupoDisponibleExpandido(grp.grupo)"
-                 (click)="toggleGrupoDisponible(grp.grupo)">
-              <span class="subgrupo-flecha">{{ grupoDisponibleExpandido(grp.grupo) ? '▼' : '▶' }}</span>
-              <span class="subgrupo-nombre">{{ grp.grupo }}</span>
-              <span class="subgrupo-count">{{ grp.personas.length }}</span>
-            </div>
-            @if (grupoDisponibleExpandido(grp.grupo)) {
-            <div class="personas-grid">
-              @for (p of grp.personas; track p.idpersonas) {
-                <div class="persona-card"
-                     draggable="true"
-                     (dragstart)="onPersonaDragStart($event, p)"
-                     (dragend)="onPersonaDragEnd()"
-                     [class.dragging]="arrastandoPersona()?.idpersonas === p.idpersonas"
-                     (click)="toggleAsistente(p)"
-                     [title]="'Marcar asistencia: ' + p.nombre_completo">
-                  <div class="persona-foto-wrap">
-                    @if (p.foto) {
-                      <img [src]="urlFotoPersona(p.foto)"
-                           class="persona-foto"
-                           [alt]="p.nombre_completo"
-                           (error)="$any($event.target).style.display='none'" />
-                    } @else {
-                      <div class="persona-foto persona-foto-placeholder">
-                        {{ inicialAsistencia(p.nombre_completo) }}
-                      </div>
-                    }
-                  </div>
-                  <span class="persona-nombre">{{ p.nombre_completo }}</span>
-                  @if (p.grupos_nombres) {
-                    <span class="persona-grupo">{{ p.grupos_nombres }}</span>
-                  }
                 </div>
               }
             </div>
-            }
-          }
-        </div>
 
+            <!-- ══ Sección Asistentes ══════════════════════════════ -->
+            <div class="personas-seccion"
+                 [class.drop-zona-activa]="sobreZonaAsistentes()"
+                 (dragover)="onZonaDragOver($event, 'asistentes')"
+                 (dragleave)="sobreZonaAsistentes.set(false)"
+                 (drop)="onZonaDrop($event, 'asistentes')">
+
+              <div class="seccion-label">
+                <span class="seccion-titulo seccion-titulo--asiste">
+                  ✅ Asistentes confirmados
+                </span>
+                <span class="seccion-count">{{ personasAsistentes().length }}</span>
+                @if (sobreZonaAsistentes()) {
+                  <span class="drop-hint">Suelta aquí para confirmar asistencia</span>
+                }
+              </div>
+
+              @if (personasAsistentes().length === 0 && !busquedaAsistencia()) {
+                <div class="seccion-vacia">Aún no hay asistentes confirmados. Haz clic en una persona para agregarla.</div>
+              }
+
+              <div class="personas-grid">
+                @for (p of asistPaginados(); track p.idpersonas) {
+                  <div class="persona-card persona-card--asiste"
+                       draggable="true"
+                       (dragstart)="onPersonaDragStart($event, p)"
+                       (dragend)="onPersonaDragEnd()"
+                       [class.dragging]="arrastandoPersona()?.idpersonas === p.idpersonas"
+                       (click)="toggleAsistente(p)"
+                       [title]="'Quitar: ' + p.nombre_completo">
+                    <div class="persona-foto-wrap">
+                      @if (p.foto) {
+                        <img [src]="urlFotoPersona(p.foto)"
+                             class="persona-foto"
+                             [alt]="p.nombre_completo"
+                             (error)="$any($event.target).style.display='none'" />
+                      } @else {
+                        <div class="persona-foto persona-foto-placeholder">
+                          {{ inicialAsistencia(p.nombre_completo) }}
+                        </div>
+                      }
+                      <div class="persona-check">✓</div>
+                    </div>
+                    <span class="persona-nombre">{{ p.nombre_completo }}</span>
+                    @if (p.grupos_nombres) {
+                      <span class="persona-grupo">{{ p.grupos_nombres }}</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (asistTotalPag() > 1) {
+                <div class="pagination-bar pagination-bar--compacta">
+                  <span class="pagination-info">Página {{ asistPagina() }} de {{ asistTotalPag() }} · {{ personasAsistentes().length }} asistentes</span>
+                  <div class="pagination-controls">
+                    <button class="btn-page" [disabled]="asistPagina() === 1"             (click)="asistIrPagina(1)">«</button>
+                    <button class="btn-page" [disabled]="asistPagina() === 1"             (click)="asistIrPagina(asistPagina() - 1)">‹</button>
+                    @for (p of asistPaginas(); track $index) {
+                      @if (p === '...') { <span class="page-dots">…</span> }
+                      @else { <button class="btn-page" [class.active]="p === asistPagina()" (click)="asistIrPagina(p)">{{ p }}</button> }
+                    }
+                    <button class="btn-page" [disabled]="asistPagina() === asistTotalPag()" (click)="asistIrPagina(asistPagina() + 1)">›</button>
+                    <button class="btn-page" [disabled]="asistPagina() === asistTotalPag()" (click)="asistIrPagina(asistTotalPag())">»</button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- ══ Sección Disponibles ════════════════════════════ -->
+            <div class="personas-seccion personas-seccion--disponibles"
+                 [class.drop-zona-activa]="sobreZonaDisponibles()"
+                 (dragover)="onZonaDragOver($event, 'disponibles')"
+                 (dragleave)="sobreZonaDisponibles.set(false)"
+                 (drop)="onZonaDrop($event, 'disponibles')">
+
+              <div class="seccion-label">
+                <span class="seccion-titulo">👤 Personas disponibles</span>
+                <span class="seccion-count">{{ personasDisponibles().length }}</span>
+                @if (sobreZonaDisponibles()) {
+                  <span class="drop-hint">Suelta aquí para quitar de asistentes</span>
+                }
+              </div>
+
+              @if (personasDisponibles().length === 0 && !busquedaAsistencia()) {
+                <div class="seccion-vacia">Todas las personas están marcadas como asistentes.</div>
+              }
+              @if (personasDisponibles().length === 0 && busquedaAsistencia()) {
+                <div class="seccion-vacia">Sin resultados para "{{ busquedaAsistencia() }}".</div>
+              }
+
+              @for (grp of personasDisponiblesPorGrupo(); track grp.grupo) {
+                <div class="subgrupo-label"
+                     [class.subgrupo-label--expandido]="grupoDisponibleExpandido(grp.grupo)"
+                     (click)="toggleGrupoDisponible(grp.grupo)">
+                  <span class="subgrupo-flecha">{{ grupoDisponibleExpandido(grp.grupo) ? '▼' : '▶' }}</span>
+                  <span class="subgrupo-nombre">{{ grp.grupo }}</span>
+                  <span class="subgrupo-count">{{ grp.personas.length }}</span>
+                </div>
+                @if (grupoDisponibleExpandido(grp.grupo)) {
+                <div class="personas-grid">
+                  @for (p of grp.personas; track p.idpersonas) {
+                    <div class="persona-card"
+                         draggable="true"
+                         (dragstart)="onPersonaDragStart($event, p)"
+                         (dragend)="onPersonaDragEnd()"
+                         [class.dragging]="arrastandoPersona()?.idpersonas === p.idpersonas"
+                         (click)="toggleAsistente(p)"
+                         [title]="'Marcar asistencia: ' + p.nombre_completo">
+                      <div class="persona-foto-wrap">
+                        @if (p.foto) {
+                          <img [src]="urlFotoPersona(p.foto)"
+                               class="persona-foto"
+                               [alt]="p.nombre_completo"
+                               (error)="$any($event.target).style.display='none'" />
+                        } @else {
+                          <div class="persona-foto persona-foto-placeholder">
+                            {{ inicialAsistencia(p.nombre_completo) }}
+                          </div>
+                        }
+                      </div>
+                      <span class="persona-nombre">{{ p.nombre_completo }}</span>
+                      @if (p.grupos_nombres) {
+                        <span class="persona-grupo">{{ p.grupos_nombres }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+                }
+              }
+            </div>
+
+          }
+        </div><!-- /asistencia-body -->
       }
-    </div><!-- /asistencia-body -->
-  </div><!-- /asistencia-modal -->
+
+      <!-- ══════════ FICHA: TESORERÍA ══════════ -->
+      @if (tabGestion() === 'tesoreria') {
+        @if (errorTesoreria()) {
+          <div class="alert alert-error" style="margin-bottom:14px">{{ errorTesoreria() }}</div>
+        }
+
+        @if (cargandoTesoreria()) {
+          <div class="loading-state">Cargando movimientos...</div>
+        } @else if (tesoreriaResumen(); as r) {
+          @if (r.movimientos.length > 0) {
+            <div class="tesoreria-act-totales">
+              <div class="counter-badge counter-personas">Ingresos: {{ formatQ(r.totales.ingresos) }}</div>
+              <div class="counter-badge counter-visitantes">Egresos: {{ formatQ(r.totales.egresos) }}</div>
+              <div class="counter-badge counter-total">Saldo neto: {{ formatQ(r.totales.saldo) }}</div>
+            </div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th><th>Tesorería</th><th>Tipo</th><th>Concepto</th><th class="num-col">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of r.movimientos; track m.idtesoreria_movimientos) {
+                    <tr>
+                      <td>{{ formatFecha(m.fecha) }}</td>
+                      <td>{{ m.tesoreria }}</td>
+                      <td>
+                        @if (m.debito > 0) {
+                          <span class="badge-ingreso">Ingreso</span>
+                        } @else {
+                          <span class="badge-egreso">Egreso</span>
+                        }
+                      </td>
+                      <td>{{ m.concepto }}</td>
+                      <td class="num-col">{{ formatQ(m.debito > 0 ? m.debito : m.credito) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="seccion-vacia">Aún no hay movimientos de tesorería vinculados a esta actividad.</div>
+          }
+        }
+
+        @if (puedeAgregarMovimientoTesoreria()) {
+          <div class="tesoreria-act-form">
+            <div class="reporte-subtitulo" style="margin-top:20px">Agregar movimiento(s)</div>
+
+            @if (tesoreriasAccesibles().length === 0) {
+              <div class="seccion-vacia">No tienes acceso a ninguna tesorería.</div>
+            } @else {
+              <div class="form-group">
+                <label>Tesorería <span class="req">*</span></label>
+                <select class="form-control" [(ngModel)]="formTesoreriaIdtesoreria">
+                  <option value="">-- Selecciona --</option>
+                  @for (t of tesoreriasAccesibles(); track t.idtesoreria) {
+                    <option [value]="t.idtesoreria">{{ t.nombre }}</option>
+                  }
+                </select>
+              </div>
+
+              @for (fila of filasTesoreria; track $index; let i = $index) {
+                <div class="mov-fila">
+                  <select class="form-control mov-tipo" [(ngModel)]="fila.tipo">
+                    <option value="ingreso">Ingreso</option>
+                    <option value="egreso">Egreso</option>
+                  </select>
+                  <input type="text" class="form-control mov-concepto" [(ngModel)]="fila.concepto"
+                         placeholder="Concepto" />
+                  <input type="number" class="form-control mov-monto" [(ngModel)]="fila.monto"
+                         placeholder="Monto" min="0" step="0.01" />
+                  <select class="form-control mov-tipomov" [(ngModel)]="fila.idtipo_movimiento">
+                    <option value="">-- Tipo --</option>
+                    @for (tm of tiposMovimiento(); track tm.id) {
+                      <option [value]="tm.id">{{ tm.nombre }}</option>
+                    }
+                  </select>
+                  <input type="date" class="form-control mov-fecha" [(ngModel)]="fila.fecha" />
+                  <button type="button" class="btn-remove-adj" (click)="quitarFilaTesoreria(i)"
+                          [disabled]="filasTesoreria.length <= 1" title="Quitar fila">✕</button>
+                </div>
+              }
+
+              <button type="button" class="btn-agregar-visitante" (click)="agregarFilaTesoreria()">
+                + Agregar movimiento
+              </button>
+            }
+          </div>
+        }
+      }
+    </div><!-- /gestion-body -->
+
+    <div class="gestion-footer">
+      @if (tabGestion() === 'datos') {
+        <button class="btn btn-outline" (click)="cerrarGestion()" [disabled]="guardando()">
+          Cancelar
+        </button>
+        <button class="btn btn-primary" style="width:auto" (click)="guardar()" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      }
+      @if (tabGestion() === 'tesoreria' && puedeAgregarMovimientoTesoreria() && tesoreriasAccesibles().length > 0) {
+        <button class="btn btn-primary" style="width:auto" (click)="guardarTesoreria()" [disabled]="guardandoTesoreria()">
+          {{ guardandoTesoreria() ? 'Guardando...' : 'Guardar movimiento(s)' }}
+        </button>
+      }
+    </div>
+  </div>
 }
 
 </div><!-- /actividades-contenido -->
@@ -903,6 +1046,50 @@
                 </tbody>
               </table>
             </div>
+          }
+
+          <!-- Tesorería -->
+          @if (d.tesoreria; as teso) {
+            <div class="reporte-subtitulo">Tesorería</div>
+            @if (teso.movimientos.length > 0) {
+              <div class="reporte-resumen-cards">
+                <div class="resumen-card">
+                  <div class="resumen-valor">{{ formatQ(teso.totales.ingresos) }}</div>
+                  <div class="resumen-label">Ingresos</div>
+                </div>
+                <div class="resumen-card">
+                  <div class="resumen-valor">{{ formatQ(teso.totales.egresos) }}</div>
+                  <div class="resumen-label">Egresos</div>
+                </div>
+                <div class="resumen-card accent">
+                  <div class="resumen-valor">{{ formatQ(teso.totales.saldo) }}</div>
+                  <div class="resumen-label">Saldo neto</div>
+                </div>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr><th>Fecha</th><th>Tesorería</th><th>Tipo</th><th>Concepto</th><th class="num-col">Monto</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (m of teso.movimientos; track m.idtesoreria_movimientos) {
+                      <tr>
+                        <td>{{ formatFecha(m.fecha) }}</td>
+                        <td>{{ m.tesoreria }}</td>
+                        <td>
+                          @if (m.debito > 0) { <span class="badge-ingreso">Ingreso</span> }
+                          @else { <span class="badge-egreso">Egreso</span> }
+                        </td>
+                        <td>{{ m.concepto }}</td>
+                        <td class="num-col">{{ formatQ(m.debito > 0 ? m.debito : m.credito) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p style="color:var(--text-muted);font-size:14px">No hay movimientos de tesorería registrados en esta actividad.</p>
+            }
           }
 
         }

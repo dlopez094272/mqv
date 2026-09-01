@@ -55,6 +55,8 @@ interface ReporteActividad {
   grupos:           GrupoActividad[];
   por_edad:         PorEdad;
   por_genero:       PorGenero;
+  ingresos?:        number;
+  egresos?:         number;
 }
 
 @Component({
@@ -90,6 +92,11 @@ export class ReportesActividadesComponent implements OnInit {
   totalPersonas   = computed(() => this.actividades().reduce((s, a) => s + a.total_personas, 0));
   totalVisitantes = computed(() => this.actividades().reduce((s, a) => s + a.total_visitantes, 0));
   totalAsistentes = computed(() => this.actividades().reduce((s, a) => s + a.total_asistentes, 0));
+
+  // ── Tesorería: solo presente si el backend la incluyó (permiso tesoreria_movimientos:S) ──
+  mostrarTesoreria = computed(() => this.actividades().some(a => a.ingresos !== undefined));
+  totalIngresos    = computed(() => this.actividades().reduce((s, a) => s + (a.ingresos || 0), 0));
+  totalEgresos     = computed(() => this.actividades().reduce((s, a) => s + (a.egresos  || 0), 0));
 
   totalEdad = computed<PorEdad>(() => {
     const acts = this.actividades();
@@ -213,6 +220,11 @@ export class ReportesActividadesComponent implements OnInit {
 
   asistentesDeGrupo(act: ReporteActividad, grupo: string): number {
     return act.grupos.find(g => g.grupo === grupo)?.total_asistentes ?? 0;
+  }
+
+  formatQ(val: number | null | undefined): string {
+    const n = val || 0;
+    return 'Q ' + n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   private _hoy(): string {

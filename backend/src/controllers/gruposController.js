@@ -6,8 +6,9 @@ const FEATURES = [
   { name: 'usuarios', label: 'Seguridad: Usuarios' },
 
   // Módulos principales
-  { name: 'personas',  label: 'Personas' },
-  { name: 'tesoreria', label: 'Tesorería' },
+  { name: 'personas',       label: 'Personas' },
+  { name: 'personas_todas', label: 'Personas: Ver todas (sin restricción de grupo)' },
+  { name: 'tesoreria',      label: 'Tesorería' },
 
   // Catálogos
   { name: 'iglesias',                label: 'Catálogo: Iglesias' },

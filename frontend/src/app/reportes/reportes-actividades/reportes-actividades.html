@@ -267,6 +267,47 @@
       </div>
     </section>
 
+    <!-- ══ SECCIÓN: Tesorería (ingresos/egresos) ═════════════════ -->
+    @if (mostrarTesoreria()) {
+      <section class="reporte-seccion">
+        <h3 class="seccion-titulo">Tesorería por Actividad</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="logo-col"></th>
+                <th>Actividad</th>
+                <th class="num-col">Ingresos</th>
+                <th class="num-col">Egresos</th>
+                <th class="num-col">Saldo neto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (act of actividades(); track act.idactividades) {
+                <tr>
+                  <td class="logo-col">
+                    <ng-container *ngTemplateOutlet="logoTpl; context: { act: act, size: 28 }"></ng-container>
+                  </td>
+                  <td>{{ act.nombre }}</td>
+                  <td class="num-col">{{ formatQ(act.ingresos) }}</td>
+                  <td class="num-col">{{ formatQ(act.egresos) }}</td>
+                  <td class="num-col total-col"><strong>{{ formatQ((act.ingresos || 0) - (act.egresos || 0)) }}</strong></td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="totales-row">
+                <td colspan="2"><strong>TOTALES</strong></td>
+                <td class="num-col"><strong>{{ formatQ(totalIngresos()) }}</strong></td>
+                <td class="num-col"><strong>{{ formatQ(totalEgresos()) }}</strong></td>
+                <td class="num-col total-col"><strong>{{ formatQ(totalIngresos() - totalEgresos()) }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    }
+
     <!-- ══ SECCIÓN 5: Ranking de asistencia por persona ══════════ -->
     @if (rankingAsistencia().length > 0) {
       <section class="reporte-seccion">

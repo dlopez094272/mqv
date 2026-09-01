@@ -5,6 +5,8 @@ const multer = require('multer');
 const { pool }       = require('../config/database');
 const authMiddleware = require('../middleware/authMiddleware');
 const checkPermission = require('../middleware/permissionsMiddleware');
+const { tienePermiso } = require('../middleware/permissionsMiddleware');
+const { recalcularSaldo, verificarAccesoTesoreria } = require('../utils/tesoreriaAccess');
 
 const logosDir    = path.join(__dirname, '..', '..', 'files', 'actividades', 'logos');
 const adjuntosDir = path.join(__dirname, '..', '..', 'files', 'actividades', 'adjuntos');
@@ -371,6 +373,108 @@ router.delete('/:id/asistentes/:idasistente', checkPermission('actividades_asist
     );
     if (!r.affectedRows) return res.status(404).json({ error: 'Registro no encontrado' });
     res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/* ── Tesorería: movimientos vinculados a la actividad ────────── */
+router.get('/:id/tesoreria', checkPermission('actividades', 'S'), async (req, res, next) => {
+  try {
+    const { usuario, is_superadmin } = req.user;
+    if (!await tienePermiso(usuario, 'tesoreria_movimientos', 'S', is_superadmin)) {
+      return res.json({ movimientos: [], totales: { ingresos: 0, egresos: 0, saldo: 0 } });
+    }
+
+    let sql = `
+      SELECT tm.idtesoreria_movimientos, tm.dtesoreria AS idtesoreria, t.nombre AS tesoreria,
+             tm.fecha, tm.concepto, tm.credito, tm.debito, tm.anulado,
+             tt.tipo_movimiento
+      FROM actividades_tesoreria_movimientos atm
+      JOIN tesoreria_movimientos tm ON tm.idtesoreria_movimientos = atm.idtesoreria_movimientos
+      JOIN tesoreria t ON t.idtesoreria = tm.dtesoreria
+      LEFT JOIN tesoreria_tipomov tt ON tt.idtesoreria_tipomov = tm.idtipo_movimiento
+      WHERE atm.idactividades = ?`;
+    const params = [req.params.id];
+
+    if (!is_superadmin) {
+      sql += ` AND (t.responsable = ? OR EXISTS (
+                 SELECT 1 FROM tesoreria_usuarios tu
+                 WHERE tu.idtesoreria = t.idtesoreria AND tu.usuario = ?
+               ))`;
+      params.push(usuario, usuario);
+    }
+    sql += ' ORDER BY tm.fecha, tm.idtesoreria_movimientos';
+
+    const [movimientos] = await pool.query(sql, params);
+
+    const totales = movimientos.reduce((acc, m) => {
+      if (!m.anulado) {
+        acc.ingresos += parseFloat(m.debito)  || 0;
+        acc.egresos  += parseFloat(m.credito) || 0;
+      }
+      return acc;
+    }, { ingresos: 0, egresos: 0 });
+    totales.saldo = totales.ingresos - totales.egresos;
+
+    res.json({ movimientos, totales });
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/tesoreria', checkPermission('actividades', 'S'), async (req, res, next) => {
+  try {
+    const { usuario, is_superadmin } = req.user;
+    const { idtesoreria, movimientos } = req.body;
+
+    if (!idtesoreria) return res.status(400).json({ error: 'La tesorería es requerida' });
+    if (!Array.isArray(movimientos) || !movimientos.length) {
+      return res.status(400).json({ error: 'Debe incluir al menos un movimiento' });
+    }
+
+    const [[act]] = await pool.query(
+      'SELECT idactividades, fecha_inicio FROM actividades WHERE idactividades = ?', [req.params.id]
+    );
+    if (!act) return res.status(404).json({ error: 'Actividad no encontrada' });
+
+    const acceso = await verificarAccesoTesoreria(usuario, idtesoreria, is_superadmin);
+    if (!acceso.acceso)     return res.status(403).json({ error: 'No tiene acceso a esa tesorería' });
+    if (acceso.soloLectura) return res.status(403).json({ error: 'Su acceso a esa tesorería es de solo lectura' });
+    if (!await tienePermiso(usuario, 'tesoreria_movimientos', 'A', is_superadmin)) {
+      return res.status(403).json({ error: 'No tiene permiso para agregar movimientos de tesorería' });
+    }
+
+    for (const m of movimientos) {
+      if (!m.concepto?.trim()) return res.status(400).json({ error: 'Todos los movimientos requieren un concepto' });
+      if (m.concepto.length > 145) return res.status(400).json({ error: 'El concepto supera los 145 caracteres' });
+      const monto = parseFloat(m.monto);
+      if (!monto || monto <= 0) return res.status(400).json({ error: 'El monto debe ser mayor a 0' });
+      if (m.tipo !== 'ingreso' && m.tipo !== 'egreso') {
+        return res.status(400).json({ error: "El tipo de movimiento debe ser 'ingreso' o 'egreso'" });
+      }
+    }
+
+    const ids = [];
+    for (const m of movimientos) {
+      const monto = parseFloat(m.monto);
+      const fecha = m.fecha || String(act.fecha_inicio).slice(0, 10);
+      const [r] = await pool.query(
+        `INSERT INTO tesoreria_movimientos
+           (fecha, concepto, credito, debito, dtesoreria, idtipo_movimiento, creador)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          fecha, m.concepto.trim(),
+          m.tipo === 'egreso'  ? monto : 0,
+          m.tipo === 'ingreso' ? monto : 0,
+          idtesoreria, m.idtipo_movimiento || null, usuario,
+        ]
+      );
+      await pool.query(
+        'INSERT INTO actividades_tesoreria_movimientos (idactividades, idtesoreria_movimientos) VALUES (?, ?)',
+        [req.params.id, r.insertId]
+      );
+      ids.push(r.insertId);
+    }
+
+    await recalcularSaldo(idtesoreria);
+    res.status(201).json({ ids });
   } catch (err) { next(err); }
 });
 

@@ -7,11 +7,21 @@ import {
   ActividadesService, Actividad, AdjuntoInfo,
   CategoriaLookup, LugarLookup, GrupoLookup,
   AsistenciaPersona, Visitante, AsistenciaResumen,
+  ActividadTesoreriaResumen,
 } from './actividades.service';
+import { TesoreriaService, Tesoreria, TipoMovimientoLookup } from '../tesoreria/tesoreria.service';
 import { PermisosService } from '../core/services/permisos.service';
 import { environment }     from '../../environments/environment';
 import { confirmar }       from '../shared/confirmar.util';
 import { CamaraAsistenciaComponent } from './camara-asistencia.component';
+
+interface FilaMovimientoTesoreria {
+  tipo:              'ingreso' | 'egreso';
+  concepto:          string;
+  monto:             number;
+  idtipo_movimiento: string;
+  fecha:             string;
+}
 
 interface DiaCalendario {
   fecha:        Date;
@@ -44,6 +54,11 @@ interface ReporteActividadDetalle {
   por_genero:       { hombres: number; mujeres: number; sin_dato: number };
   asistentes:       { idpersonas: number; nombre_completo: string; grupos_nombres: string | null }[];
   visitantes:       { idactividades_asistentes: number; nombre_completo: string; telefono: string | null; comentarios: string | null }[];
+  tesoreria?: {
+    movimientos: { idtesoreria_movimientos: number; tesoreria: string; fecha: string; concepto: string;
+                    credito: number; debito: number; tipo_movimiento: string | null }[];
+    totales: { ingresos: number; egresos: number; saldo: number };
+  };
 }
 
 @Component({
@@ -55,6 +70,7 @@ interface ReporteActividadDetalle {
 })
 export class ActividadesComponent implements OnInit {
   private svc    = inject(ActividadesService);
+  private tesoreriaSvc = inject(TesoreriaService);
   private http   = inject(HttpClient);
   public permisos = inject(PermisosService);
 
@@ -102,12 +118,15 @@ export class ActividadesComponent implements OnInit {
 
   // ── Grupos involucrados ────────────────────────────────────────
   gruposSeleccionados    = signal<number[]>([]);
+  todosGruposSeleccionados = computed(() => {
+    const total = this.grupos().length;
+    return total > 0 && this.gruposSeleccionados().length === total;
+  });
 
   // ── Calendar ─────────────────────────────────────────────────
   mesActual = signal(new Date());
 
   // ── Form actividad ────────────────────────────────────────────
-  mostrarForm = signal(false);
   modoEdicion = signal(false);
   editandoId  = signal<number | null>(null);
   guardando   = signal(false);
@@ -133,9 +152,7 @@ export class ActividadesComponent implements OnInit {
   adjuntosActuales: AdjuntoInfo[] = [];
 
   // ── Asistencia ────────────────────────────────────────────────
-  mostrarAsistencia    = signal(false);
   mostrarCamara        = signal(false);
-  actividadAsistencia  = signal<Actividad | null>(null);
   cargandoAsistencia   = signal(false);
   asistenciaData       = signal<AsistenciaResumen | null>(null);
   busquedaAsistencia   = signal('');
@@ -146,6 +163,34 @@ export class ActividadesComponent implements OnInit {
   gruposDisponiblesExpandidos = signal<Set<string>>(new Set());
 
   formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
+
+  // ── Tesorería de actividad ──────────────────────────────────────
+  cargandoTesoreria     = signal(false);
+  guardandoTesoreria    = signal(false);
+  errorTesoreria        = signal('');
+  tesoreriaResumen      = signal<ActividadTesoreriaResumen | null>(null);
+  tesoreriasAccesibles  = signal<Tesoreria[]>([]);
+  tiposMovimiento       = signal<TipoMovimientoLookup[]>([]);
+  formTesoreriaIdtesoreria = '';
+  filasTesoreria: FilaMovimientoTesoreria[] = [];
+
+  puedeOfrecerTesoreria = computed(() =>
+    this.permisos.puede('tesoreria', 'S') && this.tesoreriasAccesibles().length > 0
+  );
+  puedeAgregarMovimientoTesoreria = computed(() => this.permisos.puede('tesoreria_movimientos', 'A'));
+
+  // ── Gestión unificada de actividad (fichas: datos / asistencia / tesorería) ──
+  mostrarGestion   = signal(false);
+  tabGestion       = signal<'datos' | 'asistencia' | 'tesoreria'>('datos');
+  actividadGestion = signal<Actividad | null>(null);
+
+  anchoGestion = computed(() => {
+    switch (this.tabGestion()) {
+      case 'asistencia': return '960px';
+      case 'tesoreria':  return '760px';
+      default:           return '560px';
+    }
+  });
 
   // ── Menú contextual ───────────────────────────────────────────
   menuAct = signal<{ act: Actividad; x: number; y: number } | null>(null);
@@ -256,6 +301,30 @@ export class ActividadesComponent implements OnInit {
     this.personasFiltradas().filter(p => p.asiste)
   );
 
+  // ── Paginación asistentes confirmados ──────────────────────────
+  readonly LIMITE_ASISTENTES = 30;
+  asistPagina    = signal(1);
+  asistTotalPag  = computed(() => Math.max(1, Math.ceil(this.personasAsistentes().length / this.LIMITE_ASISTENTES)));
+  asistPaginados = computed<AsistenciaPersona[]>(() => {
+    const pag   = Math.min(this.asistPagina(), this.asistTotalPag());
+    const start = (pag - 1) * this.LIMITE_ASISTENTES;
+    return this.personasAsistentes().slice(start, start + this.LIMITE_ASISTENTES);
+  });
+  asistPaginas = computed(() => {
+    const total = this.asistTotalPag(); const actual = Math.min(this.asistPagina(), total);
+    if (total <= 1) return [];
+    const rango: (number | '...')[] = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= actual - 2 && i <= actual + 2)) rango.push(i);
+      else if (rango[rango.length - 1] !== '...') rango.push('...');
+    }
+    return rango;
+  });
+  asistIrPagina(p: number | '...') {
+    if (p === '...' || (p as number) < 1 || (p as number) > this.asistTotalPag()) return;
+    this.asistPagina.set(p as number);
+  }
+
   personasDisponibles = computed<AsistenciaPersona[]>(() =>
     this.personasFiltradas().filter(p => !p.asiste)
   );
@@ -276,6 +345,11 @@ export class ActividadesComponent implements OnInit {
       .sort((a, b) => a.grupo === 'Sin grupo' ? 1 : b.grupo === 'Sin grupo' ? -1
         : a.grupo.localeCompare(b.grupo, 'es'));
   });
+
+  buscarAsistencia(valor: string) {
+    this.busquedaAsistencia.set(valor);
+    this.asistPagina.set(1);
+  }
 
   grupoDisponibleExpandido(grupo: string): boolean {
     return !!this.busquedaAsistencia() || this.gruposDisponiblesExpandidos().has(grupo);
@@ -300,6 +374,9 @@ export class ActividadesComponent implements OnInit {
       .subscribe({ next: d => this.lugares.set(d) });
     this.svc.listarGruposDisponibles()
       .subscribe({ next: d => this.grupos.set(d) });
+    if (this.permisos.puede('tesoreria', 'S')) {
+      this.tesoreriaSvc.listar().subscribe({ next: d => this.tesoreriasAccesibles.set(d) });
+    }
   }
 
   cargar() {
@@ -320,16 +397,6 @@ export class ActividadesComponent implements OnInit {
   hoyMes()  { this.mesActual.set(new Date()); }
 
   // ── Formulario actividad ──────────────────────────────────────
-  abrirNuevo() {
-    this._resetForm('', '');
-  }
-
-  abrirNuevoEnFecha(fecha: Date) {
-    if (this.mostrarForm()) return;
-    const iso = fecha.toISOString().slice(0, 10);
-    this._resetForm(iso, iso);
-  }
-
   private _resetForm(fechaInicio: string, fechaFin: string) {
     this.form = { idcategorias: '', nombre: '', descripcion: '',
                   fecha_inicio: fechaInicio, fecha_fin: fechaFin,
@@ -338,11 +405,10 @@ export class ActividadesComponent implements OnInit {
     this.logoActual = null; this.eliminarLogo = false;
     this.adjuntosNuevos = []; this.adjuntosActuales = [];
     this.gruposSeleccionados.set([]);
-    this.modoEdicion.set(false); this.editandoId.set(null);
-    this.errorForm.set(''); this.mostrarForm.set(true);
+    this.errorForm.set('');
   }
 
-  abrirEditar(act: Actividad) {
+  private _poblarForm(act: Actividad) {
     this.form = {
       idcategorias: act.idcategorias?.toString() || '',
       nombre:       act.nombre,
@@ -358,8 +424,7 @@ export class ActividadesComponent implements OnInit {
     this.adjuntosNuevos = [];
     this.adjuntosActuales = this.parseAdjuntos(act.adjuntos);
     this.gruposSeleccionados.set([]);
-    this.modoEdicion.set(true); this.editandoId.set(act.idactividades);
-    this.errorForm.set(''); this.mostrarForm.set(true);
+    this.errorForm.set('');
     // Cargar grupos previamente asignados
     this.svc.listarGruposActividad(act.idactividades).subscribe({
       next: ids => this.gruposSeleccionados.set(ids),
@@ -373,9 +438,10 @@ export class ActividadesComponent implements OnInit {
     );
   }
 
-  cerrarForm() {
-    this.mostrarForm.set(false);
-    this.logoPreview = null; this.adjuntosNuevos = [];
+  toggleTodosGrupos() {
+    this.gruposSeleccionados.set(
+      this.todosGruposSeleccionados() ? [] : this.grupos().map(g => g.id)
+    );
   }
 
   onLogoChange(event: Event) {
@@ -431,17 +497,28 @@ export class ActividadesComponent implements OnInit {
     }
 
     this.guardando.set(true); this.errorForm.set('');
-    const op$: Observable<any> = this.modoEdicion()
-      ? this.svc.actualizar(this.editandoId()!, fd)
-      : this.svc.crear(fd);
+    const fueCreacion = !this.modoEdicion();
+    const op$: Observable<any> = fueCreacion
+      ? this.svc.crear(fd)
+      : this.svc.actualizar(this.editandoId()!, fd);
 
     op$.subscribe({
-      next: () => {
+      next: (res: any) => {
         this.guardando.set(false);
-        this.cerrarForm();
-        this.successMsg.set(this.modoEdicion() ? 'Actividad actualizada' : 'Actividad creada');
+        this.successMsg.set(fueCreacion ? 'Actividad creada' : 'Actividad actualizada');
         setTimeout(() => this.successMsg.set(''), 3000);
         this.cargar(); this.cargarLookups();
+        if (fueCreacion && res?.id) {
+          this.svc.obtener(res.id).subscribe({
+            next: act => {
+              this.actividadGestion.set(act);
+              this.modoEdicion.set(true); this.editandoId.set(act.idactividades);
+              this.seleccionarTab('asistencia');
+            },
+          });
+        } else if (this.editandoId()) {
+          this.svc.obtener(this.editandoId()!).subscribe({ next: act => this.actividadGestion.set(act) });
+        }
       },
       error: (e: any) => {
         this.guardando.set(false);
@@ -466,34 +543,149 @@ export class ActividadesComponent implements OnInit {
     this.svc.descargarAdjunto(adj.filename, adj.originalname);
   }
 
-  // ── Asistencia ────────────────────────────────────────────────
-  abrirAsistencia(act: Actividad, event?: Event) {
+  // ── Gestión unificada de actividad (fichas: datos / asistencia / tesorería) ──
+  abrirNuevo() {
+    this.abrirGestion('datos', null);
+  }
+
+  abrirNuevoEnFecha(fecha: Date) {
+    if (this.mostrarGestion()) return;
+    this.abrirGestion('datos', null);
+    const iso = fecha.toISOString().slice(0, 10);
+    this.form.fecha_inicio = iso; this.form.fecha_fin = iso;
+  }
+
+  abrirGestion(tab: 'datos' | 'asistencia' | 'tesoreria', act: Actividad | null, event?: Event) {
     event?.stopPropagation();
-    this.actividadAsistencia.set(act);
-    this.mostrarAsistencia.set(true);
+    this.mostrarGestion.set(true);
+    this.actividadGestion.set(act);
+    this.asistenciaData.set(null);
     this.busquedaAsistencia.set('');
+    this.asistPagina.set(1);
     this.mostrarFormVisitante.set(false);
     this.formVisitante = { nombre_completo: '', telefono: '', comentarios: '' };
     this.errorAsistencia.set('');
     this.visitanteExpandido.set(null);
     this.gruposDisponiblesExpandidos.set(new Set());
-    this._cargarAsistencia(act.idactividades);
+    this.errorTesoreria.set('');
+    this.tesoreriaResumen.set(null);
+    if (act) {
+      this._poblarForm(act);
+      this._resetFilasTesoreria(act);
+      this.modoEdicion.set(true); this.editandoId.set(act.idactividades);
+    } else {
+      this._resetForm('', '');
+      this.modoEdicion.set(false); this.editandoId.set(null);
+    }
+    this.tabGestion.set('datos');
+    this.seleccionarTab(tab);
   }
 
-  cerrarAsistencia() {
-    this.mostrarAsistencia.set(false);
+  seleccionarTab(tab: 'datos' | 'asistencia' | 'tesoreria') {
+    const act = this.actividadGestion();
+    if (tab !== 'datos' && !act) return;
+    this.tabGestion.set(tab);
+    if (!act) return;
+    if (tab === 'asistencia' && this.asistenciaData() === null) {
+      this._cargarAsistencia(act.idactividades);
+    }
+    if (tab === 'tesoreria' && this.tesoreriaResumen() === null) {
+      this.cargandoTesoreria.set(true);
+      this.svc.listarTesoreria(act.idactividades).subscribe({
+        next:  d => { this.tesoreriaResumen.set(d); this.cargandoTesoreria.set(false); },
+        error: (e: any) => {
+          this.errorTesoreria.set(e.message || 'Error al cargar la tesorería de la actividad');
+          this.cargandoTesoreria.set(false);
+        },
+      });
+      if (!this.tiposMovimiento().length) {
+        this.tesoreriaSvc.lookupTiposMovimiento().subscribe({ next: d => this.tiposMovimiento.set(d) });
+      }
+      if (!this.tesoreriasAccesibles().length) {
+        this.tesoreriaSvc.listar().subscribe({ next: d => this.tesoreriasAccesibles.set(d) });
+      }
+    }
+  }
+
+  cerrarGestion() {
+    this.mostrarGestion.set(false);
     this.mostrarCamara.set(false);
-    this.actividadAsistencia.set(null);
+    this.actividadGestion.set(null);
     this.asistenciaData.set(null);
     this.busquedaAsistencia.set('');
     this.mostrarFormVisitante.set(false);
     this.visitanteExpandido.set(null);
+    this.tesoreriaResumen.set(null);
+    this.logoPreview = null; this.adjuntosNuevos = [];
+  }
+
+  private _resetFilasTesoreria(act: Actividad) {
+    const accesibles = this.tesoreriasAccesibles();
+    this.formTesoreriaIdtesoreria = accesibles.length === 1 ? String(accesibles[0].idtesoreria) : '';
+    const fecha = String(act.fecha_inicio).slice(0, 10);
+    this.filasTesoreria = [{ tipo: 'ingreso', concepto: '', monto: 0, idtipo_movimiento: '', fecha }];
+  }
+
+  agregarFilaTesoreria() {
+    const act = this.actividadGestion();
+    const fecha = act ? String(act.fecha_inicio).slice(0, 10) : '';
+    this.filasTesoreria = [
+      ...this.filasTesoreria,
+      { tipo: 'ingreso', concepto: '', monto: 0, idtipo_movimiento: '', fecha },
+    ];
+  }
+
+  quitarFilaTesoreria(i: number) {
+    if (this.filasTesoreria.length <= 1) return;
+    this.filasTesoreria = this.filasTesoreria.filter((_, idx) => idx !== i);
+  }
+
+  guardarTesoreria() {
+    const act = this.actividadGestion();
+    if (!act) return;
+    if (!this.formTesoreriaIdtesoreria) { this.errorTesoreria.set('Selecciona una tesorería'); return; }
+    for (const f of this.filasTesoreria) {
+      if (!f.concepto.trim())        { this.errorTesoreria.set('Todos los movimientos requieren un concepto'); return; }
+      if (!f.monto || f.monto <= 0)  { this.errorTesoreria.set('El monto debe ser mayor a 0'); return; }
+    }
+
+    this.guardandoTesoreria.set(true);
+    this.errorTesoreria.set('');
+    const movimientos = this.filasTesoreria.map(f => ({
+      tipo:              f.tipo,
+      concepto:          f.concepto.trim(),
+      monto:             f.monto,
+      idtipo_movimiento: f.idtipo_movimiento || undefined,
+      fecha:             f.fecha || undefined,
+    }));
+
+    this.svc.registrarTesoreria(act.idactividades, +this.formTesoreriaIdtesoreria, movimientos).subscribe({
+      next: () => {
+        this.guardandoTesoreria.set(false);
+        this._resetFilasTesoreria(act);
+        this.successMsg.set('Movimiento(s) de tesorería registrados');
+        setTimeout(() => this.successMsg.set(''), 3000);
+        this.svc.listarTesoreria(act.idactividades).subscribe({ next: d => this.tesoreriaResumen.set(d) });
+      },
+      error: (e: any) => {
+        this.guardandoTesoreria.set(false);
+        this.errorTesoreria.set(e.message || 'Error al guardar la tesorería');
+      },
+    });
+  }
+
+  formatQ(val: number | string | null | undefined): string {
+    if (val == null) return 'Q 0.00';
+    const n = parseFloat(String(val));
+    return 'Q ' + (isNaN(n) ? '0.00' : n.toLocaleString('es-GT', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }));
   }
 
   // ── Menú contextual ──────────────────────────────────────────
   abrirMenu(event: MouseEvent, act: Actividad) {
     event.stopPropagation();
-    const mw = 195, mh = 185;
+    const mw = 195, mh = 225;
     const x = Math.min(event.clientX, window.innerWidth  - mw - 8);
     const y = Math.min(event.clientY, window.innerHeight - mh - 8);
     this.menuAct.set({ act, x, y });
@@ -501,8 +693,9 @@ export class ActividadesComponent implements OnInit {
 
   cerrarMenu() { this.menuAct.set(null); }
 
-  menuEditar()     { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirEditar(a); }
-  menuAsistencia() { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirAsistencia(a); }
+  menuEditar()     { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirGestion('datos', a); }
+  menuAsistencia() { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirGestion('asistencia', a); }
+  menuTesoreria()  { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirGestion('tesoreria', a); }
   menuEliminar()   { const a = this.menuAct()!.act; this.cerrarMenu(); this.eliminar(a); }
 
   // ── Reporte de actividad ─────────────────────────────────────
@@ -555,7 +748,7 @@ export class ActividadesComponent implements OnInit {
   }
 
   onAsistenciaActualizadaPorCamara() {
-    const act = this.actividadAsistencia();
+    const act = this.actividadGestion();
     if (act) this._cargarAsistencia(act.idactividades);
   }
 
@@ -576,7 +769,7 @@ export class ActividadesComponent implements OnInit {
   }
 
   toggleAsistente(persona: AsistenciaPersona) {
-    const act = this.actividadAsistencia();
+    const act = this.actividadGestion();
     if (!act) return;
 
     if (persona.asiste) {
@@ -595,7 +788,7 @@ export class ActividadesComponent implements OnInit {
   }
 
   agregarVisitante() {
-    const act = this.actividadAsistencia();
+    const act = this.actividadGestion();
     if (!act || !this.formVisitante.nombre_completo.trim()) return;
     this.guardandoVisitante.set(true);
     this.svc.agregarAsistente(act.idactividades, {
@@ -617,7 +810,7 @@ export class ActividadesComponent implements OnInit {
   }
 
   eliminarVisitante(idAsistente: number) {
-    const act = this.actividadAsistencia();
+    const act = this.actividadGestion();
     if (!act) return;
     this.svc.eliminarAsistente(act.idactividades, idAsistente).subscribe({
       next:  () => this._cargarAsistencia(act.idactividades),

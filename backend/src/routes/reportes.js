@@ -2,6 +2,17 @@ const router       = require('express').Router();
 const { pool }     = require('../config/database');
 const authMiddleware  = require('../middleware/authMiddleware');
 const checkPermission = require('../middleware/permissionsMiddleware');
+const { tienePermiso } = require('../middleware/permissionsMiddleware');
+
+// Fragmento SQL: restringe filas de tesorería a las tesorerías accesibles al usuario
+function filtroAccesoTesoreria(isSuperadmin, params, usuario) {
+  if (isSuperadmin) return '';
+  params.push(usuario, usuario);
+  return ` AND (t.responsable = ? OR EXISTS (
+             SELECT 1 FROM tesoreria_usuarios tu
+             WHERE tu.idtesoreria = t.idtesoreria AND tu.usuario = ?
+           ))`;
+}
 
 router.use(authMiddleware);
 
@@ -227,6 +238,24 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
       GROUP BY p.idpersonas ORDER BY total_asistencias DESC, nombre_completo ASC
     `, [ids]);
 
+    // ── Ingresos/egresos de tesorería por actividad (solo si el usuario tiene permiso) ──
+    let tesoreriaPorAct = [];
+    const puedeVerTesoreria = await tienePermiso(req.user.usuario, 'tesoreria_movimientos', 'S', req.user.is_superadmin);
+    if (puedeVerTesoreria) {
+      const tParams = [ids];
+      const filtro = filtroAccesoTesoreria(req.user.is_superadmin, tParams, req.user.usuario);
+      [tesoreriaPorAct] = await pool.query(`
+        SELECT atm.idactividades,
+               COALESCE(SUM(tm.debito), 0)  AS ingresos,
+               COALESCE(SUM(tm.credito), 0) AS egresos
+        FROM actividades_tesoreria_movimientos atm
+        JOIN tesoreria_movimientos tm ON tm.idtesoreria_movimientos = atm.idtesoreria_movimientos
+        JOIN tesoreria t ON t.idtesoreria = tm.dtesoreria
+        WHERE atm.idactividades IN (?) AND IFNULL(tm.anulado, 0) = 0${filtro}
+        GROUP BY atm.idactividades
+      `, tParams);
+    }
+
     // ── Combinar resultados ─────────────────────────────────────
     const result = actividades.map(act => {
       const t = totales.find(x => x.idactividades === act.idactividades)
@@ -235,6 +264,7 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
              || { bebes: 0, ninos: 0, adolescentes: 0, jovenes: 0, adultos: 0, adultos_mayores: 0, sin_fecha: 0 };
       const g = porGenero.find(x => x.idactividades === act.idactividades)
              || { hombres: 0, mujeres: 0, sin_dato: 0 };
+      const teso = tesoreriaPorAct.find(x => x.idactividades === act.idactividades);
 
       return {
         ...act,
@@ -258,6 +288,10 @@ router.get('/actividades', checkPermission('actividades', 'S'), async (req, res,
           mujeres:  Number(g.mujeres)  || 0,
           sin_dato: Number(g.sin_dato) || 0,
         },
+        ...(puedeVerTesoreria ? {
+          ingresos: Number(teso?.ingresos) || 0,
+          egresos:  Number(teso?.egresos)  || 0,
+        } : {}),
       };
     });
 
@@ -389,6 +423,30 @@ router.get('/actividades/:id', checkPermission('actividades', 'S'), async (req, 
       ORDER BY nombre_completo ASC
     `, [idactividades]);
 
+    // Tesorería vinculada a la actividad (solo si el usuario tiene permiso)
+    let tesoreria;
+    if (await tienePermiso(req.user.usuario, 'tesoreria_movimientos', 'S', req.user.is_superadmin)) {
+      const tParams = [idactividades];
+      const filtro = filtroAccesoTesoreria(req.user.is_superadmin, tParams, req.user.usuario);
+      const [tesoMovs] = await pool.query(`
+        SELECT tm.idtesoreria_movimientos, tm.dtesoreria AS idtesoreria, t.nombre AS tesoreria,
+               tm.fecha, tm.concepto, tm.credito, tm.debito, tt.tipo_movimiento
+        FROM actividades_tesoreria_movimientos atm
+        JOIN tesoreria_movimientos tm ON tm.idtesoreria_movimientos = atm.idtesoreria_movimientos
+        JOIN tesoreria t ON t.idtesoreria = tm.dtesoreria
+        LEFT JOIN tesoreria_tipomov tt ON tt.idtesoreria_tipomov = tm.idtipo_movimiento
+        WHERE atm.idactividades = ? AND IFNULL(tm.anulado, 0) = 0${filtro}
+        ORDER BY tm.fecha, tm.idtesoreria_movimientos
+      `, tParams);
+      const totalesTeso = tesoMovs.reduce((acc, m) => {
+        acc.ingresos += parseFloat(m.debito)  || 0;
+        acc.egresos  += parseFloat(m.credito) || 0;
+        return acc;
+      }, { ingresos: 0, egresos: 0 });
+      totalesTeso.saldo = totalesTeso.ingresos - totalesTeso.egresos;
+      tesoreria = { movimientos: tesoMovs, totales: totalesTeso };
+    }
+
     res.json({
       ...act,
       total_asistentes:  Number(tot.total)            || 0,
@@ -411,6 +469,7 @@ router.get('/actividades/:id', checkPermission('actividades', 'S'), async (req, 
       },
       asistentes,
       visitantes,
+      ...(tesoreria ? { tesoreria } : {}),
     });
   } catch (err) { next(err); }
 });

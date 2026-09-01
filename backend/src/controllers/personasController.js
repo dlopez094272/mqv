@@ -2,6 +2,7 @@ const path   = require('path');
 const fs     = require('fs');
 const crypto = require('crypto');
 const { pool } = require('../config/database');
+const { tienePermiso } = require('../middleware/permissionsMiddleware');
 const XLSX = require('xlsx');
 const { sendMail, emailCumpleaneros, emailBienvenida } = require('../config/email');
 
@@ -53,8 +54,11 @@ async function listar(req, res, next) {
     let where = `WHERE 1=1`;
     const params = [];
 
-    // Superadmin ve todas las personas; los demás solo ven personas de sus grupos como encargado
-    if (!req.user.is_superadmin) {
+    // Superadmin y quienes tengan el permiso especial "personas_todas" ven todas las
+    // personas; los demás solo ven personas de sus grupos como encargado.
+    const veTodas = req.user.is_superadmin
+      || await tienePermiso(req.user.usuario, 'personas_todas', 'S');
+    if (!veTodas) {
       where += ` AND p.idpersonas IN (
         SELECT gp.idpersonas FROM grupos_personas gp
         INNER JOIN grupos_encargados ge ON ge.idgrupos = gp.idgrupos

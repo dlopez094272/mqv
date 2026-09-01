@@ -85,6 +85,30 @@ export interface PersonaDescriptor {
   foto_ref:   string | null;
 }
 
+export interface ActividadMovimiento {
+  idtesoreria_movimientos: number;
+  idtesoreria:             number;
+  tesoreria:               string;
+  fecha:                   string;
+  concepto:                string;
+  credito:                 number;
+  debito:                  number;
+  tipo_movimiento:         string | null;
+}
+
+export interface ActividadTesoreriaResumen {
+  movimientos: ActividadMovimiento[];
+  totales: { ingresos: number; egresos: number; saldo: number };
+}
+
+export interface NuevoMovimientoActividad {
+  tipo:               'ingreso' | 'egreso';
+  concepto:            string;
+  monto:               number;
+  idtipo_movimiento?:  number | string;
+  fecha?:              string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ActividadesService {
   private http = inject(HttpClient);
@@ -92,6 +116,10 @@ export class ActividadesService {
 
   listar() {
     return this.http.get<Actividad[]>(this.base);
+  }
+
+  obtener(id: number) {
+    return this.http.get<Actividad>(`${this.base}/${id}`);
   }
 
   crear(data: FormData) {
@@ -160,5 +188,13 @@ export class ActividadesService {
 
   guardarDescriptorFacial(idpersonas: number, descriptor: number[], foto_ref?: string) {
     return this.http.post<{ ok: boolean }>(`${this.base}/faces/descriptor`, { idpersonas, descriptor, foto_ref });
+  }
+
+  listarTesoreria(idActividad: number) {
+    return this.http.get<ActividadTesoreriaResumen>(`${this.base}/${idActividad}/tesoreria`);
+  }
+
+  registrarTesoreria(idActividad: number, idtesoreria: number, movimientos: NuevoMovimientoActividad[]) {
+    return this.http.post<{ ids: number[] }>(`${this.base}/${idActividad}/tesoreria`, { idtesoreria, movimientos });
   }
 }
