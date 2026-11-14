@@ -24,11 +24,17 @@ export class LoginComponent {
     private permisos: PermisosService,
     private router: Router,
   ) {
-    if (auth.isAuthenticated()) router.navigate(['/dashboard']);
+    if (auth.isAuthenticated()) router.navigateByUrl(this.destino());
     this.form = this.fb.group({
       usuario: ['', Validators.required],
       password: ['', Validators.required],
     });
+  }
+
+  /** Destino tras iniciar sesión: ?returnUrl=/ruta-interna (p. ej. un formulario privado). */
+  private destino(): string {
+    const ret = new URLSearchParams(window.location.search).get('returnUrl') || '';
+    return ret.startsWith('/') && !ret.startsWith('//') ? ret : '/dashboard';
   }
 
   submit() {
@@ -44,7 +50,7 @@ export class LoginComponent {
         if (res.primer_ingreso === 1) {
           this.router.navigate(['/cambiar-password']);
         } else {
-          this.router.navigate(['/dashboard']);
+          this.router.navigateByUrl(this.destino());
         }
       },
       error: (err) => {

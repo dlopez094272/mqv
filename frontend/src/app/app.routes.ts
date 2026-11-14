@@ -25,6 +25,13 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/complete-registration/complete-registration').then(m => m.CompleteRegistrationComponent),
   },
 
+  // Formulario de inscripción de una actividad (acceso por URL / QR).
+  // Si es privado, el propio componente pide iniciar sesión.
+  {
+    path: 'f/:token',
+    loadComponent: () => import('./actividades/formularios/formulario-publico/formulario-publico').then(m => m.FormularioPublicoComponent),
+  },
+
   // Páginas protegidas (dentro del shell)
   {
     path: '',
@@ -167,6 +174,34 @@ export const routes: Routes = [
         canActivate: [permissionGuard('actividades', 'S')],
         loadComponent: () => import('./actividades/actividades.component').then(m => m.ActividadesComponent),
       },
+      // Gestión de una actividad a página completa (datos / asistencia / tesorería / formularios)
+      {
+        path: 'actividades/nueva',
+        canActivate: [permissionGuard('actividades', 'A')],
+        data: { gestion: true },
+        loadComponent: () => import('./actividades/actividades.component').then(m => m.ActividadesComponent),
+      },
+      {
+        path: 'actividades/:id/gestion',
+        canActivate: [permissionGuard('actividades', 'S')],
+        data: { gestion: true },
+        loadComponent: () => import('./actividades/actividades.component').then(m => m.ActividadesComponent),
+      },
+      {
+        path: 'actividades/:idact/formularios/nuevo',
+        canActivate: [permissionGuard('actividades', 'E')],
+        loadComponent: () => import('./actividades/formularios/formulario-editor/formulario-editor').then(m => m.FormularioEditorComponent),
+      },
+      {
+        path: 'actividades/formularios/:id/editar',
+        canActivate: [permissionGuard('actividades', 'E')],
+        loadComponent: () => import('./actividades/formularios/formulario-editor/formulario-editor').then(m => m.FormularioEditorComponent),
+      },
+      {
+        path: 'actividades/formularios/:id/respuestas',
+        canActivate: [permissionGuard('actividades', 'S')],
+        loadComponent: () => import('./actividades/formularios/formulario-respuestas/formulario-respuestas').then(m => m.FormularioRespuestasComponent),
+      },
       // Tesorería
       {
         path: 'tesoreria',
@@ -193,6 +228,11 @@ export const routes: Routes = [
         path: 'reportes/personas',
         canActivate: [permissionGuard('personas', 'S')],
         loadComponent: () => import('./reportes/reportes-personas/reportes-personas').then(m => m.ReportesPersonasComponent),
+      },
+      {
+        path: 'reportes/inasistentes',
+        canActivate: [permissionGuard('personas', 'S')],
+        loadComponent: () => import('./reportes/reportes-inasistentes/reportes-inasistentes').then(m => m.ReportesInasistentesComponent),
       },
       // Crecimiento — Gestión de Cursos (permiso: cursos)
       {

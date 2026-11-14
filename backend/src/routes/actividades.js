@@ -2,6 +2,7 @@ const router = require('express').Router();
 const path   = require('path');
 const fs     = require('fs');
 const multer = require('multer');
+const crypto = require('crypto');
 const { pool }       = require('../config/database');
 const authMiddleware = require('../middleware/authMiddleware');
 const checkPermission = require('../middleware/permissionsMiddleware');
@@ -43,6 +44,61 @@ const uploadFields = multer({
 ]);
 
 router.use(authMiddleware);
+
+/* ── Actividades de varios días: "una actividad por cada día" ─── */
+const MAX_DIAS_SERIE = 62;
+
+/** Lista de fechas 'YYYY-MM-DD' entre dos fechas (inclusive). */
+function diasEntre(fi, ff) {
+  const out = [];
+  const d   = new Date(String(fi).slice(0, 10) + 'T00:00:00Z');
+  const fin = new Date(String(ff).slice(0, 10) + 'T00:00:00Z');
+  if (isNaN(d) || isNaN(fin)) return out;
+  while (d <= fin && out.length <= MAX_DIAS_SERIE) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return out;
+}
+
+/** Copia un archivo (logo/adjunto) para que cada actividad de la serie tenga el suyo
+ *  (al eliminar una actividad se borran sus archivos). */
+function copiarArchivo(dir, filename) {
+  if (!filename) return null;
+  const base  = filename.replace(/^\d+-(?:[0-9a-f]{8}-)?/, '');
+  const nuevo = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${base}`;
+  try { fs.copyFileSync(path.join(dir, filename), path.join(dir, nuevo)); return nuevo; }
+  catch { return null; }
+}
+
+/** Inserta copias de una actividad para cada fecha indicada (fecha_inicio = fecha_fin = día). */
+async function crearCopiasPorDia({ datos, fechas, logo, adjuntos, gruposIds, serie, usuario }) {
+  const ids = [];
+  for (const dia of fechas) {
+    const logoCopia     = copiarArchivo(logosDir, logo);
+    const adjuntosCopia = (adjuntos || []).map(a => {
+      const fn = copiarArchivo(adjuntosDir, a.filename);
+      return fn ? { ...a, filename: fn } : null;
+    }).filter(Boolean);
+
+    const [r] = await pool.query(`
+      INSERT INTO actividades
+        (idcategorias, nombre, descripcion, fecha_inicio, fecha_fin,
+         hora_inicio, hora_fin, adjuntos, logo, idlugares, serie, usuario)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      datos.idcategorias || null, datos.nombre, datos.descripcion || null, dia, dia,
+      datos.hora_inicio || null, datos.hora_fin || null,
+      JSON.stringify(adjuntosCopia), logoCopia, datos.idlugares || null, serie, usuario,
+    ]);
+    if (gruposIds?.length) {
+      await pool.query('INSERT INTO actividades_grupos (idactividades, idgrupos) VALUES ?',
+        [gruposIds.map(g => [r.insertId, g])]);
+    }
+    ids.push(r.insertId);
+  }
+  return ids;
+}
 
 /* ── Grupos disponibles (lookup para multiselect) ────────────── */
 router.get('/grupos-disponibles', checkPermission('actividades', 'S'), async (req, res, next) => {
@@ -131,37 +187,55 @@ router.post('/', checkPermission('actividades', 'A'), (req, res, next) => {
         size:         f.size,
       }));
 
+      if (String(fecha_fin).slice(0, 10) < String(fecha_inicio).slice(0, 10)) {
+        return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio' });
+      }
+
+      // ¿Varios días y se pidió una actividad por cada día?
+      const dias   = diasEntre(fecha_inicio, fecha_fin);
+      const porDia = req.body.crear_por_dia === 'true' && dias.length > 1;
+      if (porDia && dias.length > MAX_DIAS_SERIE) {
+        return res.status(400).json({ error: `Máximo ${MAX_DIAS_SERIE} días al crear una actividad por día` });
+      }
+      const serie = porDia ? crypto.randomUUID() : null;
+
       const [r] = await pool.query(`
         INSERT INTO actividades
           (idcategorias, nombre, descripcion, fecha_inicio, fecha_fin,
-           hora_inicio, hora_fin, adjuntos, logo, idlugares, usuario)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           hora_inicio, hora_fin, adjuntos, logo, idlugares, serie, usuario)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         idcategorias || null,
         nombre.trim(),
         descripcion  || null,
         fecha_inicio,
-        fecha_fin,
+        porDia ? dias[0] : fecha_fin,
         hora_inicio  || null,
         hora_fin     || null,
         JSON.stringify(adjuntos),
         logo,
         idlugares    || null,
+        serie,
         req.user.usuario,
       ]);
 
       // Insertar grupos asociados
-      const grupos = req.body.grupos;
-      if (grupos) {
-        let gruposIds = [];
-        try { gruposIds = JSON.parse(grupos); } catch {}
-        if (gruposIds.length) {
-          const vals = gruposIds.map(gId => [r.insertId, gId]);
-          await pool.query('INSERT INTO actividades_grupos (idactividades, idgrupos) VALUES ?', [vals]);
-        }
+      let gruposIds = [];
+      if (req.body.grupos) { try { gruposIds = JSON.parse(req.body.grupos); } catch {} }
+      if (gruposIds.length) {
+        const vals = gruposIds.map(gId => [r.insertId, gId]);
+        await pool.query('INSERT INTO actividades_grupos (idactividades, idgrupos) VALUES ?', [vals]);
       }
 
-      res.status(201).json({ id: r.insertId });
+      let ids = [r.insertId];
+      if (porDia) {
+        ids = ids.concat(await crearCopiasPorDia({
+          datos: { idcategorias, nombre: nombre.trim(), descripcion, hora_inicio, hora_fin, idlugares },
+          fechas: dias.slice(1), logo, adjuntos, gruposIds, serie, usuario: req.user.usuario,
+        }));
+      }
+
+      res.status(201).json({ id: r.insertId, ids });
     } catch (dbErr) { next(dbErr); }
   });
 });
@@ -176,7 +250,7 @@ router.put('/:id', checkPermission('actividades', 'E'), (req, res, next) => {
 
     try {
       const [[existing]] = await pool.query(
-        'SELECT logo, adjuntos FROM actividades WHERE idactividades = ?',
+        'SELECT logo, adjuntos, serie FROM actividades WHERE idactividades = ?',
         [req.params.id]
       );
       if (!existing) return res.status(404).json({ error: 'Actividad no encontrada' });
@@ -224,24 +298,37 @@ router.put('/:id', checkPermission('actividades', 'E'), (req, res, next) => {
 
       const adjuntosFinales = [...adjuntosActuales, ...nuevos];
 
+      if (String(fecha_fin).slice(0, 10) < String(fecha_inicio).slice(0, 10)) {
+        return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio' });
+      }
+
+      // Dividir en una actividad por día: esta queda en el primer día y se crean las demás
+      const dias   = diasEntre(fecha_inicio, fecha_fin);
+      const porDia = req.body.dividir_por_dia === 'true' && dias.length > 1;
+      if (porDia && dias.length > MAX_DIAS_SERIE) {
+        return res.status(400).json({ error: `Máximo ${MAX_DIAS_SERIE} días al crear una actividad por día` });
+      }
+      const serie = porDia ? (existing.serie || crypto.randomUUID()) : existing.serie;
+
       const [r] = await pool.query(`
         UPDATE actividades SET
           idcategorias = ?, nombre = ?, descripcion = ?,
           fecha_inicio = ?, fecha_fin = ?,
           hora_inicio = ?, hora_fin = ?,
-          adjuntos = ?, logo = ?, idlugares = ?
+          adjuntos = ?, logo = ?, idlugares = ?, serie = ?
         WHERE idactividades = ?
       `, [
         idcategorias || null,
         nombre.trim(),
         descripcion  || null,
         fecha_inicio,
-        fecha_fin,
+        porDia ? dias[0] : fecha_fin,
         hora_inicio  || null,
         hora_fin     || null,
         JSON.stringify(adjuntosFinales),
         logo,
         idlugares    || null,
+        serie,
         req.params.id,
       ]);
 
@@ -259,7 +346,17 @@ router.put('/:id', checkPermission('actividades', 'E'), (req, res, next) => {
         }
       }
 
-      res.json({ ok: true });
+      let ids = [];
+      if (porDia) {
+        const [gs] = await pool.query('SELECT idgrupos FROM actividades_grupos WHERE idactividades = ?', [req.params.id]);
+        ids = await crearCopiasPorDia({
+          datos: { idcategorias, nombre: nombre.trim(), descripcion, hora_inicio, hora_fin, idlugares },
+          fechas: dias.slice(1), logo, adjuntos: adjuntosFinales,
+          gruposIds: gs.map(g => g.idgrupos), serie, usuario: req.user.usuario,
+        });
+      }
+
+      res.json({ ok: true, ids });
     } catch (dbErr) { next(dbErr); }
   });
 });
@@ -288,6 +385,7 @@ router.get('/:id/asistentes', checkPermission('actividades_asistentes', 'S'), as
         ON aa.idpersonas = p.idpersonas AND aa.idactividades = ?
       LEFT JOIN grupos_personas gp ON gp.idpersonas = p.idpersonas
       LEFT JOIN grupos g           ON g.idgrupos = gp.idgrupos
+      WHERE p.fallecido = 0 OR aa.idactividades_asistentes IS NOT NULL
       GROUP BY p.idpersonas
       ORDER BY asiste DESC, p.primer_apellido, p.primer_nombre
     `, [idActividad]);
@@ -516,6 +614,7 @@ router.get('/faces/descriptors', checkPermission('actividades_asistentes', 'S'),
       LEFT JOIN personas_descriptores_faciales d ON d.idpersonas = p.idpersonas
       WHERE p.foto IS NOT NULL
         AND CONVERT(p.foto USING utf8) != ''
+        AND p.fallecido = 0
       ORDER BY p.primer_apellido, p.primer_nombre
     `);
 

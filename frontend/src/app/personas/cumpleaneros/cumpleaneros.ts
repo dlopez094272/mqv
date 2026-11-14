@@ -24,6 +24,11 @@ const GREEN       = '#40996D';
 const SIDEBAR_TOP = '#1d3a47';
 const SIDEBAR_BOT = '#2d1f3e';
 
+// Paleta solemne para esquelas
+const GRAY_DARK  = '#3a3a3a';
+const GRAY_MED   = '#6b6b6b';
+const GRAY_LIGHT = '#b0b0b0';
+
 @Component({
   selector: 'app-cumpleaneros',
   standalone: true,
@@ -125,7 +130,7 @@ export class CumpleaneroesComponent implements OnInit {
     this.msgWhatsapp.set('');
     this.cardCargando.set(true);
     try {
-      this.cardDataUrl.set(await this.generarTarjeta(c));
+      this.cardDataUrl.set(c.fallecido ? await this.generarEsquela(c) : await this.generarTarjeta(c));
     } catch {
       this.error.set('No se pudo generar la tarjeta');
     } finally {
@@ -382,6 +387,147 @@ export class CumpleaneroesComponent implements OnInit {
     return cv.toDataURL('image/png');
   }
 
+  // ── Canvas de esquela (en memoria) ────────────────────────────
+  private async generarEsquela(c: Cumpleanero): Promise<string> {
+    const W=800, H=1250;
+    const cv = document.createElement('canvas');
+    cv.width=W; cv.height=H;
+    const ctx = cv.getContext('2d')!;
+
+    // --- Fondo: degradado gris suave ---
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#f7f7f8'); bg.addColorStop(1,'#ececee');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+    // --- BANNER SUPERIOR (sin guirnalda festiva) ---
+    const bannerH = 220;
+    const bannerGrad = ctx.createLinearGradient(0,0,W,bannerH);
+    bannerGrad.addColorStop(0, SIDEBAR_TOP);
+    bannerGrad.addColorStop(1, SIDEBAR_BOT);
+    ctx.fillStyle=bannerGrad; ctx.fillRect(0,0,W,bannerH);
+
+    // Logo de la iglesia
+    let logoH = 0;
+    try {
+      const logo = await this.loadImage('/logo.png');
+      const lw=170, lh=Math.round(170*(logo.naturalHeight/logo.naturalWidth||1));
+      ctx.drawImage(logo, W/2-lw/2, 26, lw, lh);
+      logoH = lh;
+    } catch { logoH = 0; }
+
+    const nameY = 26 + logoH + 14;
+    ctx.fillStyle=GRAY_LIGHT; ctx.font='bold 15px "Nunito",Arial'; ctx.textAlign='center';
+    ctx.fillText('IGLESIA DEL NAZARENO', W/2, nameY);
+    ctx.fillStyle='#c9c2d6'; ctx.font='bold 18px "Nunito",Arial';
+    ctx.fillText('MÁS QUE VENCEDORES', W/2, nameY+22);
+
+    // Línea decorativa debajo del banner
+    ctx.strokeStyle=GRAY_LIGHT; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(0,bannerH); ctx.lineTo(W,bannerH); ctx.stroke();
+
+    // --- "EN MEMORIA DE" ---
+    ctx.fillStyle=GRAY_MED; ctx.font='bold 15px Arial'; ctx.letterSpacing='4px'; ctx.textAlign='center';
+    ctx.fillText('EN MEMORIA DE', W/2, bannerH+50); ctx.letterSpacing='0px';
+
+    // Paloma
+    ctx.font='60px serif';
+    ctx.fillText('🕊️', W/2, bannerH+120);
+
+    // Separador decorativo
+    const sepY = bannerH + 148;
+    ctx.strokeStyle=GRAY_LIGHT; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(160,sepY); ctx.lineTo(W-160,sepY); ctx.stroke();
+
+    // --- NOMBRE COMPLETO ---
+    ctx.font='bold 34px "Nunito",Arial'; ctx.fillStyle=GRAY_DARK; ctx.textAlign='center';
+    const nameRowY = sepY + 48;
+    const nombreLines = this.wrapText(ctx, c.nombre_completo, W-140);
+    let ny = nameRowY;
+    for (const line of nombreLines) { ctx.fillText(line, W/2, ny); ny += 42; }
+
+    // --- FOTO CIRCULAR (borde gris, sin globos/confetti) ---
+    const photoX=W/2, photoY=ny+150, photoR=140;
+
+    ctx.strokeStyle=GRAY_LIGHT; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.arc(photoX,photoY,photoR+12,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.arc(photoX,photoY,photoR+4,0,Math.PI*2); ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(photoX,photoY,photoR,0,Math.PI*2); ctx.clip();
+    if (c.foto) {
+      try {
+        const img = await this.loadImage(this.svc.fotoUrl(c.foto));
+        ctx.filter = 'grayscale(60%)';
+        ctx.drawImage(img, photoX-photoR, photoY-photoR, photoR*2, photoR*2);
+        ctx.filter = 'none';
+      } catch {
+        this.drawAvatarFallback(ctx, photoX, photoY, photoR, c.nombre_completo);
+      }
+    } else {
+      this.drawAvatarFallback(ctx, photoX, photoY, photoR, c.nombre_completo);
+    }
+    ctx.restore();
+
+    // --- FECHAS ---
+    const fechasY = photoY + photoR + 50;
+    ctx.font='16px "Nunito",Arial'; ctx.fillStyle=GRAY_MED; ctx.textAlign='center';
+    const fNac = c.fechanacimiento ? new Date(String(c.fechanacimiento).slice(0,10)+'T00:00:00').toLocaleDateString('es-GT',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+    const fFall = c.fecha_fallecimiento ? new Date(String(c.fecha_fallecimiento).slice(0,10)+'T00:00:00').toLocaleDateString('es-GT',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+    ctx.fillText(`${fNac}  ✝  ${fFall}`, W/2, fechasY);
+
+    // --- VERSÍCULO DE CONSUELO ---
+    const versiculo = this.VERSICULOS_CONSUELO[Math.floor(Math.random() * this.VERSICULOS_CONSUELO.length)];
+    const verseX = 60, verseW = W - 120;
+    const verseStartY = fechasY + 30;
+
+    ctx.font = 'italic 19px Georgia,"Times New Roman",serif';
+    const verseLines = this.wrapText(ctx, versiculo.texto, verseW - 48);
+    const verseLineH = 28;
+    const verseBoxH = 32 + verseLines.length * verseLineH + 38;
+
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = GRAY_DARK;
+    this.roundRect(ctx, verseX, verseStartY, verseW, verseBoxH, 14);
+    ctx.fill();
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = GRAY_LIGHT;
+    ctx.lineWidth = 1.5;
+    this.roundRect(ctx, verseX, verseStartY, verseW, verseBoxH, 14);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = GRAY_MED; ctx.font = '17px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('✝', W/2, verseStartY + 20);
+
+    ctx.font = 'italic 19px Georgia,"Times New Roman",serif';
+    ctx.fillStyle = '#4a4a4a';
+    ctx.textAlign = 'center';
+    let verseTextY = verseStartY + 44;
+    for (const vLine of verseLines) {
+      ctx.fillText(vLine, W/2, verseTextY);
+      verseTextY += verseLineH;
+    }
+
+    ctx.font = 'bold italic 15px "Nunito",Arial';
+    ctx.fillStyle = GRAY_DARK;
+    ctx.fillText(versiculo.ref, W/2, verseTextY + 14);
+
+    // --- BANNER PIE ---
+    const footerY = H - 60;
+    const footerGrad = ctx.createLinearGradient(0,footerY,W,H);
+    footerGrad.addColorStop(0, SIDEBAR_TOP); footerGrad.addColorStop(1, SIDEBAR_BOT);
+    ctx.fillStyle=footerGrad; ctx.fillRect(0,footerY,W,60);
+
+    ctx.fillStyle='rgba(255,255,255,.75)'; ctx.font='13px "Nunito",Arial'; ctx.textAlign='center';
+    ctx.fillText('Su memoria vive en nuestros corazones 🕊️', W/2, footerY+24);
+    ctx.fillStyle=GRAY_LIGHT; ctx.font='11px Arial';
+    ctx.fillText('Iglesia del Nazareno · Más que Vencedores', W/2, footerY+44);
+
+    return cv.toDataURL('image/png');
+  }
+
   private drawAvatarFallback(ctx: CanvasRenderingContext2D, x:number, y:number, r:number, nombre:string) {
     const grad = ctx.createLinearGradient(x-r,y-r,x+r,y+r);
     grad.addColorStop(0,BLUE); grad.addColorStop(1,PURPLE);
@@ -511,13 +657,27 @@ export class CumpleaneroesComponent implements OnInit {
     { texto: '"El joven que sigue la justicia y la misericordia hallará vida, justicia y honra."', ref: '— Proverbios 21:21' },
   ];
 
+  private readonly VERSICULOS_CONSUELO = [
+    { texto: '"El Señor es mi pastor; nada me faltará... Aunque ande en valle de sombra de muerte, no temeré mal alguno, porque tú estarás conmigo."', ref: '— Salmos 23:1,4' },
+    { texto: '"Enjugará Dios toda lágrima de los ojos de ellos; y ya no habrá muerte, ni habrá más llanto, ni clamor, ni dolor."', ref: '— Apocalipsis 21:4' },
+    { texto: '"Confiamos, pues, y quisiéramos más bien estar ausentes del cuerpo, y presentes al Señor."', ref: '— 2 Corintios 5:8' },
+    { texto: '"Porque para mí el vivir es Cristo, y el morir es ganancia."', ref: '— Filipenses 1:21' },
+    { texto: '"Yo soy la resurrección y la vida; el que cree en mí, aunque esté muerto, vivirá."', ref: '— Juan 11:25' },
+    { texto: '"Bienaventurados los muertos que mueren en el Señor de aquí en adelante... descansarán de sus trabajos."', ref: '— Apocalipsis 14:13' },
+    { texto: '"Preciosa es a los ojos de Jehová la muerte de sus santos."', ref: '— Salmos 116:15' },
+    { texto: '"No quiero, hermanos, que ignoréis acerca de los que duermen, para que no os entristezcáis como los otros que no tienen esperanza."', ref: '— 1 Tesalonicenses 4:13' },
+    { texto: '"En la casa de mi Padre muchas moradas hay... voy, pues, a preparar lugar para vosotros."', ref: '— Juan 14:2' },
+    { texto: '"El Señor está cerca de los quebrantados de corazón; y salva a los contritos de espíritu."', ref: '— Salmos 34:18' },
+  ];
+
   // ── Compartir ─────────────────────────────────────────────────
   descargarTarjeta() {
     const url = this.cardDataUrl();
     if (!url || !this.personaSelec) return;
     const a = document.createElement('a');
     a.href = url;
-    a.download = `feliz-cumpleanios-${this.personaSelec.nombre_completo.replace(/\s+/g,'_')}.png`;
+    const prefijo = this.personaSelec.fallecido ? 'esquela' : 'feliz-cumpleanios';
+    a.download = `${prefijo}-${this.personaSelec.nombre_completo.replace(/\s+/g,'_')}.png`;
     a.click();
   }
 
@@ -535,7 +695,9 @@ export class CumpleaneroesComponent implements OnInit {
       if (navigator.share && (navigator as any).canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: `🎂 Feliz Cumpleaños ${this.personaSelec.nombre_completo}`,
+          title: this.personaSelec.fallecido
+            ? `🕊️ En memoria de ${this.personaSelec.nombre_completo}`
+            : `🎂 Feliz Cumpleaños ${this.personaSelec.nombre_completo}`,
         });
         return;
       }

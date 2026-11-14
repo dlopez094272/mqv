@@ -104,6 +104,7 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   }
 
   modelo: Partial<PersonaDetalle> = { sexo: 'M', estado_civil: 'Solter@' };
+  readonly hoyStr = hoyLocal();
 
   // Modo Mi Perfil (asistente)
   modoPerfil = false;
@@ -145,8 +146,8 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
             idgrupos: g.idgrupos, idgrupos_personas: g.idgrupos_personas, grupo: g.grupo,
           }));
           if (p.foto) this.fotoPreview.set(this.svc.fotoUrl(p.foto));
-          if (this.modelo.iddepartamentos_nacimiento) this.onDeptNacChange();
-          if (this.modelo.iddepartamentos_domicilio)  this.onDeptDomChange();
+          if (this.modelo.iddepartamentos_nacimiento) this.cargarMunicipiosNac(false);
+          if (this.modelo.iddepartamentos_domicilio)  this.cargarMunicipiosDom(false);
           this.resolverChips();
           this.cargando.set(false);
         },
@@ -288,19 +289,24 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  onDeptNacChange() {
-    this.modelo.idmunicipios_nacimiento = undefined as any;
+  // resetSeleccion=false se usa al cargar una persona existente, para no perder
+  // el municipio ya guardado mientras se recarga la lista de municipios del depto.
+  private cargarMunicipiosNac(resetSeleccion: boolean) {
+    if (resetSeleccion) this.modelo.idmunicipios_nacimiento = undefined as any;
     if (!this.modelo.iddepartamentos_nacimiento) { this.municipiosNac = []; return; }
     this.http.get<any[]>(`/api/catalogos/lookup/municipios?dept=${this.modelo.iddepartamentos_nacimiento}`)
       .subscribe({ next: d => this.municipiosNac = d });
   }
 
-  onDeptDomChange() {
-    this.modelo.idmunicipios_domicilio = undefined as any;
+  private cargarMunicipiosDom(resetSeleccion: boolean) {
+    if (resetSeleccion) this.modelo.idmunicipios_domicilio = undefined as any;
     if (!this.modelo.iddepartamentos_domicilio) { this.municipiosDom = []; return; }
     this.http.get<any[]>(`/api/catalogos/lookup/municipios?dept=${this.modelo.iddepartamentos_domicilio}`)
       .subscribe({ next: d => this.municipiosDom = d });
   }
+
+  onDeptNacChange() { this.cargarMunicipiosNac(true); }
+  onDeptDomChange() { this.cargarMunicipiosDom(true); }
 
   // ── Foto — base64 como signal para detectar cambios async ────
   onFotoSeleccionada(event: Event) {
@@ -390,6 +396,12 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   }
   quitarGrupo(idgrupos: number) { this.gruposPersona = this.gruposPersona.filter(g => g.idgrupos!==idgrupos); }
 
+  // ── Fallecido ────────────────────────────────────────────────
+  onFallecidoChange(checked: boolean) {
+    this.modelo.fallecido = checked;
+    if (!checked) this.modelo.fecha_fallecimiento = null;
+  }
+
   private toDateStr(val: any): string {
     if (!val) return '';
     const s = val instanceof Date ? val.toISOString() : String(val);
@@ -397,7 +409,7 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
   }
 
   private normalizarFechas(m: any) {
-    for (const f of ['fechanacimiento','fecha_inicio_asistencia','fechaconversion','fechabautiso']) {
+    for (const f of ['fechanacimiento','fecha_inicio_asistencia','fechaconversion','fechabautiso','fecha_fallecimiento']) {
       if (m[f]) m[f] = this.toDateStr(m[f]);
     }
   }
@@ -411,8 +423,8 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
         this.normalizarFechas(this.modelo);
         this.gruposPersona = (p.grupos||[]).map(g => ({ idgrupos:g.idgrupos, idgrupos_personas:g.idgrupos_personas, grupo:g.grupo }));
         if (p.foto) this.fotoPreview.set(this.svc.fotoUrl(p.foto));
-        if (this.modelo.iddepartamentos_nacimiento) this.onDeptNacChange();
-        if (this.modelo.iddepartamentos_domicilio)  this.onDeptDomChange();
+        if (this.modelo.iddepartamentos_nacimiento) this.cargarMunicipiosNac(false);
+        if (this.modelo.iddepartamentos_domicilio)  this.cargarMunicipiosDom(false);
         this.resolverChips();
         this.cargando.set(false);
         this.cargarCrecimiento();
@@ -466,6 +478,9 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
     if (!this.esEdicion && !this.modoPerfil && this.gruposPersona.length === 0) {
       this.error.set('Debe asignar al menos un grupo a la persona'); this.tabActivo.set('grupos'); return;
     }
+    if (this.modelo.fallecido && !this.modelo.fecha_fallecimiento) {
+      this.error.set('La fecha de fallecimiento es requerida'); this.tabActivo.set('personales'); return;
+    }
 
     this.guardando.set(true);
 
@@ -512,6 +527,8 @@ export class PersonaFormComponent implements OnInit, OnDestroy {
       direcciontrabajo: this.modelo.direcciontrabajo || null,
       puesto_trabajo: this.modelo.puesto_trabajo || null,
       experiencia_laboral: this.idsToCsv(this.expLabSelec.map(x=>x.id)) || null,
+      fallecido: !!this.modelo.fallecido,
+      fecha_fallecimiento: this.modelo.fallecido ? this.modelo.fecha_fallecimiento : null,
       grupos: this.gruposPersona.map(g => g.idgrupos),
     };
 

@@ -1,11 +1,10 @@
 <div class="page-header">
-  <h2>{{ modoPerfil ? '👤 Mi Perfil' : (esEdicion ? '✏️ Editar Persona' : '➕ Nueva Persona') }}</h2>
+  <h2>
+    {{ modoPerfil ? '👤 Mi Perfil' : (esEdicion ? '✏️ Editar Persona' : '➕ Nueva Persona') }}
+    @if (modelo.fallecido) { <span class="badge-fallecido">🕊️ Fallecido</span> }
+  </h2>
   <div style="display:flex;gap:8px;">
     <button class="btn btn-outline btn-sm" (click)="cancelar()">Cancelar</button>
-    <button class="btn btn-primary" style="width:auto;" (click)="guardar()" [disabled]="guardando()">
-      @if (guardando()) { <span class="spinner"></span> }
-      {{ guardando() ? 'Guardando...' : 'Guardar' }}
-    </button>
   </div>
 </div>
 
@@ -167,6 +166,29 @@
 
         </div>
       </div>
+
+      @if (!modoPerfil) {
+        <div class="fallecido-section">
+          <label class="fallecido-check">
+            <input type="checkbox" [ngModel]="modelo.fallecido"
+                   (ngModelChange)="onFallecidoChange($event)" />
+            🕊️ Marcar como fallecido
+          </label>
+          @if (modelo.fallecido) {
+            <div class="form-row" style="margin-top:10px;">
+              <div class="form-group">
+                <label>Fecha de Fallecimiento <span class="req">*</span></label>
+                <input type="date" [(ngModel)]="modelo.fecha_fallecimiento" [max]="hoyStr" />
+              </div>
+            </div>
+            <div class="alert alert-info" style="margin-top:8px;">
+              Esta persona dejará de aparecer como disponible para tomar asistencia y en el
+              reporte de inasistentes. Su registro se conserva y seguirá apareciendo en el
+              calendario de cumpleañeros con un formato de esquela en su memoria.
+            </div>
+          }
+        </div>
+      }
     </div>
   }
 

@@ -35,6 +35,7 @@ const CAMPOS_LISTA = `
   p.segundo_apellido, p.apellidocasada,
   p.fechanacimiento, p.sexo, p.estado_civil,
   p.celular, p.email, p.foto,
+  p.fallecido, p.fecha_fallecimiento,
   TIMESTAMPDIFF(YEAR, p.fechanacimiento, CURDATE()) AS edad,
   TRIM(CONCAT_WS(' ',
     p.primer_nombre, NULLIF(p.segundo_nombre,''),
@@ -158,11 +159,15 @@ async function crear(req, res, next) {
       iddepartamentos_domicilio, idmunicipios_domicilio,
       zona_domicilio, direccion_domicilio, longitud, latitud,
       idprofesiones, lugartrabajo, direcciontrabajo, puesto_trabajo, experiencia_laboral,
+      fallecido, fecha_fallecimiento,
       grupos,
     } = req.body;
 
     if (!primer_nombre || !primer_apellido || !fechanacimiento || !sexo || !estado_civil) {
       return res.status(400).json({ error: 'Primer nombre, primer apellido, fecha de nacimiento, sexo y estado civil son requeridos' });
+    }
+    if (fallecido && !fecha_fallecimiento) {
+      return res.status(400).json({ error: 'La fecha de fallecimiento es requerida al marcar a la persona como fallecida' });
     }
 
     await conn.beginTransaction();
@@ -182,8 +187,9 @@ async function crear(req, res, next) {
         iddepartamentos_domicilio, idmunicipios_domicilio,
         zona_domicilio, direccion_domicilio, longitud, latitud,
         idprofesiones, lugartrabajo, direcciontrabajo, puesto_trabajo, experiencia_laboral,
+        fallecido, fecha_fallecimiento,
         usuario, fechacreacion
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
       [
         primer_nombre, segundo_nombre||null, primer_apellido, segundo_apellido||null, apellidocasada||null,
         fechanacimiento, lugarnacimiento||null, idnacionalidades||null, sexo, estado_civil,
@@ -200,6 +206,7 @@ async function crear(req, res, next) {
         longitud||null, latitud||null,
         idprofesiones||null, lugartrabajo||null, direcciontrabajo||null,
         puesto_trabajo||null, experiencia_laboral||null,
+        fallecido ? 1 : 0, fallecido ? fecha_fallecimiento : null,
         req.user?.usuario||null,
       ]
     );
@@ -248,11 +255,15 @@ async function actualizar(req, res, next) {
       iddepartamentos_domicilio, idmunicipios_domicilio,
       zona_domicilio, direccion_domicilio, longitud, latitud,
       idprofesiones, lugartrabajo, direcciontrabajo, puesto_trabajo, experiencia_laboral,
+      fallecido, fecha_fallecimiento,
       grupos,
     } = req.body;
 
     if (!primer_nombre || !primer_apellido || !fechanacimiento || !sexo || !estado_civil) {
       return res.status(400).json({ error: 'Campos requeridos faltantes' });
+    }
+    if (fallecido && !fecha_fallecimiento) {
+      return res.status(400).json({ error: 'La fecha de fallecimiento es requerida al marcar a la persona como fallecida' });
     }
 
     const [[existe]] = await conn.query('SELECT idpersonas, foto AS fotoActual FROM personas WHERE idpersonas = ?', [id]);
@@ -286,7 +297,7 @@ async function actualizar(req, res, next) {
         iddepartamentos_domicilio=?, idmunicipios_domicilio=?,
         zona_domicilio=?, direccion_domicilio=?, longitud=?, latitud=?,
         idprofesiones=?, lugartrabajo=?, direcciontrabajo=?, puesto_trabajo=?,
-        experiencia_laboral=?, usuario=?
+        experiencia_laboral=?, fallecido=?, fecha_fallecimiento=?, usuario=?
       WHERE idpersonas=?`,
       [
         primer_nombre, segundo_nombre||null, primer_apellido, segundo_apellido||null, apellidocasada||null,
@@ -304,6 +315,7 @@ async function actualizar(req, res, next) {
         longitud||null, latitud||null,
         idprofesiones||null, lugartrabajo||null, direcciontrabajo||null,
         puesto_trabajo||null, experiencia_laboral||null,
+        fallecido ? 1 : 0, fallecido ? fecha_fallecimiento : null,
         req.user?.usuario||null, id,
       ]
     );
@@ -346,7 +358,7 @@ async function cumpleaneros(req, res, next) {
         fechanacimiento,
         MONTH(fechanacimiento) AS mes_nac, DAY(fechanacimiento) AS dia_nac,
         (YEAR(CURDATE()) - YEAR(fechanacimiento)) AS edad,
-        sexo, celular, foto
+        sexo, celular, foto, fallecido, fecha_fallecimiento
       FROM personas
       WHERE MONTH(fechanacimiento) = ?
       ORDER BY DAY(fechanacimiento), primer_apellido`, [mesNum]);

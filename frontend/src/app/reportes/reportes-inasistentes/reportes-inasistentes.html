@@ -1,0 +1,132 @@
+<!-- ── Cabecera ─────────────────────────────────────────────── -->
+<div class="page-header no-print">
+  <h2>📵 Reporte de Inasistentes</h2>
+  @if (generado() && personas().length > 0) {
+    <div class="btns-export">
+      <button class="btn btn-outline" style="width:auto" (click)="imprimir()">
+        🖨️ Imprimir
+      </button>
+      <button class="btn btn-primary" style="width:auto" (click)="descargarPDF()" [disabled]="generandoPdf()">
+        {{ generandoPdf() ? 'Generando...' : '📄 Descargar PDF' }}
+      </button>
+    </div>
+  }
+</div>
+
+<!-- ── Filtros ───────────────────────────────────────────────── -->
+<div class="filtros-card no-print">
+  <div class="filtros-row">
+    <div class="form-group">
+      <label>Grupo</label>
+      <select class="form-control" [(ngModel)]="filtro.idgrupo">
+        <option [ngValue]="null">Todas las personas</option>
+        @for (g of gruposDisponibles(); track g.idgrupos) {
+          <option [ngValue]="g.idgrupos">{{ g.grupo }}</option>
+        }
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Categoría de actividad</label>
+      <select class="form-control" [(ngModel)]="filtro.idcategoria">
+        <option [ngValue]="null">Todas las actividades</option>
+        @for (c of categorias(); track c.id) {
+          <option [ngValue]="c.id">{{ c.nombre }}</option>
+        }
+      </select>
+    </div>
+    <button class="btn btn-primary" style="width:auto;align-self:flex-end"
+            (click)="generar()" [disabled]="cargando()">
+      {{ cargando() ? 'Generando...' : '🔍 Generar reporte' }}
+    </button>
+  </div>
+  <div class="filtros-row" style="margin-top:12px;">
+    <label class="check-inline">
+      <input type="checkbox" [(ngModel)]="filtro.incluirNuncaAsistieron" />
+      ¿Deseas incluir a las personas que nunca han asistido?
+    </label>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="alert alert-error no-print">{{ error() }}</div>
+}
+
+@if (cargando()) {
+  <div class="loading-state no-print">Generando reporte...</div>
+}
+
+@if (generado() && !cargando()) {
+<div id="reporte-contenido">
+
+  <!-- Encabezado solo para impresión -->
+  <div class="print-header print-only">
+    <img src="/logo.png" class="print-logo" alt="MQV"
+         onerror="this.style.display='none'" />
+    <div class="print-titulo">
+      <strong>Iglesia del Nazareno · Más que Vencedores</strong>
+      <h2>Reporte de Inasistentes</h2>
+      <span class="print-rango">
+        {{ nombreGrupoSeleccionado() || 'Todas las personas' }}
+        @if (nombreCategoriaSeleccionada()) { &nbsp;·&nbsp; {{ nombreCategoriaSeleccionada() }} }
+        &nbsp;·&nbsp; {{ totalPersonas() }} persona(s)
+      </span>
+    </div>
+  </div>
+
+  @if (personas().length === 0) {
+    <div class="empty-state no-print">
+      <p>No se encontraron personas para los filtros seleccionados.</p>
+    </div>
+  } @else {
+
+    <div class="resumen-bar no-print">
+      <span><strong>{{ totalPersonas() }}</strong> persona(s)</span>
+      <span><strong>{{ nuncaAsistieron() }}</strong> nunca han asistido</span>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="foto-col"></th>
+            <th>Nombre</th>
+            <th>Grupos</th>
+            <th>Tiempo sin asistir</th>
+            <th>Última asistencia</th>
+            <th>Teléfono</th>
+            <th>Correo</th>
+            <th>Dirección</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of personas(); track p.idpersonas) {
+            <tr [class.fila-critica]="!p.ultima_asistencia">
+              <td class="foto-col">
+                @if (p.foto) {
+                  <img [src]="fotoUrl(p.foto)" class="avatar-foto" [alt]="p.nombre_completo"
+                       onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                  <div class="avatar" style="display:none">{{ p.nombre_completo[0] }}</div>
+                } @else {
+                  <div class="avatar">{{ p.nombre_completo[0] }}</div>
+                }
+              </td>
+              <td><strong>{{ p.nombre_completo }}</strong></td>
+              <td>{{ p.grupos || '—' }}</td>
+              <td>
+                <span class="tiempo-badge" [class.critico]="!p.ultima_asistencia">
+                  {{ tiempoSinAsistir(p) }}
+                </span>
+              </td>
+              <td>{{ formatFecha(p.ultima_asistencia) }}</td>
+              <td>{{ p.celular || p.telefono || '—' }}</td>
+              <td>{{ p.email || '—' }}</td>
+              <td>{{ direccionCompleta(p) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+  }
+</div><!-- /reporte-contenido -->
+}

@@ -1,0 +1,84 @@
+.fr-header { flex-wrap: wrap; gap: 12px; }
+.fr-header-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.fr-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.fr-cargando { padding: 40px; text-align: center; color: var(--text-muted); }
+.fr-muted { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+
+.fr-banner {
+  display: flex; align-items: center; gap: 16px; background: var(--grad-brand); color: #fff;
+  border-radius: var(--radius); padding: 14px 18px; margin-bottom: 18px; box-shadow: var(--shadow);
+}
+.fr-logo { width: 64px; height: 64px; object-fit: contain; background: #fff; border-radius: 10px; padding: 4px; }
+.fr-banner-info { flex: 1; min-width: 0; }
+.fr-titulo { font-weight: 800; font-size: 18px; }
+.fr-act    { opacity: .85; font-size: 13px; }
+.fr-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.fr-badge  { background: rgba(255,255,255,.2); border-radius: 12px; padding: 2px 10px; font-size: 12px; font-weight: 700;
+  &--off { background: rgba(0,0,0,.25); }
+}
+.fr-total { text-align: center; }
+.fr-total-num { font-size: 30px; font-weight: 800; line-height: 1; }
+.fr-total-lbl { font-size: 12px; opacity: .85; }
+
+.fr-tabla {
+  overflow-x: auto;
+  table { min-width: 700px; }
+  th { white-space: nowrap; }
+  td { vertical-align: top; }
+}
+.fr-num   { color: var(--text-muted); font-size: 13px; }
+.fr-fecha { white-space: nowrap; font-size: 13px; }
+.fr-celda { white-space: pre-line; }
+.fr-vacio-td { text-align: center; color: var(--text-muted); padding: 36px !important; }
+
+.fr-persona { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+.fr-avatar {
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  &--inicial { display: flex; align-items: center; justify-content: center; background: var(--grad-brand); color: #fff; font-weight: 800; }
+}
+.fr-persona-nombre { font-weight: 700; }
+.fr-tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 1px 8px; margin-right: 6px;
+  &--nueva { background: #fff3e0; color: #b25b00; }
+  &--reg   { background: #e8f5f0; color: var(--success); }
+}
+.fr-link {
+  border: none; background: none; color: var(--blue); font-weight: 700; cursor: pointer; font-family: inherit;
+  font-size: 12px; padding: 0;
+  &:disabled { opacity: .6; cursor: default; }
+}
+.fr-eliminar { border: none; background: none; cursor: pointer; opacity: .6; &:hover { opacity: 1; } }
+
+.fr-paginacion { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+
+.fr-resumen {
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 16px 18px; margin-bottom: 12px;
+}
+.fr-resumen-titulo { font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+.fr-barra-fila { display: grid; grid-template-columns: minmax(100px, 220px) 1fr 90px; gap: 10px; align-items: center; margin-bottom: 6px; }
+.fr-barra-lbl { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-barra { background: var(--bg); border-radius: 6px; height: 14px; overflow: hidden; }
+.fr-barra-fill { background: var(--grad-brand); height: 100%; border-radius: 6px; min-width: 2px; }
+.fr-barra-num { font-size: 13px; font-weight: 700; text-align: right; }
+.fr-vacio { padding: 30px; text-align: center; color: var(--text-muted); }
+
+@media (max-width: 600px) {
+  .fr-barra-fila { grid-template-columns: 1fr 70px; .fr-barra { grid-column: 1 / -1; grid-row: 2; } }
+}
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px; margin-top: 14px; padding: 10px 4px;
+}
+.pagination-info { font-size: 13px; color: var(--text-muted); }
+.pagination-controls { display: flex; align-items: center; gap: 4px; }
+.btn-page {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  border: 1.5px solid var(--border); border-radius: 6px;
+  background: var(--card); color: var(--text);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  &:hover:not(:disabled):not(.active) { border-color: var(--primary); color: var(--primary); }
+  &.active { background: var(--primary); border-color: var(--primary); color: #fff; cursor: default; }
+  &:disabled { opacity: .35; cursor: not-allowed; }
+}
+.page-dots { font-size: 16px; color: var(--text-muted); padding: 0 4px; }

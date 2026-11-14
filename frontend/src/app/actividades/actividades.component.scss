@@ -1625,3 +1625,90 @@ tfoot td {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ── Ficha: formularios de inscripción ───────────────────────── */
+.form-act-intro { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+.form-act-item {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  border: 1px solid var(--border); border-left: 4px solid var(--purple-light);
+  border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; background: #fff;
+  &--inactivo { border-left-color: var(--gray-light); background: #fafafa; }
+}
+.form-act-info { flex: 1; min-width: 220px; }
+.form-act-titulo { font-weight: 800; color: var(--primary); }
+.form-act-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+.form-act-tag {
+  border-radius: 10px; padding: 1px 8px; font-weight: 700; background: #fff8e1; color: #8a5a00;
+  &--pub { background: #e8f5f0; color: var(--success); }
+  &--off { background: var(--bg); color: var(--text-muted); }
+}
+.form-act-url { font-size: 12px; word-break: break-all; }
+.form-act-acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+.form-act-del:hover:not(:disabled) { background: var(--danger) !important; border-color: var(--danger) !important; }
+
+
+/* ── Gestión de actividad a página completa ──────────────────── */
+.gestion-topbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.gestion-topbar-info { font-size: 13px; color: var(--text-muted); }
+
+.gestion-pagina {
+  max-width: 1200px; margin: 0 auto;
+  background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+
+  .gestion-header { border-radius: 14px 14px 0 0; align-items: center; gap: 14px; }
+  .asistencia-header-info { flex: 1; min-width: 0; }
+  .gestion-tabs {
+    position: sticky; top: 0; z-index: 6; background: var(--card); padding: 10px 28px 0;
+  }
+  .gestion-tab { font-size: 14px; padding: 12px 16px; }
+  .gestion-body { overflow: visible; padding: 24px 28px; }
+  .gestion-footer {
+    position: sticky; bottom: 0; z-index: 6; background: var(--card);
+    border-radius: 0 0 14px 14px; box-shadow: 0 -4px 14px rgba(0,0,0,.05); padding: 14px 28px;
+  }
+  .asistencia-body { overflow: visible; }
+}
+.gestion-header-logo {
+  width: 52px; height: 52px; object-fit: contain; background: #fff; border-radius: 10px; padding: 3px; flex-shrink: 0;
+}
+
+/* Ficha "Datos" en dos columnas */
+.datos-grid {
+  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 32px;
+}
+.datos-col { min-width: 0; }
+.datos-seccion {
+  font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px;
+  color: var(--primary); border-bottom: 2px solid var(--border);
+  padding-bottom: 6px; margin: 4px 0 16px;
+  &:not(:first-child) { margin-top: 26px; }
+}
+
+/* Actividad resaltada al regresar al calendario */
+.event-chip--resaltada {
+  outline: 3px solid var(--warning); outline-offset: 1px;
+  animation: pulsoResaltada 1s ease-in-out 4;
+}
+@keyframes pulsoResaltada {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,127,23,.6); }
+  50%      { box-shadow: 0 0 0 6px rgba(245,127,23,0); }
+}
+
+@media (max-width: 900px) {
+  .datos-grid { grid-template-columns: 1fr; gap: 0; }
+  .datos-col + .datos-col .datos-seccion:first-child { margin-top: 26px; }
+}
+@media (max-width: 640px) {
+  .gestion-pagina {
+    border-radius: 10px;
+    .gestion-header { border-radius: 10px 10px 0 0; padding: 14px 16px; }
+    .gestion-tabs { padding: 6px 10px 0; }
+    .gestion-body { padding: 16px; }
+    .gestion-footer { padding: 12px 16px; border-radius: 0 0 10px 10px; }
+  }
+  .gestion-header-logo { width: 40px; height: 40px; }
+}

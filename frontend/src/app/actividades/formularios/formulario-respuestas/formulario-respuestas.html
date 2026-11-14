@@ -1,0 +1,153 @@
+<div class="fr-page">
+  <div class="page-header fr-header">
+    <div class="fr-header-left">
+      <button class="btn-back" (click)="volver()">← Actividades</button>
+      <h2>Respuestas del formulario</h2>
+    </div>
+    @if (data(); as d) {
+      <div class="fr-header-actions">
+        <button class="btn btn-outline btn-sm" (click)="mostrarCompartir.set(true)">🔗 Compartir / QR</button>
+        @if (permisos.puede('actividades', 'E')) {
+          <button class="btn btn-outline btn-sm" [routerLink]="['/actividades/formularios', id, 'editar']">✏️ Editar</button>
+        }
+        <button class="btn btn-success btn-sm" (click)="exportarExcel()" [disabled]="!d.respuestas.length">
+          ⬇ Exportar a Excel
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+  @if (exito()) { <div class="alert alert-success">{{ exito() }}</div> }
+
+  @if (cargando() && !data()) {
+    <div class="fr-cargando">Cargando…</div>
+  } @else if (data(); as d) {
+    <div class="fr-banner">
+      @if (d.formulario.actividad_logo) {
+        <img [src]="urlLogo(d.formulario.actividad_logo)" class="fr-logo" alt="" />
+      }
+      <div class="fr-banner-info">
+        <div class="fr-titulo">{{ d.formulario.titulo }}</div>
+        <div class="fr-act">{{ d.formulario.actividad_nombre }}</div>
+        <div class="fr-badges">
+          <span class="fr-badge">{{ d.formulario.publico ? '🌐 Público' : '🔒 Privado' }}</span>
+          <span class="fr-badge" [class.fr-badge--off]="!d.formulario.activo">
+            {{ d.formulario.activo ? '● Recibiendo respuestas' : '○ Cerrado' }}
+          </span>
+        </div>
+      </div>
+      <div class="fr-total">
+        <div class="fr-total-num">{{ d.respuestas.length }}</div>
+        <div class="fr-total-lbl">respuesta(s)</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab" [class.active]="vista() === 'tabla'"   (click)="vista.set('tabla')">📋 Respuestas</button>
+      <button class="tab" [class.active]="vista() === 'resumen'" (click)="vista.set('resumen')">📊 Resumen</button>
+    </div>
+
+    @if (vista() === 'resumen') {
+      @for (r of resumen(); track r.q.clave) {
+        <div class="fr-resumen">
+          <div class="fr-resumen-titulo">{{ r.q.etiqueta }} <span class="fr-muted">· {{ r.total }} respuesta(s)</span></div>
+          @for (b of r.barras; track b.etiqueta) {
+            <div class="fr-barra-fila">
+              <div class="fr-barra-lbl" [title]="b.etiqueta">{{ b.etiqueta }}</div>
+              <div class="fr-barra"><div class="fr-barra-fill" [style.width.%]="b.pct"></div></div>
+              <div class="fr-barra-num">{{ b.cantidad }} <span class="fr-muted">({{ b.pct }}%)</span></div>
+            </div>
+          }
+        </div>
+      } @empty {
+        <div class="fr-vacio">Este formulario no tiene preguntas de opciones para resumir.</div>
+      }
+    } @else {
+      <div class="search-bar">
+        <input class="input-search" type="search" placeholder="Buscar en las respuestas…"
+               [ngModel]="busqueda()" (ngModelChange)="buscar($event)" />
+      </div>
+
+      <div class="table-container fr-tabla">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              @for (q of columnas(); track q.clave) { <th>{{ q.etiqueta }}</th> }
+              @if (permisos.puede('actividades', 'E')) { <th></th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of paginadas(); track r.id; let i = $index) {
+              <tr>
+                <td class="fr-num">{{ (pagina() - 1) * LIMITE + i + 1 }}</td>
+                <td class="fr-fecha">
+                  {{ formatFechaHora(r.created_at) }}
+                  @if (r.usuario) { <div class="fr-muted">{{ r.usuario }}</div> }
+                </td>
+                @for (q of columnas(); track q.clave) {
+                  <td>
+                    @if (q.tipo === 'persona') {
+                      @let v = valor(q, r);
+                      @if (v) {
+                        <div class="fr-persona">
+                          @if (fotoPersona(v); as foto) {
+                            <img [src]="urlFoto(foto)" class="fr-avatar" alt="" loading="lazy" />
+                          } @else {
+                            <div class="fr-avatar fr-avatar--inicial">{{ inicial(texto(q, r)) }}</div>
+                          }
+                          <div>
+                            <div class="fr-persona-nombre">{{ texto(q, r) }}</div>
+                            @if (v.modo === 'nueva') {
+                              <span class="fr-tag fr-tag--nueva">Nueva</span>
+                              @if (permisos.puede('personas', 'A')) {
+                                <button class="fr-link" (click)="registrarPersona(q, r)"
+                                        [disabled]="registrando() === r.id + '-' + q.clave">
+                                  {{ registrando() === r.id + '-' + q.clave ? 'Registrando…' : 'Registrar en Personas' }}
+                                </button>
+                              }
+                            } @else if (v.registrada_desde_formulario) {
+                              <span class="fr-tag fr-tag--reg">Registrada desde el formulario</span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    } @else {
+                      <span class="fr-celda">{{ texto(q, r) }}</span>
+                    }
+                  </td>
+                }
+                @if (permisos.puede('actividades', 'E')) {
+                  <td><button class="fr-eliminar" title="Eliminar respuesta" (click)="eliminar(r)">🗑️</button></td>
+                }
+              </tr>
+            } @empty {
+              <tr>
+                <td [attr.colspan]="columnas().length + 3" class="fr-vacio-td">
+                  {{ busqueda() ? 'Ninguna respuesta coincide con la búsqueda.' : 'Aún no hay respuestas.' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPaginas() > 1) {
+        <div class="pagination-bar fr-paginacion">
+          <span class="pagination-info">Página {{ pagina() }} de {{ totalPaginas() }} · {{ filtradas().length }} respuestas</span>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="pagina() === 1" (click)="irPagina(pagina() - 1)">‹</button>
+            <button class="btn-page" [disabled]="pagina() === totalPaginas()" (click)="irPagina(pagina() + 1)">›</button>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (mostrarCompartir() && data(); as d) {
+  <app-formulario-compartir [token]="d.formulario.token" [titulo]="d.formulario.titulo"
+                            [publico]="d.formulario.publico" (cerrar)="mostrarCompartir.set(false)" />
+}

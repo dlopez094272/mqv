@@ -44,6 +44,35 @@
 
 .req { color: var(--danger-light); }
 
+/* ── Fallecido ───────────────────────────────────────────────── */
+.badge-fallecido {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: #4b4b4b;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.fallecido-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+
+.fallecido-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+
+  input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+}
+
 /* ── Radio group ─────────────────────────────────────────────── */
 .radio-group {
   display: flex;

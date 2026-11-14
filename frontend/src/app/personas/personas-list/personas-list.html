@@ -93,7 +93,10 @@
                 <div class="avatar">{{ p.primer_nombre[0] }}{{ p.primer_apellido[0] }}</div>
               }
             </td>
-            <td><strong>{{ p.nombre_completo }}</strong></td>
+            <td>
+              <strong>{{ p.nombre_completo }}</strong>
+              @if (p.fallecido) { <span class="badge-fallecido-list" title="Fallecido">🕊️</span> }
+            </td>
             <td>{{ edadLabel(p.edad) }}</td>
             <td>
               <span class="sexo-badge" [class.masculino]="p.sexo==='M'" [class.femenino]="p.sexo==='F'">

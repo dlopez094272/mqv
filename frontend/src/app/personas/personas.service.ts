@@ -18,6 +18,8 @@ export interface PersonaLista {
   email: string;
   foto: string;
   nacionalidad: string;
+  fallecido: boolean;
+  fecha_fallecimiento: string | null;
 }
 
 export interface PersonaDetalle extends PersonaLista {
@@ -75,6 +77,8 @@ export interface Cumpleanero {
   sexo: string;
   celular: string;
   foto: string;
+  fallecido: boolean;
+  fecha_fallecimiento: string | null;
 }
 
 export interface FiltrosPersonas {

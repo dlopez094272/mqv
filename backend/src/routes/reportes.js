@@ -595,4 +595,70 @@ router.get('/personas', checkPermission('personas', 'S'), async (req, res, next)
   } catch (err) { next(err); }
 });
 
+/* ─────────────────────────────────────────────────────────────
+   GET /reportes/inasistentes?idgrupo=&idcategoria=&incluir_nunca_asistieron=
+   Permiso: personas:S
+   Personas activas (no fallecidas) ordenadas de mayor a menor tiempo
+   sin asistir a ninguna actividad. Las que nunca han asistido aparecen
+   primero (ultima_asistencia = null), salvo que se excluyan con
+   incluir_nunca_asistieron=0.
+   Si se indica idcategoria, la "última asistencia" solo considera
+   actividades de esa categoría (las demás asistencias se ignoran).
+   ───────────────────────────────────────────────────────────── */
+router.get('/inasistentes', checkPermission('personas', 'S'), async (req, res, next) => {
+  try {
+    const { idgrupo, idcategoria } = req.query;
+    const incluirNuncaAsistieron = req.query.incluir_nunca_asistieron !== '0';
+
+    let sql = `
+      SELECT
+        p.idpersonas,
+        TRIM(CONCAT_WS(' ',
+          p.primer_nombre, NULLIF(p.segundo_nombre,''),
+          p.primer_apellido, NULLIF(p.segundo_apellido,''),
+          NULLIF(p.apellidocasada,'')
+        )) AS nombre_completo,
+        p.foto, p.telefono, p.celular, p.email,
+        p.direccion_domicilio, p.zona_domicilio,
+        GROUP_CONCAT(DISTINCT g.grupo ORDER BY g.grupo SEPARATOR ', ') AS grupos,
+        MAX(a.fecha_inicio) AS ultima_asistencia,
+        DATEDIFF(CURDATE(), MAX(a.fecha_inicio)) AS dias_sin_asistir
+      FROM personas p
+      LEFT JOIN grupos_personas gp        ON gp.idpersonas = p.idpersonas
+      LEFT JOIN grupos g                  ON g.idgrupos = gp.idgrupos
+      LEFT JOIN actividades_asistentes aa ON aa.idpersonas = p.idpersonas
+      LEFT JOIN actividades a             ON a.idactividades = aa.idactividades
+        ${idcategoria ? 'AND a.idcategorias = ?' : ''}
+      WHERE p.fallecido = 0
+    `;
+    const params = [];
+    if (idcategoria) params.push(idcategoria);
+
+    if (!req.user.is_superadmin) {
+      sql += ` AND p.idpersonas IN (
+        SELECT gp2.idpersonas FROM grupos_personas gp2
+        INNER JOIN grupos_encargados ge ON ge.idgrupos = gp2.idgrupos
+        WHERE ge.idpersonas = (SELECT idpersonas FROM usuarios WHERE usuario = ? LIMIT 1)
+      )`;
+      params.push(req.user.usuario);
+    }
+
+    if (idgrupo) {
+      sql += ` AND p.idpersonas IN (SELECT idpersonas FROM grupos_personas WHERE idgrupos = ?)`;
+      params.push(idgrupo);
+    }
+
+    sql += ` GROUP BY p.idpersonas `;
+
+    if (!incluirNuncaAsistieron) {
+      sql += ` HAVING ultima_asistencia IS NOT NULL `;
+    }
+
+    sql += ` ORDER BY (ultima_asistencia IS NULL) DESC, dias_sin_asistir DESC, nombre_completo `;
+
+    const [rows] = await pool.query(sql, params);
+    res.json({ personas: rows });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

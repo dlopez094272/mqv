@@ -483,6 +483,27 @@
 .anio-persona    { cursor: pointer; &:hover .anio-nombre { color: var(--primary); text-decoration: underline; } }
 .semana-cumple   { cursor: pointer; }
 
+/* ══════════════ Esquelas (personas fallecidas) ════════════════ */
+.fallecido-item {
+  filter: grayscale(70%);
+  opacity: .82;
+
+  .cal-foto, .lista-foto { filter: grayscale(100%); }
+}
+
+.fallecido-row {
+  background: #f4f4f4;
+  border-left: 4px solid #6b6b6b;
+
+  .cumple-info span { color: #666; }
+}
+
+.btn-esquela {
+  background: linear-gradient(135deg, #57446c, #2d1f3e);
+
+  &:hover { box-shadow: 0 3px 10px rgba(87,68,108,.4); }
+}
+
 /* ── Responsive móvil ────────────────────────────────────────── */
 @media (max-width: 600px) {
   .cal-celda {

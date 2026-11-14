@@ -54,14 +54,18 @@
           @if (dia.cumpleaneros.length) {
             <div class="cal-cumples">
               @for (c of dia.cumpleaneros.slice(0,3); track c.idpersonas) {
-                <div class="cal-cumple-item" [class.hoy-item]="cumpleHoy(c)"
-                     (click)="abrirTarjeta(c)" title="Generar tarjeta">
+                <div class="cal-cumple-item" [class.hoy-item]="cumpleHoy(c) && !c.fallecido"
+                     [class.fallecido-item]="c.fallecido"
+                     (click)="abrirTarjeta(c)" [title]="c.fallecido ? 'Ver esquela' : 'Generar tarjeta'">
                   @if (c.foto) {
                     <img [src]="fotoUrl(c)" class="cal-foto" [alt]="c.nombre_completo" />
                   } @else {
                     <span class="cal-avatar">{{ c.nombre_completo[0] }}</span>
                   }
-                  <span class="cal-nombre">{{ c.primer_nombre }}</span>
+                  <span class="cal-nombre">
+                    @if (c.fallecido) { 🕊️ }
+                    {{ c.primer_nombre }}
+                  </span>
                 </div>
               }
               @if (dia.cumpleaneros.length > 3) {
@@ -79,7 +83,7 @@
       <h3>Lista de cumpleañeros — {{ nombreMes }}</h3>
       <div class="tabla-cumples">
         @for (c of cumpleaneros(); track c.idpersonas) {
-          <div class="cumple-row" [class.hoy-row]="cumpleHoy(c)">
+          <div class="cumple-row" [class.hoy-row]="cumpleHoy(c) && !c.fallecido" [class.fallecido-row]="c.fallecido">
             <div class="cumple-fecha">
               <span class="dia-num">{{ c.dia_nac }}</span>
               <span class="mes-abr">{{ MESES[c.mes_nac-1].slice(0,3) }}</span>
@@ -93,13 +97,23 @@
             </div>
             <div class="cumple-info">
               <strong>{{ c.nombre_completo }}</strong>
-              <span>Cumple {{ c.edad }} años</span>
-              @if (c.celular) { <span>📱 {{ c.celular }}</span> }
+              @if (c.fallecido) {
+                <span>🕊️ En memoria — falleció el {{ c.fecha_fallecimiento | date:'dd/MM/yyyy' }}</span>
+              } @else {
+                <span>Cumple {{ c.edad }} años</span>
+                @if (c.celular) { <span>📱 {{ c.celular }}</span> }
+              }
             </div>
-            @if (cumpleHoy(c)) { <span class="hoy-badge">🎉 ¡Hoy!</span> }
-            <button class="btn-tarjeta" (click)="abrirTarjeta(c)" title="Generar tarjeta">
-              🎂 Tarjeta
-            </button>
+            @if (cumpleHoy(c) && !c.fallecido) { <span class="hoy-badge">🎉 ¡Hoy!</span> }
+            @if (c.fallecido) {
+              <button class="btn-tarjeta btn-esquela" (click)="abrirTarjeta(c)" title="Ver esquela">
+                🕊️ Esquela
+              </button>
+            } @else {
+              <button class="btn-tarjeta" (click)="abrirTarjeta(c)" title="Generar tarjeta">
+                🎂 Tarjeta
+              </button>
+            }
           </div>
         }
       </div>
@@ -123,7 +137,8 @@
         </div>
         <div class="semana-body">
           @for (c of dia.cumpleaneros; track c.idpersonas) {
-            <div class="semana-cumple" [class.hoy-item]="cumpleHoy(c)" (click)="abrirTarjeta(c)">
+            <div class="semana-cumple" [class.hoy-item]="cumpleHoy(c) && !c.fallecido"
+                 [class.fallecido-item]="c.fallecido" (click)="abrirTarjeta(c)">
               @if (c.foto) {
                 <img [src]="fotoUrl(c)" class="lista-foto" [alt]="c.nombre_completo" />
               } @else {
@@ -131,7 +146,7 @@
               }
               <div class="semana-info">
                 <strong>{{ c.nombre_completo }}</strong>
-                <span>{{ c.edad }} años</span>
+                @if (c.fallecido) { <span>🕊️ En memoria</span> } @else { <span>{{ c.edad }} años</span> }
               </div>
             </div>
           } @empty {
@@ -155,9 +170,9 @@
         @if (item.personas.length) {
           <div class="anio-personas">
             @for (c of item.personas.slice(0,5); track c.idpersonas) {
-              <div class="anio-persona" (click)="abrirTarjeta(c)">
+              <div class="anio-persona" [class.fallecido-item]="c.fallecido" (click)="abrirTarjeta(c)">
                 <span class="anio-dia">{{ c.dia_nac }}</span>
-                <span class="anio-nombre">{{ c.primer_nombre }} {{ c.primer_apellido }}</span>
+                <span class="anio-nombre">@if (c.fallecido) { 🕊️ } {{ c.primer_nombre }} {{ c.primer_apellido }}</span>
               </div>
             }
             @if (item.personas.length>5) {
@@ -178,7 +193,7 @@
   <div class="modal-overlay" (click)="cerrarTarjeta()">
     <div class="modal-card" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>🎂 Tarjeta de Cumpleaños</h3>
+        <h3>{{ personaSelec!.fallecido ? '🕊️ En Memoria' : '🎂 Tarjeta de Cumpleaños' }}</h3>
         <button class="modal-close" (click)="cerrarTarjeta()">✕</button>
       </div>
       <div class="modal-body">
@@ -195,10 +210,12 @@
         <div class="modal-footer">
           <div class="share-label">Compartir tarjeta:</div>
           <div class="share-btns">
-            <button class="btn-share btn-share-email" (click)="enviarEmail()" [disabled]="enviandoEmail()">
-              @if (enviandoEmail()) { <span class="spinner"></span> } @else { 📧 }
-              Email
-            </button>
+            @if (!personaSelec!.fallecido) {
+              <button class="btn-share btn-share-email" (click)="enviarEmail()" [disabled]="enviandoEmail()">
+                @if (enviandoEmail()) { <span class="spinner"></span> } @else { 📧 }
+                Email
+              </button>
+            }
             <button class="btn-share btn-share-whatsapp" (click)="compartirWhatsapp()">
               💬 WhatsApp
             </button>

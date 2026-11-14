@@ -1,0 +1,308 @@
+<div class="fe-page">
+  <div class="page-header fe-header">
+    <div class="fe-header-left">
+      <button class="btn-back" (click)="volver()">← Actividades</button>
+      <h2>{{ idFormulario() ? 'Editar formulario' : 'Nuevo formulario' }}</h2>
+    </div>
+    <div class="fe-header-actions">
+      @if (token()) {
+        <button class="btn btn-outline btn-sm" (click)="mostrarCompartir.set(true)">🔗 Compartir / QR</button>
+        <button class="btn btn-outline btn-sm" [routerLink]="['/actividades/formularios', idFormulario(), 'respuestas']">📊 Respuestas</button>
+      }
+      <button class="btn btn-primary btn-sm fe-btn-guardar" (click)="guardar()" [disabled]="guardando() || cargando()">
+        {{ guardando() ? 'Guardando…' : '💾 Guardar' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+  @if (exito()) { <div class="alert alert-success">{{ exito() }}</div> }
+
+  @if (cargando()) {
+    <div class="fe-cargando">Cargando…</div>
+  } @else {
+    <!-- Encabezado con el logo de la actividad (así se verá en el formulario) -->
+    <div class="fe-banner">
+      @if (actLogo()) {
+        <img [src]="urlLogo(actLogo()!)" alt="Logo de la actividad" class="fe-banner-logo" />
+      } @else {
+        <div class="fe-banner-logo fe-banner-logo--vacio" title="La actividad no tiene logo">📋</div>
+      }
+      <div>
+        <div class="fe-banner-act">{{ actNombre() }}</div>
+        <div class="fe-banner-nota">El logo de la actividad se muestra en el encabezado del formulario.</div>
+      </div>
+    </div>
+
+    <!-- Configuración general -->
+    <div class="fe-card">
+      <div class="fe-card-titulo">Configuración</div>
+      <div class="form-group">
+        <label>Título del formulario <span class="req">*</span></label>
+        <input type="text" [(ngModel)]="datos.titulo" maxlength="255" />
+      </div>
+      <div class="form-group">
+        <label>Descripción / instrucciones</label>
+        <textarea rows="3" [(ngModel)]="datos.descripcion" placeholder="Opcional"></textarea>
+      </div>
+
+      <div class="fe-opciones-grid">
+        <div class="fe-switch-box">
+          <div class="fe-switch-label">Acceso</div>
+          <div class="fe-segmento">
+            <button type="button" [class.activo]="!datos.publico" (click)="datos.publico = false">🔒 Privado</button>
+            <button type="button" [class.activo]="datos.publico"  (click)="datos.publico = true">🌐 Público</button>
+          </div>
+          <div class="fe-switch-ayuda">
+            {{ datos.publico ? 'Cualquier persona con el enlace o el QR puede responder.'
+                             : 'Solo usuarios del sistema; se les pedirá iniciar sesión.' }}
+          </div>
+        </div>
+        <div class="fe-switch-box">
+          <div class="fe-switch-label">Estado</div>
+          <label class="fe-check">
+            <input type="checkbox" [(ngModel)]="datos.activo" /> Recibiendo respuestas
+          </label>
+        </div>
+        <div class="fe-switch-box">
+          <div class="fe-switch-label">Fecha límite (opcional)</div>
+          <input type="datetime-local" class="fe-input" [(ngModel)]="datos.fecha_limite" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px">
+        <label>Mensaje al enviar</label>
+        <input type="text" [(ngModel)]="datos.mensaje_confirmacion" maxlength="2000"
+               placeholder="¡Gracias! Hemos recibido su inscripción." />
+      </div>
+    </div>
+
+    <!-- Notificaciones por correo (opcional) -->
+    <div class="fe-card">
+      <div class="fe-card-titulo">✉️ Notificaciones por correo <span class="fe-opcional">opcional</span></div>
+
+      <label class="fe-check">
+        <input type="checkbox" [(ngModel)]="notif.inscrito" (ngModelChange)="onNotifInscritoCambia()" />
+        Enviar confirmación de la inscripción al correo del inscrito
+      </label>
+      @if (notif.inscrito) {
+        <div class="fe-notif-detalle">
+          @if (preguntasCorreo().length) {
+            <div class="form-group">
+              <label>Pregunta donde escribe su correo</label>
+              <select [(ngModel)]="notif.pregunta_email">
+                <option [ngValue]="null">— Seleccione —</option>
+                @for (q of preguntasCorreo(); track q.clave) {
+                  <option [ngValue]="q.clave">{{ q.etiqueta || '(sin texto)' }}</option>
+                }
+              </select>
+            </div>
+          } @else {
+            <div class="fe-nota">Este formulario aún no tiene una pregunta de texto para el correo.</div>
+          }
+          <button type="button" class="fe-link" style="padding-left:0" (click)="agregarPreguntaCorreo()">+ Agregar pregunta "Correo electrónico"</button>
+          <div class="fe-nota">
+            Recibirá un resumen de sus respuestas y el mensaje al enviar. Si la pregunta está enlazada al correo
+            de una persona registrada, se usa el correo de su ficha.
+          </div>
+        </div>
+      }
+
+      <div class="form-group" style="margin-top:14px">
+        <label>Avisar de cada inscripción a (organizadores)</label>
+        <input type="text" [(ngModel)]="notif.correos" placeholder="correo1@ejemplo.com, correo2@ejemplo.com" />
+        <div class="fe-nota" style="margin-top:4px">Separados por coma. Deje vacío para no enviar avisos.</div>
+      </div>
+    </div>
+
+    <!-- Preguntas -->
+    <div class="fe-preguntas-titulo">
+      Preguntas <span class="fe-contador">{{ preguntas().length }}</span>
+    </div>
+
+    @for (item of numeradas(); track item.q.clave; let i = $index; let ultimo = $last) {
+      @let q = item.q;
+      <div class="fe-pregunta" [class.fe-pregunta--seccion]="q.tipo === 'seccion'"
+           [class.fe-pregunta--abierta]="expandida() === q.clave">
+
+        <!-- Cabecera (siempre visible) -->
+        <div class="fe-preg-cab" (click)="toggleExpandida(q.clave)">
+          <span class="fe-preg-num">{{ item.num ?? '§' }}</span>
+          <span class="fe-preg-icono" [title]="etiquetaTipo(q.tipo)?.etiqueta">{{ etiquetaTipo(q.tipo)?.icono }}</span>
+          <div class="fe-preg-resumen">
+            <div class="fe-preg-texto">
+              {{ q.etiqueta || '(sin texto)' }}
+              @if (q.requerida) { <span class="req">*</span> }
+            </div>
+            @for (r of reglas(q); track r) { <div class="fe-preg-regla">↳ {{ r }}</div> }
+          </div>
+          <div class="fe-preg-acciones" (click)="$event.stopPropagation()">
+            <button type="button" title="Subir"   (click)="mover(i, -1)" [disabled]="i === 0">▲</button>
+            <button type="button" title="Bajar"   (click)="mover(i, 1)"  [disabled]="ultimo">▼</button>
+            <button type="button" title="Duplicar" (click)="duplicar(i)">⧉</button>
+            <button type="button" title="Eliminar" class="peligro" (click)="eliminar(i)">✕</button>
+          </div>
+        </div>
+
+        <!-- Detalle editable -->
+        @if (expandida() === q.clave) {
+          <div class="fe-preg-cuerpo">
+            <div class="fe-fila">
+              <div class="form-group fe-flex-2">
+                <label>{{ q.tipo === 'seccion' ? 'Título de la sección' : 'Pregunta' }} <span class="req">*</span></label>
+                <input type="text" [(ngModel)]="q.etiqueta" maxlength="500" />
+              </div>
+              <div class="form-group fe-flex-1">
+                <label>Tipo</label>
+                <select [(ngModel)]="q.tipo" (ngModelChange)="onTipoCambia(q)" [disabled]="!!q.campo_persona">
+                  @for (t of TIPOS; track t.valor) { <option [value]="t.valor">{{ t.icono }} {{ t.etiqueta }}</option> }
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>{{ q.tipo === 'seccion' ? 'Texto descriptivo' : 'Texto de ayuda' }}</label>
+              <input type="text" [(ngModel)]="q.ayuda" maxlength="1000" placeholder="Opcional" />
+            </div>
+
+            @if (q.tipo !== 'seccion') {
+              <label class="fe-check"><input type="checkbox" [(ngModel)]="q.requerida" /> Respuesta obligatoria</label>
+            }
+
+            <!-- Opciones -->
+            @if (tieneOpciones(q)) {
+              <div class="fe-subtitulo">Opciones</div>
+              @for (op of q.opciones; track trackIdx($index); let oi = $index; let oultimo = $last) {
+                <div class="fe-opcion">
+                  <span class="fe-opcion-marca">{{ q.tipo === 'multiple' ? '☐' : q.tipo === 'lista' ? (oi + 1) + '.' : '○' }}</span>
+                  <input type="text" [ngModel]="op" (ngModelChange)="renombrarOpcion(q, oi, $event)"
+                         [readonly]="q.campo_persona === 'sexo' || q.campo_persona === 'estado_civil'" maxlength="200" />
+                  <button type="button" (click)="moverOpcion(q, oi, -1)" [disabled]="oi === 0" title="Subir">▲</button>
+                  <button type="button" (click)="moverOpcion(q, oi, 1)"  [disabled]="oultimo" title="Bajar">▼</button>
+                  <button type="button" class="peligro" (click)="quitarOpcion(q, oi)" [disabled]="q.opciones.length <= 1" title="Quitar">✕</button>
+                </div>
+              }
+              @if (q.campo_persona !== 'sexo' && q.campo_persona !== 'estado_civil') {
+                <button type="button" class="fe-link" (click)="agregarOpcion(q)">+ Agregar opción</button>
+              }
+            }
+
+            <!-- Configuración de búsqueda de persona -->
+            @if (q.tipo === 'persona') {
+              <div class="fe-subtitulo">Búsqueda de persona</div>
+              <div class="fe-nota">
+                Muestra un buscador de personas registradas (con su foto) y un filtro por grupo.
+              </div>
+              <label class="fe-check">
+                <input type="checkbox" [(ngModel)]="q.permitir_nuevo" />
+                Si no la encuentra, permitir ingresar los datos de una persona nueva
+              </label>
+              <div class="fe-nota" style="margin-top:8px">
+                Limitar la búsqueda a estos grupos (ninguno = todas las personas):
+              </div>
+              <div class="fe-chips">
+                @for (g of grupos(); track g.id) {
+                  <button type="button" class="fe-chip" [class.activo]="q.filtro_grupos?.includes(g.id)"
+                          (click)="toggleGrupoFiltro(q, g.id)">{{ g.nombre }}</button>
+                }
+              </div>
+              <div class="fe-nota" style="margin-top:10px">
+                💡 Para pedir celular, correo, etc., agregue preguntas después de esta y enlácelas con
+                “Enlazar a datos de la persona”: si eligen una persona registrada se toma de su ficha;
+                si es nueva, se le pregunta.
+              </div>
+            }
+
+            <!-- Enlace a datos de persona -->
+            @if (q.tipo !== 'seccion' && q.tipo !== 'persona' && personasAnteriores(i).length) {
+              <div class="fe-subtitulo">Enlazar a datos de la persona</div>
+              <div class="fe-fila">
+                <div class="form-group fe-flex-1">
+                  <label>Pregunta de persona</label>
+                  <select [(ngModel)]="q.pregunta_persona" (ngModelChange)="onPreguntaPersonaCambia(q)">
+                    <option [ngValue]="null">— No enlazar —</option>
+                    @for (p of personasAnteriores(i); track p.clave) {
+                      <option [ngValue]="p.clave">{{ p.etiqueta || '(sin texto)' }}</option>
+                    }
+                  </select>
+                </div>
+                @if (q.pregunta_persona) {
+                  <div class="form-group fe-flex-1">
+                    <label>Dato de la ficha</label>
+                    <select [(ngModel)]="q.campo_persona" (ngModelChange)="onCampoPersonaCambia(q)">
+                      <option [ngValue]="null">— Seleccione —</option>
+                      @for (c of CAMPOS_PERSONA; track c.valor) { <option [ngValue]="c.valor">{{ c.etiqueta }}</option> }
+                    </select>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Dependencia -->
+            @if (anteriores(i).length) {
+              <div class="fe-subtitulo">Mostrar solo si…</div>
+              <div class="form-group">
+                <label>Depende de la pregunta</label>
+                <select [(ngModel)]="q.depende_de" (ngModelChange)="onDependeCambia(q)">
+                  <option [ngValue]="null">— Mostrar siempre —</option>
+                  @for (p of anteriores(i); track p.clave) {
+                    <option [ngValue]="p.clave">{{ p.etiqueta || '(sin texto)' }}</option>
+                  }
+                </select>
+              </div>
+              @if (porClave(q.depende_de); as padre) {
+                @let vals = valoresCondicion(padre);
+                @if (vals.length) {
+                  <div class="fe-nota">Se muestra cuando la respuesta sea alguna de:</div>
+                  <div class="fe-chips">
+                    @for (v of vals; track v.valor) {
+                      <button type="button" class="fe-chip" [class.activo]="q.depende_valores.includes(v.valor)"
+                              (click)="toggleValorCondicion(q, v.valor)">{{ v.etiqueta }}</button>
+                    }
+                  </div>
+                  @if (!q.depende_valores.length) {
+                    <div class="fe-nota">Sin selección: se muestra cuando la pregunta tenga cualquier respuesta.</div>
+                  }
+                } @else {
+                  <div class="fe-nota">Se muestra cuando esa pregunta tenga respuesta.</div>
+                }
+              }
+            }
+          </div>
+        }
+      </div>
+    } @empty {
+      <div class="fe-vacio">
+        Aún no hay preguntas. Agregue la primera con los botones de abajo
+        o use la plantilla de confirmación de asistencia.
+      </div>
+    }
+
+    <!-- Agregar -->
+    <div class="fe-agregar">
+      <div class="fe-agregar-titulo">Agregar pregunta</div>
+      <div class="fe-agregar-botones">
+        @for (t of TIPOS; track t.valor) {
+          <button type="button" class="fe-agregar-btn" (click)="agregar(t.valor)">
+            <span>{{ t.icono }}</span> {{ t.etiqueta }}
+          </button>
+        }
+      </div>
+      <button type="button" class="fe-plantilla" (click)="agregarPlantillaAsistencia()">
+        ✨ Plantilla: confirmar asistencia (¿Asistirá? → buscar persona o registrar nueva → celular y correo)
+      </button>
+    </div>
+
+    <div class="fe-pie">
+      <button class="btn btn-outline" (click)="volver()">Cancelar</button>
+      <button class="btn btn-primary fe-btn-guardar" (click)="guardar()" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando…' : '💾 Guardar formulario' }}
+      </button>
+    </div>
+  }
+</div>
+
+@if (mostrarCompartir() && token()) {
+  <app-formulario-compartir [token]="token()!" [titulo]="datos.titulo" [publico]="datos.publico"
+                            (cerrar)="mostrarCompartir.set(false)" />
+}

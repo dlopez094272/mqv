@@ -1,8 +1,10 @@
 import { Component, OnInit, signal, computed, inject, NgZone } from '@angular/core';
-import { CommonModule }   from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule }    from '@angular/forms';
 import { HttpClient }     from '@angular/common/http';
 import { Observable }     from 'rxjs';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import Swal from 'sweetalert2';
 import {
   ActividadesService, Actividad, AdjuntoInfo,
   CategoriaLookup, LugarLookup, GrupoLookup,
@@ -14,6 +16,8 @@ import { PermisosService } from '../core/services/permisos.service';
 import { environment }     from '../../environments/environment';
 import { confirmar }       from '../shared/confirmar.util';
 import { CamaraAsistenciaComponent } from './camara-asistencia.component';
+import { FormulariosService, FormularioResumen } from './formularios/formularios.service';
+import { FormularioCompartirComponent } from './formularios/formulario-compartir.component';
 
 interface FilaMovimientoTesoreria {
   tipo:              'ingreso' | 'egreso';
@@ -22,6 +26,8 @@ interface FilaMovimientoTesoreria {
   idtipo_movimiento: string;
   fecha:             string;
 }
+
+type TabGestion = 'datos' | 'asistencia' | 'tesoreria' | 'formularios';
 
 interface DiaCalendario {
   fecha:        Date;
@@ -64,7 +70,7 @@ interface ReporteActividadDetalle {
 @Component({
   selector:    'app-actividades',
   standalone:  true,
-  imports:     [CommonModule, FormsModule, CamaraAsistenciaComponent],
+  imports:     [CommonModule, FormsModule, RouterModule, CamaraAsistenciaComponent, FormularioCompartirComponent],
   templateUrl: './actividades.component.html',
   styleUrl:    './actividades.component.scss',
 })
@@ -73,6 +79,15 @@ export class ActividadesComponent implements OnInit {
   private tesoreriaSvc = inject(TesoreriaService);
   private http   = inject(HttpClient);
   public permisos = inject(PermisosService);
+  private formSvc = inject(FormulariosService);
+  private route   = inject(ActivatedRoute);
+  private router  = inject(Router);
+  private location = inject(Location);
+
+  /** true en /actividades/nueva y /actividades/:id/gestion (gestión a página completa) */
+  modoPagina = signal(false);
+  /** Actividad a resaltar en el calendario al regresar de su página */
+  resaltada  = signal<number | null>(null);
 
   readonly DAY_WIDTH = 32;
 
@@ -181,16 +196,15 @@ export class ActividadesComponent implements OnInit {
 
   // ── Gestión unificada de actividad (fichas: datos / asistencia / tesorería) ──
   mostrarGestion   = signal(false);
-  tabGestion       = signal<'datos' | 'asistencia' | 'tesoreria'>('datos');
+  tabGestion       = signal<TabGestion>('datos');
   actividadGestion = signal<Actividad | null>(null);
 
-  anchoGestion = computed(() => {
-    switch (this.tabGestion()) {
-      case 'asistencia': return '960px';
-      case 'tesoreria':  return '760px';
-      default:           return '560px';
-    }
-  });
+
+  // ── Formularios de inscripción ────────────────────────────────
+  formulariosAct      = signal<FormularioResumen[] | null>(null);
+  cargandoFormularios = signal(false);
+  errorFormularios    = signal('');
+  compartirForm       = signal<FormularioResumen | null>(null);
 
   // ── Menú contextual ───────────────────────────────────────────
   menuAct = signal<{ act: Actividad; x: number; y: number } | null>(null);
@@ -364,7 +378,66 @@ export class ActividadesComponent implements OnInit {
   // ── Lifecycle ─────────────────────────────────────────────────
   ngOnInit() {
     this.cargarLookups();
+    this.modoPagina.set(!!this.route.snapshot.data['gestion']);
+    if (this.modoPagina()) { this.iniciarPagina(); return; }
+
     this.cargar();
+    const qp = this.route.snapshot.queryParamMap;
+
+    // Compatibilidad con enlaces anteriores (?formularios=idActividad)
+    const idForm = Number(qp.get('formularios'));
+    if (idForm) {
+      this.router.navigate(['/actividades', idForm, 'gestion'], { queryParams: { tab: 'formularios' }, replaceUrl: true });
+      return;
+    }
+
+    // Regreso desde la página de una actividad: ubicar su mes y resaltarla
+    const mes = qp.get('mes');
+    if (mes && /^\d{4}-\d{2}$/.test(mes)) {
+      const [y, m] = mes.split('-').map(Number);
+      this.mesActual.set(new Date(y, m - 1, 1));
+      this.vista.set('calendar');
+    }
+    const res = Number(qp.get('resaltar'));
+    if (res) {
+      this.resaltada.set(res);
+      setTimeout(() => document.querySelector(`[data-act="${res}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 700);
+      setTimeout(() => this.resaltada.set(null), 5000);
+    }
+    if (mes || res) this.location.replaceState('/actividades');
+  }
+
+  private iniciarPagina() {
+    const id  = Number(this.route.snapshot.paramMap.get('id'));
+    const qp  = this.route.snapshot.queryParamMap;
+    const tab = (['datos', 'asistencia', 'tesoreria', 'formularios'].includes(qp.get('tab') || '')
+      ? qp.get('tab') : 'datos') as TabGestion;
+    if (id) {
+      this.svc.obtener(id).subscribe({
+        next:  act => this.abrirGestion(tab, act),
+        error: (e: any) => this.error.set(e.message || 'No se pudo cargar la actividad'),
+      });
+    } else {
+      this.abrirGestion('datos', null);
+      const f = qp.get('fecha');
+      if (f && /^\d{4}-\d{2}-\d{2}$/.test(f)) { this.form.fecha_inicio = f; this.form.fecha_fin = f; }
+    }
+  }
+
+  /** Abre la página de gestión de una actividad */
+  irGestion(act: Actividad, tab: TabGestion = 'datos') {
+    this.router.navigate(['/actividades', act.idactividades, 'gestion'], tab === 'datos' ? {} : { queryParams: { tab } });
+  }
+
+  /** Regresa al calendario en el mes de la actividad y la resalta */
+  volverAlCalendario() {
+    const act = this.actividadGestion();
+    const fecha = act ? String(act.fecha_inicio).slice(0, 10) : this.form.fecha_inicio;
+    const queryParams: Record<string, string | number> = {};
+    if (fecha) queryParams['mes'] = fecha.slice(0, 7);
+    if (act)   queryParams['resaltar'] = act.idactividades;
+    this.router.navigate(['/actividades'], { queryParams });
   }
 
   cargarLookups() {
@@ -471,12 +544,68 @@ export class ActividadesComponent implements OnInit {
   quitarAdjuntoNuevo(i: number)   { this.adjuntosNuevos.splice(i, 1); }
   quitarAdjuntoActual(i: number)  { this.adjuntosActuales.splice(i, 1); }
 
-  guardar() {
+  /** Días (inclusive) entre dos fechas 'YYYY-MM-DD' */
+  private diasRango(fi: string, ff: string): number {
+    const a = new Date(fi + 'T00:00:00Z').getTime();
+    const b = new Date(ff + 'T00:00:00Z').getTime();
+    return Math.round((b - a) / 86400000) + 1;
+  }
+
+  /**
+   * Actividad de varios días: ¿una actividad por cada día (asistencia y reporte por día)
+   * o una sola actividad continua (una sola asistencia)? null = cancelado.
+   */
+  private async preguntarModoDias(dias: number): Promise<boolean | null> {
+    const r = await Swal.fire({
+      title: 'La actividad dura ' + dias + ' días',
+      html: '¿Cómo desea registrarla?<br><br>' +
+            '<b>Una por cada día:</b> se crean ' + dias + ' actividades (una por fecha) para tomar ' +
+            'la asistencia y obtener el reporte de cada día.<br><br>' +
+            '<b>Una sola continua:</b> una actividad que abarca todos los días, con una sola asistencia.',
+      icon: 'question',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: '📅 Una por cada día (' + dias + ')',
+      denyButtonText: '➡️ Una sola continua',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#57446C',
+      denyButtonColor: '#53819A',
+      cancelButtonColor: '#6b7280',
+    });
+    if (r.isConfirmed) return true;
+    if (r.isDenied)    return false;
+    return null;
+  }
+
+  async guardar() {
     if (!this.form.nombre.trim())  { this.errorForm.set('El nombre es requerido');           return; }
     if (!this.form.fecha_inicio)   { this.errorForm.set('La fecha de inicio es requerida'); return; }
     if (!this.form.fecha_fin)      { this.errorForm.set('La fecha de fin es requerida');    return; }
     if (!this.form.hora_inicio)    { this.errorForm.set('La hora de inicio es requerida');  return; }
     if (!this.form.hora_fin)       { this.errorForm.set('La hora de fin es requerida');     return; }
+    if (this.form.fecha_fin < this.form.fecha_inicio) {
+      this.errorForm.set('La fecha de fin no puede ser anterior a la de inicio'); return;
+    }
+
+    // Varios días: preguntar si es una actividad por día o una sola continua.
+    // Al editar solo se pregunta si cambió el rango de fechas.
+    const dias = this.diasRango(this.form.fecha_inicio, this.form.fecha_fin);
+    const actual = this.actividadGestion();
+    const rangoCambio = !this.modoEdicion() || !actual ||
+      String(actual.fecha_inicio).slice(0, 10) !== this.form.fecha_inicio ||
+      String(actual.fecha_fin).slice(0, 10)    !== this.form.fecha_fin;
+    let porDia = false;
+    if (dias > 1 && rangoCambio) {
+      if (dias > 62) {
+        const ok = await confirmar(`La actividad abarca ${dias} días y se guardará como una sola actividad continua.`,
+                                   { titulo: 'Actividad larga', btnConfirmar: 'Continuar' });
+        if (!ok) return;
+      } else {
+        const r = await this.preguntarModoDias(dias);
+        if (r === null) return;
+        porDia = r;
+      }
+    }
 
     const fd = new FormData();
     if (this.form.idcategorias) fd.append('idcategorias', this.form.idcategorias);
@@ -495,6 +624,7 @@ export class ActividadesComponent implements OnInit {
     if (this.modoEdicion()) {
       fd.append('adjuntos_existentes', JSON.stringify(this.adjuntosActuales.map(a => a.filename)));
     }
+    if (porDia) fd.append(this.modoEdicion() ? 'dividir_por_dia' : 'crear_por_dia', 'true');
 
     this.guardando.set(true); this.errorForm.set('');
     const fueCreacion = !this.modoEdicion();
@@ -505,7 +635,10 @@ export class ActividadesComponent implements OnInit {
     op$.subscribe({
       next: (res: any) => {
         this.guardando.set(false);
-        this.successMsg.set(fueCreacion ? 'Actividad creada' : 'Actividad actualizada');
+        const nuevas = (res?.ids?.length || 0) + (fueCreacion ? 0 : 1);
+        this.successMsg.set(porDia
+          ? `Se ${fueCreacion ? 'crearon' : 'generaron'} ${nuevas} actividades, una por cada día`
+          : (fueCreacion ? 'Actividad creada' : 'Actividad actualizada'));
         setTimeout(() => this.successMsg.set(''), 3000);
         this.cargar(); this.cargarLookups();
         if (fueCreacion && res?.id) {
@@ -517,7 +650,11 @@ export class ActividadesComponent implements OnInit {
             },
           });
         } else if (this.editandoId()) {
-          this.svc.obtener(this.editandoId()!).subscribe({ next: act => this.actividadGestion.set(act) });
+          this.svc.obtener(this.editandoId()!).subscribe({ next: act => {
+            this.actividadGestion.set(act);
+            // Al dividir por día, esta actividad quedó en el primer día
+            this.form.fecha_fin = String(act.fecha_fin).slice(0, 10);
+          } });
         }
       },
       error: (e: any) => {
@@ -545,17 +682,16 @@ export class ActividadesComponent implements OnInit {
 
   // ── Gestión unificada de actividad (fichas: datos / asistencia / tesorería) ──
   abrirNuevo() {
-    this.abrirGestion('datos', null);
+    this.router.navigate(['/actividades/nueva']);
   }
 
   abrirNuevoEnFecha(fecha: Date) {
-    if (this.mostrarGestion()) return;
-    this.abrirGestion('datos', null);
-    const iso = fecha.toISOString().slice(0, 10);
-    this.form.fecha_inicio = iso; this.form.fecha_fin = iso;
+    const p = (n: number) => String(n).padStart(2, '0');
+    const iso = `${fecha.getFullYear()}-${p(fecha.getMonth() + 1)}-${p(fecha.getDate())}`;
+    this.router.navigate(['/actividades/nueva'], { queryParams: { fecha: iso } });
   }
 
-  abrirGestion(tab: 'datos' | 'asistencia' | 'tesoreria', act: Actividad | null, event?: Event) {
+  abrirGestion(tab: TabGestion, act: Actividad | null, event?: Event) {
     event?.stopPropagation();
     this.mostrarGestion.set(true);
     this.actividadGestion.set(act);
@@ -569,6 +705,8 @@ export class ActividadesComponent implements OnInit {
     this.gruposDisponiblesExpandidos.set(new Set());
     this.errorTesoreria.set('');
     this.tesoreriaResumen.set(null);
+    this.formulariosAct.set(null);
+    this.errorFormularios.set('');
     if (act) {
       this._poblarForm(act);
       this._resetFilasTesoreria(act);
@@ -581,13 +719,19 @@ export class ActividadesComponent implements OnInit {
     this.seleccionarTab(tab);
   }
 
-  seleccionarTab(tab: 'datos' | 'asistencia' | 'tesoreria') {
+  seleccionarTab(tab: TabGestion) {
     const act = this.actividadGestion();
     if (tab !== 'datos' && !act) return;
     this.tabGestion.set(tab);
     if (!act) return;
+    if (this.modoPagina()) {
+      this.location.replaceState(`/actividades/${act.idactividades}/gestion`, tab === 'datos' ? '' : `tab=${tab}`);
+    }
     if (tab === 'asistencia' && this.asistenciaData() === null) {
       this._cargarAsistencia(act.idactividades);
+    }
+    if (tab === 'formularios' && this.formulariosAct() === null) {
+      this.cargarFormularios(act.idactividades);
     }
     if (tab === 'tesoreria' && this.tesoreriaResumen() === null) {
       this.cargandoTesoreria.set(true);
@@ -608,6 +752,7 @@ export class ActividadesComponent implements OnInit {
   }
 
   cerrarGestion() {
+    if (this.modoPagina()) { this.volverAlCalendario(); return; }
     this.mostrarGestion.set(false);
     this.mostrarCamara.set(false);
     this.actividadGestion.set(null);
@@ -693,10 +838,50 @@ export class ActividadesComponent implements OnInit {
 
   cerrarMenu() { this.menuAct.set(null); }
 
-  menuEditar()     { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirGestion('datos', a); }
-  menuAsistencia() { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirGestion('asistencia', a); }
-  menuTesoreria()  { const a = this.menuAct()!.act; this.cerrarMenu(); this.abrirGestion('tesoreria', a); }
+  menuEditar()      { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'datos'); }
+  menuAsistencia()  { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'asistencia'); }
+  menuTesoreria()   { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'tesoreria'); }
+  menuFormularios() { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'formularios'); }
+  menuNuevaPestana() {
+    const a = this.menuAct()!.act; this.cerrarMenu();
+    window.open(`/actividades/${a.idactividades}/gestion`, '_blank');
+  }
   menuEliminar()   { const a = this.menuAct()!.act; this.cerrarMenu(); this.eliminar(a); }
+
+  // ── Formularios de inscripción ────────────────────────────────
+  cargarFormularios(idActividad: number) {
+    this.cargandoFormularios.set(true);
+    this.errorFormularios.set('');
+    this.formSvc.listarPorActividad(idActividad).subscribe({
+      next:  d => { this.formulariosAct.set(d); this.cargandoFormularios.set(false); },
+      error: (e: any) => { this.errorFormularios.set(e.message || 'Error al cargar formularios'); this.cargandoFormularios.set(false); },
+    });
+  }
+
+  nuevoFormulario() {
+    const act = this.actividadGestion();
+    if (act) this.router.navigate(['/actividades', act.idactividades, 'formularios', 'nuevo']);
+  }
+
+  editarFormulario(f: FormularioResumen)    { this.router.navigate(['/actividades/formularios', f.idactividades_formularios, 'editar']); }
+  verRespuestas(f: FormularioResumen)       { this.router.navigate(['/actividades/formularios', f.idactividades_formularios, 'respuestas']); }
+  urlFormulario(f: FormularioResumen)       { return this.formSvc.urlPublica(f.token); }
+
+  toggleActivoFormulario(f: FormularioResumen) {
+    this.formSvc.cambiarActivo(f.idactividades_formularios, !f.activo).subscribe({
+      next:  () => this.cargarFormularios(f.idactividades),
+      error: (e: any) => this.errorFormularios.set(e.message),
+    });
+  }
+
+  async eliminarFormulario(f: FormularioResumen) {
+    const extra = f.total_respuestas ? `<br>Se eliminarán también sus <b>${f.total_respuestas}</b> respuesta(s).` : '';
+    if (!await confirmar(`¿Eliminar el formulario <b>"${f.titulo}"</b>?${extra}`, { peligro: true })) return;
+    this.formSvc.eliminar(f.idactividades_formularios).subscribe({
+      next:  () => this.cargarFormularios(f.idactividades),
+      error: (e: any) => this.errorFormularios.set(e.message),
+    });
+  }
 
   // ── Reporte de actividad ─────────────────────────────────────
   abrirReporte(act: Actividad) {

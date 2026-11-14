@@ -1,6 +1,7 @@
 <!-- Todo el contenido de la vista (se oculta en impresión del reporte) -->
 <div class="actividades-contenido">
 
+@if (!modoPagina()) {
 <!-- ── Cabecera ────────────────────────────────────────────── -->
 <div class="page-header">
   <h2>Actividades</h2>
@@ -63,6 +64,8 @@
               <div class="event-chip"
                    [style.background]="act.categoria_color || '#3788d8'"
                    [class.is-dragging]="arrastrando()?.idactividades === act.idactividades"
+                   [class.event-chip--resaltada]="resaltada() === act.idactividades"
+                   [attr.data-act]="act.idactividades"
                    draggable="true"
                    (dragstart)="onDragStart($event, act)"
                    (dragend)="onDragEnd()"
@@ -247,6 +250,11 @@
         <span class="menu-icon">👥</span> Asistencia
       </button>
     }
+    @if (permisos.puede('actividades', 'S')) {
+      <button class="act-menu-item" (click)="menuFormularios()">
+        <span class="menu-icon">📝</span> Formularios
+      </button>
+    }
     @if (permisos.puede('tesoreria', 'S')) {
       <button class="act-menu-item" (click)="menuTesoreria()">
         <span class="menu-icon">💰</span> Tesorería
@@ -257,6 +265,9 @@
         <span class="menu-icon">✏️</span> Editar
       </button>
     }
+    <button class="act-menu-item" (click)="menuNuevaPestana()">
+      <span class="menu-icon">↗️</span> Abrir en nueva pestaña
+    </button>
     @if (permisos.puede('actividades', 'D')) {
       <div class="act-menu-sep"></div>
       <button class="act-menu-item danger" (click)="menuEliminar()">
@@ -266,13 +277,38 @@
   </div>
 }
 
+} <!-- /listado -->
+
 <!-- ════════════════════════════════════════════════════════════ -->
-<!--  MODAL GESTIONAR ACTIVIDAD (fichas: datos / asistencia / tesorería) -->
+<!--  PÁGINA GESTIONAR ACTIVIDAD (fichas: datos / asistencia / tesorería / formularios) -->
 <!-- ════════════════════════════════════════════════════════════ -->
+@if (modoPagina() && !mostrarGestion()) {
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+    <button class="btn-back" (click)="volverAlCalendario()">← Regresar al calendario</button>
+  } @else {
+    <div class="loading-state">Cargando actividad...</div>
+  }
+}
 @if (mostrarGestion()) {
-  <div class="gestion-backdrop" (click)="cerrarGestion()"></div>
-  <div class="gestion-modal" role="dialog" [style.max-width]="anchoGestion()">
+  <div class="gestion-topbar">
+    <button class="btn-back" (click)="volverAlCalendario()" title="Volver al calendario en el mes de esta actividad">
+      ← Regresar al calendario
+    </button>
+    @if (actividadGestion(); as a) {
+      <span class="gestion-topbar-info">
+        📅 {{ formatFecha(a.fecha_inicio) }}@if (a.fecha_fin && a.fecha_fin !== a.fecha_inicio) { – {{ formatFecha(a.fecha_fin) }} }
+        @if (a.lugar) { · 📍 {{ a.lugar }} }
+      </span>
+    }
+  </div>
+  @if (successMsg()) { <div class="alert alert-success">{{ successMsg() }}</div> }
+
+  <div class="gestion-pagina">
     <div class="gestion-header">
+      @if (actividadGestion()?.logo) {
+        <img [src]="urlLogo(actividadGestion()!.logo!)" class="gestion-header-logo" alt="" />
+      }
       <div class="asistencia-header-info">
         <span class="asistencia-titulo">{{ actividadGestion() ? 'Gestionar actividad' : 'Nueva actividad' }}</span>
         <span class="asistencia-act-nombre">{{ actividadGestion()?.nombre || form.nombre || 'Sin nombre aún' }}</span>
@@ -286,7 +322,6 @@
             📷 {{ mostrarCamara() ? 'Cerrar cámara' : 'Usar cámara' }}
           </button>
         }
-        <button class="btn-close" (click)="cerrarGestion()" title="Cerrar">✕</button>
       </div>
     </div>
 
@@ -311,6 +346,12 @@
           💰 Tesorería
         </button>
       }
+      <button type="button" class="gestion-tab" [class.active]="tabGestion()==='formularios'"
+              [disabled]="!actividadGestion()"
+              [title]="!actividadGestion() ? 'Guarda los datos de la reunión primero' : ''"
+              (click)="seleccionarTab('formularios')">
+        📝 Formularios
+      </button>
     </div>
 
     <div class="gestion-body">
@@ -321,17 +362,14 @@
           <div class="alert alert-error" style="margin-bottom:16px">{{ errorForm() }}</div>
         }
 
-        <!-- Logo -->
+        <div class="datos-grid">
+          <div class="datos-col">
+            <div class="datos-seccion">Información general</div>
+        <!-- Nombre -->
         <div class="form-group">
-          <label>Logo (solo imágenes)</label>
-          @if (logoPreview || logoActual) {
-            <div class="logo-preview-wrap">
-              <img [src]="logoPreview ?? urlLogo(logoActual!)" class="logo-preview" alt="Logo" />
-              <button class="btn btn-danger btn-sm" (click)="quitarLogo()" type="button">Quitar logo</button>
-            </div>
-          } @else {
-            <input type="file" accept="image/*" (change)="onLogoChange($event)" class="file-input" />
-          }
+          <label>Nombre <span class="req">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="form.nombre"
+                 placeholder="Nombre de la actividad" />
         </div>
 
         <!-- Categoría -->
@@ -351,13 +389,6 @@
           </div>
         </div>
 
-        <!-- Nombre -->
-        <div class="form-group">
-          <label>Nombre <span class="req">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="form.nombre"
-                 placeholder="Nombre de la actividad" />
-        </div>
-
         <!-- Descripción -->
         <div class="form-group">
           <label>Descripción</label>
@@ -365,6 +396,7 @@
                     rows="4" placeholder="Descripción detallada..."></textarea>
         </div>
 
+            <div class="datos-seccion">Fecha, hora y lugar</div>
         <!-- Fechas -->
         <div class="form-row-2">
           <div class="form-group">
@@ -400,6 +432,23 @@
           </select>
         </div>
 
+          </div>
+          <div class="datos-col">
+            <div class="datos-seccion">Logo</div>
+        <!-- Logo -->
+        <div class="form-group">
+          <label>Logo (solo imágenes)</label>
+          @if (logoPreview || logoActual) {
+            <div class="logo-preview-wrap">
+              <img [src]="logoPreview ?? urlLogo(logoActual!)" class="logo-preview" alt="Logo" />
+              <button class="btn btn-danger btn-sm" (click)="quitarLogo()" type="button">Quitar logo</button>
+            </div>
+          } @else {
+            <input type="file" accept="image/*" (change)="onLogoChange($event)" class="file-input" />
+          }
+        </div>
+
+            <div class="datos-seccion">Grupos y archivos</div>
         <!-- Grupos -->
         <div class="form-group">
           <label>Grupos involucrados</label>
@@ -463,6 +512,8 @@
         <div class="form-group">
           <label>Adjuntar archivos (máx. 200 MB por archivo)</label>
           <input type="file" multiple (change)="onAdjuntosChange($event)" class="file-input" />
+        </div>
+          </div>
         </div>
       }
 
@@ -842,6 +893,49 @@
           </div>
         }
       }
+      <!-- ══════════ FICHA: FORMULARIOS DE INSCRIPCIÓN ══════════ -->
+      @if (tabGestion() === 'formularios') {
+        @if (errorFormularios()) {
+          <div class="alert alert-error" style="margin-bottom:14px">{{ errorFormularios() }}</div>
+        }
+        <div class="form-act-intro">
+          Formularios de inscripción de esta actividad. Cada uno tiene su enlace y código QR, y puede ser
+          <b>público</b> (cualquiera con el enlace) o <b>privado</b> (solo usuarios del sistema).
+        </div>
+
+        @if (cargandoFormularios()) {
+          <div class="loading-state">Cargando formularios...</div>
+        } @else {
+          @for (f of formulariosAct() || []; track f.idactividades_formularios) {
+            <div class="form-act-item" [class.form-act-item--inactivo]="!f.activo">
+              <div class="form-act-info">
+                <div class="form-act-titulo">{{ f.titulo }}</div>
+                <div class="form-act-meta">
+                  <span class="form-act-tag" [class.form-act-tag--pub]="f.publico">{{ f.publico ? '🌐 Público' : '🔒 Privado' }}</span>
+                  <span class="form-act-tag" [class.form-act-tag--off]="!f.activo">{{ f.activo ? '● Activo' : '○ Cerrado' }}</span>
+                  <span>{{ f.total_preguntas }} pregunta(s)</span>
+                  <span>·</span>
+                  <b>{{ f.total_respuestas }} respuesta(s)</b>
+                  @if (f.fecha_limite) { <span>· hasta {{ formatFecha(f.fecha_limite) }}</span> }
+                </div>
+                <a class="form-act-url" [href]="urlFormulario(f)" target="_blank" rel="noopener">{{ urlFormulario(f) }}</a>
+              </div>
+              <div class="form-act-acciones">
+                <button class="btn btn-outline-blue btn-sm" (click)="compartirForm.set(f)" title="Enlace y código QR">🔗 QR</button>
+                <button class="btn btn-outline-blue btn-sm" (click)="verRespuestas(f)" title="Reporte de respuestas">📊 Respuestas</button>
+                @if (permisos.puede('actividades', 'E')) {
+                  <button class="btn btn-outline btn-sm" (click)="editarFormulario(f)" title="Editar">✏️</button>
+                  <button class="btn btn-outline btn-sm" (click)="toggleActivoFormulario(f)"
+                          [title]="f.activo ? 'Cerrar (dejar de recibir respuestas)' : 'Reabrir'">{{ f.activo ? '⏸' : '▶' }}</button>
+                  <button class="btn btn-outline btn-sm form-act-del" (click)="eliminarFormulario(f)" title="Eliminar">🗑️</button>
+                }
+              </div>
+            </div>
+          } @empty {
+            <div class="seccion-vacia">Esta actividad aún no tiene formularios de inscripción.</div>
+          }
+        }
+      }
     </div><!-- /gestion-body -->
 
     <div class="gestion-footer">
@@ -852,6 +946,9 @@
         <button class="btn btn-primary" style="width:auto" (click)="guardar()" [disabled]="guardando()">
           {{ guardando() ? 'Guardando...' : 'Guardar' }}
         </button>
+      }
+      @if (tabGestion() === 'formularios' && permisos.puede('actividades', 'E')) {
+        <button class="btn btn-primary" style="width:auto" (click)="nuevoFormulario()">＋ Nuevo formulario</button>
       }
       @if (tabGestion() === 'tesoreria' && puedeAgregarMovimientoTesoreria() && tesoreriasAccesibles().length > 0) {
         <button class="btn btn-primary" style="width:auto" (click)="guardarTesoreria()" [disabled]="guardandoTesoreria()">
@@ -1097,4 +1194,9 @@
     }
 
   </div><!-- /reporte-modal -->
+}
+
+@if (compartirForm(); as cf) {
+  <app-formulario-compartir [token]="cf.token" [titulo]="cf.titulo" [publico]="cf.publico"
+                            (cerrar)="compartirForm.set(null)" />
 }

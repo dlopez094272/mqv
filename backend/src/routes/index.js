@@ -21,5 +21,7 @@ router.use('/tesoreria',   require('./tesoreria'));
 router.use('/crecimiento', require('./crecimiento'));
 router.use('/correo',      require('./correo'));
 router.use('/publicaciones', require('./publicaciones'));
+router.use('/formularios',  require('./formularios'));
+router.use('/formularios-publicos', require('./formulariosPublicos')); // sin auth obligatoria
 
 module.exports = router;

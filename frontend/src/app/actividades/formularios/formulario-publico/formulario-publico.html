@@ -1,0 +1,223 @@
+<div class="fp-page">
+  @if (cargando()) {
+    <div class="fp-card fp-centro">Cargando formulario…</div>
+  } @else if (errorCarga()) {
+    <div class="fp-card fp-centro">
+      <div class="fp-icono-grande">🔍</div>
+      <h2>Formulario no disponible</h2>
+      <p class="fp-muted">{{ errorCarga() }}</p>
+    </div>
+  } @else if (form(); as f) {
+
+    <!-- Encabezado con el logo de la actividad -->
+    <header class="fp-header">
+      @if (f.actividad.logo) {
+        <img [src]="urlLogo(f.actividad.logo)" class="fp-logo" alt="Logo de {{ f.actividad.nombre }}" />
+      }
+      <div class="fp-act-nombre">{{ f.actividad.nombre }}</div>
+      @if (fechaActividad()) { <div class="fp-act-dato">📅 {{ fechaActividad() }}</div> }
+      @if (f.actividad.lugar) { <div class="fp-act-dato">📍 {{ f.actividad.lugar }}</div> }
+    </header>
+
+    <div class="fp-card fp-intro">
+      <h1>{{ f.titulo }}</h1>
+      @if (f.descripcion) { <p class="fp-descripcion">{{ f.descripcion }}</p> }
+      @if (fechaLimite() && !f.cerrado && !enviado()) {
+        <div class="fp-limite">⏰ Disponible hasta el {{ fechaLimite() }}</div>
+      }
+      @if (!f.requiere_login && !f.publico) {
+        <div class="fp-privado">🔒 Formulario interno · respondiendo como <b>{{ f.usuario }}</b></div>
+      }
+    </div>
+
+    @if (f.requiere_login) {
+      <div class="fp-card fp-centro">
+        <div class="fp-icono-grande">🔒</div>
+        <h2>Formulario privado</h2>
+        <p class="fp-muted">Este formulario es solo para usuarios del sistema. Inicie sesión para responderlo.</p>
+        <button class="btn btn-primary fp-btn" (click)="irLogin()">Iniciar sesión</button>
+      </div>
+    } @else if (enviado(); as env) {
+      <div class="fp-card fp-centro">
+        <div class="fp-icono-grande">✅</div>
+        <h2>¡Respuesta enviada!</h2>
+        <p class="fp-muted">{{ env.mensaje || 'Gracias, hemos recibido su respuesta.' }}</p>
+        @if (env.correo_confirmacion) {
+          <p class="fp-muted" style="margin-top:8px">✉️ Le enviamos una confirmación por correo.</p>
+        }
+        <button class="btn btn-outline fp-btn" (click)="otraRespuesta()">Enviar otra respuesta</button>
+      </div>
+    } @else if (f.cerrado) {
+      <div class="fp-card fp-centro">
+        <div class="fp-icono-grande">⏸️</div>
+        <h2>Formulario cerrado</h2>
+        <p class="fp-muted">{{ f.cerrado }}</p>
+      </div>
+    } @else {
+
+      @for (q of visibles(); track q.clave) {
+        @if (q.tipo === 'seccion') {
+          <div class="fp-seccion">
+            <div class="fp-seccion-titulo">{{ q.etiqueta }}</div>
+            @if (q.ayuda) { <div class="fp-seccion-texto">{{ q.ayuda }}</div> }
+          </div>
+        } @else {
+          <div class="fp-card fp-pregunta" [id]="'preg-' + q.clave" [class.fp-pregunta--error]="errores()[q.clave]">
+            <div class="fp-preg-etiqueta">
+              {{ q.etiqueta }} @if (q.requerida) { <span class="req">*</span> }
+            </div>
+            @if (q.ayuda) { <div class="fp-preg-ayuda">{{ q.ayuda }}</div> }
+            @if (q.clave === f.pregunta_email) {
+              <div class="fp-preg-ayuda">✉️ Le enviaremos una confirmación de su inscripción a este correo.</div>
+            }
+
+            @switch (q.tipo) {
+              @case ('texto') {
+                <input class="fp-input" [type]="tipoInput(q)" [attr.inputmode]="modoTeclado(q)"
+                       [attr.autocomplete]="autocompletar(q)" maxlength="2000"
+                       [ngModel]="valor(q.clave) ?? ''" (ngModelChange)="asignar(q.clave, $event)" />
+              }
+              @case ('parrafo') {
+                <textarea class="fp-input" rows="4" maxlength="5000"
+                          [ngModel]="valor(q.clave) ?? ''" (ngModelChange)="asignar(q.clave, $event)"></textarea>
+              }
+              @case ('numero') {
+                <input class="fp-input fp-input-corto" type="number" inputmode="decimal"
+                       [ngModel]="valor(q.clave) ?? ''" (ngModelChange)="asignar(q.clave, $event)" />
+              }
+              @case ('fecha') {
+                <input class="fp-input fp-input-corto" type="date"
+                       [ngModel]="valor(q.clave) ?? ''" (ngModelChange)="asignar(q.clave, $event)" />
+              }
+              @case ('lista') {
+                <select class="fp-input" [ngModel]="valor(q.clave) ?? ''" (ngModelChange)="asignar(q.clave, $event)">
+                  <option value="">— Seleccione —</option>
+                  @for (op of q.opciones; track op) { <option [value]="op">{{ op }}</option> }
+                </select>
+              }
+              @case ('unica') {
+                <div class="fp-opciones">
+                  @for (op of q.opciones; track op) {
+                    <label class="fp-opcion" [class.fp-opcion--sel]="marcado(q, op)">
+                      <input type="radio" [name]="q.clave" [checked]="marcado(q, op)" (change)="asignar(q.clave, op)" />
+                      <span>{{ op }}</span>
+                    </label>
+                  }
+                </div>
+                @if (!q.requerida && valor(q.clave)) {
+                  <button type="button" class="fp-link" (click)="asignar(q.clave, null)">Borrar selección</button>
+                }
+              }
+              @case ('multiple') {
+                <div class="fp-opciones">
+                  @for (op of q.opciones; track op) {
+                    <label class="fp-opcion" [class.fp-opcion--sel]="marcado(q, op)">
+                      <input type="checkbox" [checked]="marcado(q, op)" (change)="toggleMultiple(q, op)" />
+                      <span>{{ op }}</span>
+                    </label>
+                  }
+                </div>
+              }
+              @case ('persona') {
+                @let v = valor(q.clave);
+                @if (v?.modo === 'registrada') {
+                  <!-- Persona seleccionada -->
+                  <div class="fp-persona-sel">
+                    @if (v.foto && !fotoFallida(v.foto)) {
+                      <img [src]="urlFoto(v.foto)" class="fp-avatar fp-avatar--grande" alt="" (error)="marcarFotoFallida(v.foto)" />
+                    } @else {
+                      <div class="fp-avatar fp-avatar--grande fp-avatar--inicial">{{ inicial(v.nombre) }}</div>
+                    }
+                    <div class="fp-persona-info">
+                      <div class="fp-persona-nombre">{{ v.nombre }}</div>
+                      @if (v.grupos) { <div class="fp-persona-grupos">{{ v.grupos }}</div> }
+                    </div>
+                    <button type="button" class="fp-link" (click)="cambiarPersona(q)">Cambiar</button>
+                  </div>
+                } @else if (v?.modo === 'nueva') {
+                  <!-- Persona nueva -->
+                  <div class="fp-nueva">
+                    <div class="fp-nueva-titulo">
+                      Datos de la persona
+                      <button type="button" class="fp-link" (click)="cambiarPersona(q)">← Volver a buscar</button>
+                    </div>
+                    <div class="fp-nueva-grid">
+                      <label>Primer nombre <span class="req">*</span>
+                        <input class="fp-input" type="text" maxlength="145" autocapitalize="words" autocomplete="given-name" [ngModel]="v.primer_nombre"
+                               (ngModelChange)="campoNueva(q, 'primer_nombre', $event)" /></label>
+                      <label>Segundo nombre
+                        <input class="fp-input" type="text" maxlength="145" autocapitalize="words" autocomplete="additional-name" [ngModel]="v.segundo_nombre"
+                               (ngModelChange)="campoNueva(q, 'segundo_nombre', $event)" /></label>
+                      <label>Primer apellido <span class="req">*</span>
+                        <input class="fp-input" type="text" maxlength="145" autocapitalize="words" autocomplete="family-name" [ngModel]="v.primer_apellido"
+                               (ngModelChange)="campoNueva(q, 'primer_apellido', $event)" /></label>
+                      <label>Segundo apellido
+                        <input class="fp-input" type="text" maxlength="145" autocapitalize="words" autocomplete="off" [ngModel]="v.segundo_apellido"
+                               (ngModelChange)="campoNueva(q, 'segundo_apellido', $event)" /></label>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Buscador -->
+                  @let b = busq(q.clave);
+                  <div class="fp-buscador">
+                    <input class="fp-input" type="search" enterkeyhint="search" placeholder="Escriba un nombre o apellido…"
+                           [ngModel]="b.texto" (ngModelChange)="onBuscarTexto(q, $event)" autocomplete="off" />
+                    @if (b.grupos.length > 1) {
+                      <select class="fp-input fp-filtro" [ngModel]="b.grupo ?? ''" (ngModelChange)="onBuscarGrupo(q, $event)"
+                              title="Filtrar por grupo">
+                        <option value="">Todos los grupos</option>
+                        @for (g of b.grupos; track g.id) { <option [value]="g.id">{{ g.nombre }}</option> }
+                      </select>
+                    }
+                  </div>
+
+                  @if (b.buscando) {
+                    <div class="fp-muted fp-estado">Buscando…</div>
+                  } @else if (b.resultados.length) {
+                    <div class="fp-resultados">
+                      @for (p of b.resultados; track p.idpersonas) {
+                        <button type="button" class="fp-resultado" (click)="seleccionarPersona(q, p)">
+                          @if (p.foto && !fotoFallida(p.foto)) {
+                            <img [src]="urlFoto(p.foto)" class="fp-avatar" alt="" loading="lazy" (error)="marcarFotoFallida(p.foto)" />
+                          } @else {
+                            <div class="fp-avatar fp-avatar--inicial">{{ inicial(p.nombre) }}</div>
+                          }
+                          <div class="fp-persona-info">
+                            <div class="fp-persona-nombre">{{ p.nombre }}</div>
+                            @if (p.grupos) { <div class="fp-persona-grupos">{{ p.grupos }}</div> }
+                          </div>
+                        </button>
+                      }
+                    </div>
+                  } @else if (b.buscado) {
+                    <div class="fp-muted fp-estado">No se encontraron personas con ese nombre.</div>
+                  } @else {
+                    <div class="fp-muted fp-estado">
+                      {{ requiereTexto() ? 'Escriba al menos 2 letras para buscar.' : 'Escriba un nombre o elija un grupo.' }}
+                    </div>
+                  }
+
+                  @if (q.permitir_nuevo) {
+                    <button type="button" class="fp-btn-nueva" (click)="ingresarNueva(q)">
+                      ➕ No encuentro a la persona: ingresar sus datos
+                    </button>
+                  }
+                }
+              }
+            }
+
+            @if (errores()[q.clave]) { <div class="fp-error">{{ errores()[q.clave] }}</div> }
+          </div>
+        }
+      }
+
+      @if (errorEnvio()) { <div class="alert alert-error">{{ errorEnvio() }}</div> }
+
+      <div class="fp-enviar">
+        <button class="btn btn-primary fp-btn" (click)="enviar()" [disabled]="enviando()">
+          {{ enviando() ? 'Enviando…' : 'Enviar' }}
+        </button>
+      </div>
+    }
+  }
+</div>

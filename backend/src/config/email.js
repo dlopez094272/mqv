@@ -159,4 +159,58 @@ function emailCumpleaneros(nombre) {
   `);
 }
 
-module.exports = { sendMail, emailBienvenida, emailResetPassword, emailCumpleaneros };
+const esc = s => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+/**
+ * Correo de inscripción a un formulario de actividad.
+ * paraOrganizador = true → aviso de nueva inscripción; false → confirmación al inscrito.
+ * filas: [{ pregunta, respuesta }] (texto plano; aquí se escapa).
+ */
+function emailInscripcion({ titulo, actividad, fecha, lugar, logoUrl, filas, mensaje, paraOrganizador, urlReporte }) {
+  const filasHtml = filas.map(f => `
+      <tr>
+        <td style="padding:9px 12px;border-bottom:1px solid #eee;color:#7D7E81;font-size:13px;vertical-align:top;width:42%;">${esc(f.pregunta)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #eee;color:#414042;font-size:14px;font-weight:600;white-space:pre-line;">${esc(f.respuesta)}</td>
+      </tr>`).join('');
+
+  return tplBase(`
+    ${logoUrl ? `<div style="text-align:center;margin-bottom:16px;"><img src="${esc(logoUrl)}" alt="" style="max-width:140px;max-height:100px;border:0;" /></div>` : ''}
+    <h2 style="color:#57446C;margin:0 0 4px;font-size:20px;font-weight:800;text-align:center;">
+      ${paraOrganizador ? 'Nueva inscripción recibida' : '¡Inscripción recibida!'}
+    </h2>
+    <p style="color:#7D7E81;font-size:14px;margin:0 0 20px;text-align:center;">${esc(titulo)}</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="background:linear-gradient(135deg,#f3f0f8 0%,#e8f4f8 100%);border-radius:10px;padding:16px 20px;border-left:4px solid #57446C;">
+          <p style="margin:0 0 4px;color:#57446C;font-size:16px;font-weight:800;">${esc(actividad)}</p>
+          ${fecha ? `<p style="margin:0;color:#414042;font-size:13px;">&#128197; ${esc(fecha)}</p>` : ''}
+          ${lugar ? `<p style="margin:2px 0 0;color:#414042;font-size:13px;">&#128205; ${esc(lugar)}</p>` : ''}
+        </td>
+      </tr>
+    </table>
+
+    ${!paraOrganizador && mensaje ? `<p style="color:#414042;line-height:1.7;font-size:14px;margin:0 0 18px;white-space:pre-line;">${esc(mensaje)}</p>` : ''}
+
+    <p style="margin:0 0 8px;color:#7D7E81;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">
+      ${paraOrganizador ? 'Respuestas' : 'Resumen de su inscripción'}
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:8px;border-collapse:separate;margin-bottom:20px;">
+      ${filasHtml}
+    </table>
+
+    ${paraOrganizador && urlReporte ? `
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <a href="${esc(urlReporte)}" style="display:inline-block;background:linear-gradient(135deg,#53819A 0%,#57446C 100%);color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">
+        Ver todas las respuestas
+      </a>
+    </td></tr></table>` : `
+    <p style="color:#ABADB0;font-size:12px;line-height:1.6;margin:0;text-align:center;">
+      Este es un mensaje automático, por favor no responda a este correo.
+    </p>`}
+  `);
+}
+
+module.exports = { sendMail, emailBienvenida, emailResetPassword, emailCumpleaneros, emailInscripcion };
