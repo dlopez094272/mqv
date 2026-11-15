@@ -1,0 +1,196 @@
+<div class="page-header">
+  <div class="cf-head">
+    <button class="btn-back" (click)="volver()">← Biblioteca</button>
+    <h2>{{ id() ? 'Editar canción' : 'Nueva canción' }}@if (form.titulo) { · <span class="cf-tit">{{ form.titulo }}</span> }</h2>
+  </div>
+  <div class="cf-acciones">
+    @if (id()) { <button class="btn-secondary" (click)="verCancion()">👁️ Ver como músico</button> }
+    <button class="btn-primary" (click)="guardar()" [disabled]="guardando()">{{ guardando() ? 'Guardando...' : '💾 Guardar' }}</button>
+  </div>
+</div>
+
+@if (exito()) { <div class="alert-success">{{ exito() }}</div> }
+@if (error())  { <div class="alert-error">{{ error() }}</div> }
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else {
+  <div class="tabs">
+    <button class="tab" [class.active]="seccion() === 'datos'" (click)="seccion.set('datos')">📋 Datos</button>
+    <button class="tab" [class.active]="seccion() === 'letra'" (click)="seccion.set('letra')">🎸 Letra y acordes</button>
+    <button class="tab" [class.active]="seccion() === 'partitura'" (click)="seccion.set('partitura')">🎼 Partitura</button>
+    <button class="tab" [class.active]="seccion() === 'archivos'" (click)="seccion.set('archivos')" [disabled]="!id()"
+            [title]="id() ? '' : 'Guarda la canción primero'">🎧 Pistas y PDF</button>
+  </div>
+
+  <!-- ══ DATOS ══ -->
+  @if (seccion() === 'datos') {
+    <div class="cf-card">
+      <div class="form-row">
+        <div class="form-group flex-2">
+          <label>Título <span class="req">*</span></label>
+          <input [(ngModel)]="form.titulo" maxlength="255" placeholder="Ej. Santo, Santo, Santo" />
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select [(ngModel)]="form.tipo">
+            <option value="cancion">Canción</option>
+            <option value="himno">Himno</option>
+            <option value="coro">Coro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group flex-2">
+          <label>Autor / compositor</label>
+          <input [(ngModel)]="form.autor" maxlength="255" />
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <input [(ngModel)]="form.categoria" list="cf-categorias" maxlength="60" />
+          <datalist id="cf-categorias">@for (c of categorias; track c) { <option [value]="c"></option> }</datalist>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tonalidad original</label>
+          <select [(ngModel)]="form.tonalidad">
+            <option [ngValue]="null">—</option>
+            @for (t of tonalidades; track t) { <option [ngValue]="t">{{ t }}</option> }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tempo (BPM)</label>
+          <div class="cf-bpm">
+            <input type="number" [(ngModel)]="form.bpm" min="20" max="300" />
+            <button type="button" class="btn-secondary cf-tap" (click)="tap()" title="Toca al ritmo de la canción">👆 Tap</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Compás</label>
+          <select [(ngModel)]="form.compas">
+            @for (c of ['4/4','3/4','6/8','2/4','12/8']; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Etiquetas <small>(separadas por coma)</small></label>
+        <input [(ngModel)]="form.etiquetas" maxlength="255" placeholder="gracia, cruz, rápida..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Video de referencia (YouTube)</label>
+          <input [(ngModel)]="form.youtube_url" placeholder="https://www.youtube.com/watch?v=..." />
+        </div>
+        <div class="form-group">
+          <label>Spotify</label>
+          <input [(ngModel)]="form.spotify_url" placeholder="https://open.spotify.com/track/..." />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>No. CCLI</label>
+          <input [(ngModel)]="form.ccli" maxlength="20" placeholder="Si la canción tiene derechos" />
+        </div>
+        <div class="form-group cf-checks">
+          <label class="cf-check"><input type="checkbox" [ngModel]="!!form.dominio_publico" (ngModelChange)="form.dominio_publico = $event ? 1 : 0" /> Dominio público</label>
+          <label class="cf-check"><input type="checkbox" [ngModel]="!!form.activo" (ngModelChange)="form.activo = $event ? 1 : 0" /> Activa en el repertorio</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notas para los músicos</label>
+        <textarea [(ngModel)]="form.notas" rows="3" placeholder="Intro con piano solo, final lento, repetir coro..."></textarea>
+      </div>
+    </div>
+  }
+
+  <!-- ══ LETRA Y ACORDES ══ -->
+  @if (seccion() === 'letra') {
+    <div class="cf-ayuda">
+      Escribe cada acorde entre corchetes <code>[G]</code> justo antes de la sílaba donde cambia.
+      ¿Copiaste la canción de internet con los acordes <b>arriba</b> de la letra? Pégala y presiona <b>Convertir</b>.
+    </div>
+    <div class="cf-editor">
+      <div class="cf-editor-col">
+        <div class="cf-toolbar">
+          <button type="button" class="btn-icon" (click)="insertarEtiqueta(area, '{start_of_verse}\n', '\n{end_of_verse}')">Estrofa</button>
+          <button type="button" class="btn-icon" (click)="insertarEtiqueta(area, '{start_of_chorus}\n', '\n{end_of_chorus}')">Coro</button>
+          <button type="button" class="btn-icon" (click)="insertarEtiqueta(area, '{start_of_bridge}\n', '\n{end_of_bridge}')">Puente</button>
+          <button type="button" class="btn-icon" (click)="insertarEtiqueta(area, '{comment: ', '}')">Nota</button>
+          <span class="cf-sp"></span>
+          <button type="button" class="btn-icon" (click)="convertir()" title="Convierte el formato de acordes arriba de la letra">🔄 Convertir</button>
+          @if (!form.letra_acordes) { <button type="button" class="btn-icon" (click)="insertarEjemplo()">Ejemplo</button> }
+        </div>
+        <textarea #area class="cf-code" [(ngModel)]="form.letra_acordes" spellcheck="false"
+                  placeholder="[G]Señor mi Dios, al contem[C]plar los [G]cielos..."></textarea>
+      </div>
+      <div class="cf-editor-col cf-preview">
+        <div class="cf-preview-tit">Vista previa</div>
+        <app-hoja-acordes [texto]="form.letra_acordes || ''" [tonalidad]="form.tonalidad || null" [tamano]="15" />
+      </div>
+    </div>
+  }
+
+  <!-- ══ PARTITURA ══ -->
+  @if (seccion() === 'partitura') {
+    <div class="cf-ayuda">
+      La partitura se escribe en <b>notación ABC</b> (texto) y el sistema la dibuja y la reproduce.
+      Hay miles de himnos de dominio público ya escritos en ABC en internet, listos para copiar y pegar.
+      Si solo tienes un PDF, súbelo en <b>Pistas y PDF</b>.
+    </div>
+    <div class="cf-editor">
+      <div class="cf-editor-col">
+        <div class="cf-toolbar">
+          @if (!form.partitura_abc) { <button type="button" class="btn-icon" (click)="insertarEjemploAbc()">Plantilla</button> }
+        </div>
+        <textarea class="cf-code" [(ngModel)]="form.partitura_abc" spellcheck="false" placeholder="X:1&#10;T:...&#10;K:G&#10;..."></textarea>
+      </div>
+      <div class="cf-editor-col cf-preview">
+        <app-partitura-abc [abc]="form.partitura_abc || ''" />
+      </div>
+    </div>
+  }
+
+  <!-- ══ ARCHIVOS ══ -->
+  @if (seccion() === 'archivos' && id()) {
+    <div class="cf-card">
+      <div class="cf-drop" (dragover)="$event.preventDefault()" (drop)="soltar($event)">
+        <div class="cf-drop-ico">🎧 🎼</div>
+        <div>Arrastra aquí las pistas de audio (MP3, M4A, WAV) o partituras (PDF, imagen)</div>
+        <label class="btn-secondary cf-drop-btn">
+          Elegir archivos
+          <input type="file" multiple hidden accept="audio/*,.pdf,image/*,.musicxml,.mxl,.mid,.midi" (change)="elegirArchivos($event)" />
+        </label>
+        <small>Sube cada instrumento por separado (voz, bajo, batería...) y los músicos podrán silenciar el suyo en el mezclador.</small>
+      </div>
+
+      @if (pendientes.length) {
+        <div class="cf-pend">
+          @for (p of pendientes; track $index) {
+            <div class="cf-pend-item">
+              <span class="cf-pend-nom">{{ p.file.name }} <small>{{ tamano(p.file.size) }}</small></span>
+              <input class="input" [(ngModel)]="p.pista" list="cf-pistas" placeholder="Pista" />
+              <button class="btn-icon btn-danger" (click)="quitarPendiente($index)">✕</button>
+            </div>
+          }
+          <datalist id="cf-pistas">@for (p of pistasSugeridas; track p) { <option [value]="p"></option> }<option value="Partitura"></option></datalist>
+          <button class="btn-primary" (click)="subir()" [disabled]="subiendo()">{{ subiendo() ? 'Subiendo...' : '⬆ Subir ' + pendientes.length + ' archivo(s)' }}</button>
+        </div>
+      }
+
+      <h4 class="cf-sub">Archivos de la canción</h4>
+      @for (a of archivos(); track a.idarchivos) {
+        <div class="cf-arch">
+          <span class="cf-arch-ico">{{ a.tipo === 'audio' ? '🎧' : a.mimetype === 'application/pdf' ? '📄' : '🖼️' }}</span>
+          <input class="input cf-arch-pista" [ngModel]="a.pista" (change)="renombrar(a, $any($event.target).value)" list="cf-pistas" />
+          <a class="cf-arch-nom" [href]="url(a)" target="_blank" rel="noopener">{{ a.nombre_original }}</a>
+          <small>{{ tamano(a.size) }}</small>
+          @if (a.tipo === 'audio') { <audio controls preload="none" [src]="url(a)"></audio> }
+          <button class="btn-icon btn-danger" (click)="eliminarArchivo(a)">🗑️</button>
+        </div>
+      } @empty {
+        <div class="text-muted text-sm">Todavía no hay archivos.</div>
+      }
+    </div>
+  }
+}

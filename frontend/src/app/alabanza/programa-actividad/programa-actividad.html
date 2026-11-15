@@ -1,0 +1,174 @@
+@if (cargando()) {
+  <div class="loading-state">Cargando programa...</div>
+} @else {
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+  @if (exito()) { <div class="alert alert-success">{{ exito() }}</div> }
+
+  <div class="pg-resumen">
+    <span>📋 <b>{{ items().length }}</b> elemento(s)</span>
+    <span>🎵 <b>{{ totalCanciones() }}</b> canción(es)</span>
+    @if (duracionTotal()) { <span>⏱ <b>{{ duracionTotal() }}</b> min</span> }
+    <span>🎸 <b>{{ musicos().length }}</b> en el equipo</span>
+    <span class="pg-sp"></span>
+    @if (items().length) { <button class="btn btn-outline-blue btn-sm" (click)="imprimir()">🖨️ Imprimir programa</button> }
+  </div>
+
+  <div class="pg-layout">
+    <!-- ══ Programa ══ -->
+    <div class="pg-col">
+      <h4 class="pg-tit">Orden de la actividad</h4>
+
+      @for (it of items(); track $index; let i = $index) {
+        <div class="pg-item" [class.cancion]="it.tipo === 'cancion'" [class.abierto]="expandido() === i"
+             [draggable]="puedeEditar()" (dragstart)="dragStart(i)" (dragover)="dragOver($event)" (drop)="drop(i)">
+          <div class="pg-fila" (click)="alternar(i)">
+            @if (puedeEditar()) { <span class="pg-grip" title="Arrastra para ordenar">⋮⋮</span> }
+            <span class="pg-hora" [class.estimada]="horas()[i].estimada" [title]="horas()[i].estimada ? 'Hora estimada' : ''">{{ horas()[i].hora || '' }}</span>
+            <span class="pg-ico">{{ icono(it) }}</span>
+            <div class="pg-info">
+              @if (it.tipo === 'cancion') {
+                <div class="pg-nombre">{{ it.cancion_titulo || '(Canción eliminada)' }}
+                  @if (it.tonalidad) { <span class="pg-tono" [class.cambiado]="it.tonalidad !== it.cancion_tonalidad"
+                     [title]="it.tonalidad !== it.cancion_tonalidad ? 'Original: ' + (it.cancion_tonalidad || '?') : 'Tono original'">{{ it.tonalidad }}</span> }
+                </div>
+                <div class="pg-meta">
+                  {{ it.cancion_autor || '' }}
+                  @if (it.cancion_bpm) { · {{ it.cancion_bpm }} BPM }
+                  @if (it.total_audios) { · 🎧 {{ it.total_audios }} }
+                  @if (it.responsable) { · 🎤 {{ it.responsable }} }
+                </div>
+              } @else {
+                <div class="pg-nombre">{{ it.titulo }}</div>
+                <div class="pg-meta">
+                  @if (it.responsable) { 👤 {{ it.responsable }} }
+                  @if (it.notas) { · {{ it.notas }} }
+                </div>
+              }
+            </div>
+            @if (it.duracion_min) { <span class="pg-dur">{{ it.duracion_min }}′</span> }
+            @if (it.tipo === 'cancion' && it.idcanciones) {
+              <button class="pg-mini" (click)="$event.stopPropagation(); verCancion(it)" title="Ver acordes en este tono">👁️</button>
+            }
+            @if (puedeEditar()) {
+              <button class="pg-mini" (click)="$event.stopPropagation(); mover(i, -1)" [disabled]="i === 0">▲</button>
+              <button class="pg-mini" (click)="$event.stopPropagation(); mover(i, 1)" [disabled]="i === items().length - 1">▼</button>
+              <button class="pg-mini pg-del" (click)="$event.stopPropagation(); quitar(i)">✕</button>
+            }
+          </div>
+
+          @if (expandido() === i && puedeEditar()) {
+            <div class="pg-edit">
+              @if (it.tipo === 'momento') {
+                <label>Título <input class="input" [ngModel]="it.titulo" (ngModelChange)="actualizar(i, 'titulo', $event)" /></label>
+              } @else {
+                <label>Tono para este día
+                  <select class="input" [ngModel]="it.tonalidad" (ngModelChange)="actualizar(i, 'tonalidad', $event)">
+                    <option [ngValue]="null">—</option>
+                    @for (t of tonalidades; track t) { <option [ngValue]="t">{{ t }}{{ t === it.cancion_tonalidad ? ' (original)' : '' }}</option> }
+                  </select>
+                </label>
+              }
+              <label>{{ it.tipo === 'cancion' ? 'Dirige' : 'Responsable' }} <input class="input" [ngModel]="it.responsable" (ngModelChange)="actualizar(i, 'responsable', $event)" /></label>
+              <label>Hora fija <input class="input" type="time" [ngModel]="it.hora" (ngModelChange)="actualizar(i, 'hora', $event)" /></label>
+              <label>Duración (min) <input class="input" type="number" min="0" [ngModel]="it.duracion_min" (ngModelChange)="actualizar(i, 'duracion_min', $event)" /></label>
+              <label class="pg-edit-full">Notas <input class="input" [ngModel]="it.notas" (ngModelChange)="actualizar(i, 'notas', $event)"
+                     [placeholder]="it.tipo === 'cancion' ? 'Intro con piano, repetir coro 2 veces...' : 'Detalles para este momento'" /></label>
+            </div>
+          }
+        </div>
+      } @empty {
+        <div class="pg-vacio">
+          El programa está vacío.
+          @if (puedeEditar()) { <br><button class="btn btn-outline btn-sm" (click)="plantillaCulto()">✨ Usar plantilla de culto</button> }
+        </div>
+      }
+
+      @if (puedeEditar()) {
+        <div class="pg-agregar">
+          <div class="pg-agregar-tit">Agregar momento</div>
+          <div class="pg-chips">
+            @for (m of momentos; track m.titulo) {
+              <button class="pg-chip" (click)="agregarMomento(m.titulo)">{{ m.icono }} {{ m.titulo }}</button>
+            }
+            <button class="pg-chip pg-chip--otro" (click)="momentoPersonalizado()">＋ Otro...</button>
+          </div>
+
+          <div class="pg-agregar-tit">Agregar canción de la biblioteca</div>
+          @if (sinBiblioteca()) {
+            <div class="text-muted text-sm">Necesitas el permiso <b>Alabanza</b> para elegir canciones de la biblioteca.</div>
+          } @else {
+            <input class="input" placeholder="🔍 Buscar canción, himno o coro..." [ngModel]="busqueda()"
+                   (ngModelChange)="busqueda.set($event)" (focus)="buscando.set(true)" />
+            @if (buscando()) {
+              <div class="pg-resultados">
+                @for (c of resultados(); track c.idcanciones) {
+                  <button class="pg-res" (click)="agregarCancion(c)">
+                    <span><b>{{ c.titulo }}</b> <small>{{ c.autor }}</small></span>
+                    <span class="pg-res-der">
+                      @if (c.total_audios) { 🎧 }
+                      @if (c.tiene_acordes) { 🎸 }
+                      <span class="pg-tono">{{ c.tonalidad || '—' }}</span>
+                    </span>
+                  </button>
+                } @empty { <div class="text-muted text-sm" style="padding:8px">Sin resultados.</div> }
+              </div>
+            }
+          }
+
+          @if (recientes().length) {
+            <div class="pg-agregar-tit">Copiar el programa de otra actividad</div>
+            <select class="input" (change)="copiarDe(+$any($event.target).value); $any($event.target).value = ''">
+              <option value="">Elegir actividad...</option>
+              @for (r of recientes(); track r.idactividades) {
+                <option [value]="r.idactividades">{{ r.fecha_inicio }} · {{ r.nombre }} ({{ r.elementos }})</option>
+              }
+            </select>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ══ Equipo ══ -->
+    <div class="pg-col pg-col--equipo">
+      <h4 class="pg-tit">🎸 Equipo de alabanza</h4>
+      <div class="pg-ayuda">Los músicos asignados ven este programa en la app, con los acordes en el tono del día.</div>
+      @for (m of musicos(); track $index; let i = $index) {
+        <div class="pg-musico">
+          <span class="avatar">{{ (m.nombre || '?').charAt(0) }}</span>
+          <div class="pg-musico-info"><b>{{ m.nombre }}</b><small>{{ m.instrumento || 'Sin instrumento' }}</small></div>
+          @if (puedeEditar()) { <button class="pg-mini pg-del" (click)="quitarMusico(i)">✕</button> }
+        </div>
+      } @empty {
+        <div class="text-muted text-sm">Aún no hay músicos asignados.</div>
+      }
+
+      @if (puedeEditar()) {
+        <div class="pg-nuevo-musico">
+          <div class="pg-autocomp">
+            <input class="input" placeholder="Buscar persona..." [ngModel]="busquedaPersona()"
+                   (ngModelChange)="busquedaPersona.set($event); nuevoMusico.idpersonas = null" />
+            @if (personasFiltradas().length && !nuevoMusico.idpersonas) {
+              <div class="pg-autocomp-lista">
+                @for (p of personasFiltradas(); track p.id) { <button (click)="elegirPersona(p)">{{ p.nombre }}</button> }
+              </div>
+            }
+          </div>
+          <input class="input" placeholder="Instrumento" list="pg-instr" [(ngModel)]="nuevoMusico.instrumento" />
+          <datalist id="pg-instr">@for (x of instrumentos; track x) { <option [value]="x"></option> }</datalist>
+          <button class="btn btn-outline btn-sm" (click)="agregarMusico()" [disabled]="!nuevoMusico.idpersonas">＋ Agregar</button>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (puedeEditar()) {
+    <div class="pg-guardar" [class.sucio]="sucio()">
+      @if (sucio()) { <span>Tienes cambios sin guardar</span> }
+      <span class="pg-sp"></span>
+      @if (sucio()) { <button class="btn btn-outline btn-sm" (click)="descartar()">Descartar</button> }
+      <button class="btn btn-primary" style="width:auto" (click)="guardar()" [disabled]="guardando() || !sucio()">
+        {{ guardando() ? 'Guardando...' : '💾 Guardar programa' }}
+      </button>
+    </div>
+  }
+}

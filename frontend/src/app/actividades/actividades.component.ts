@@ -18,6 +18,7 @@ import { confirmar }       from '../shared/confirmar.util';
 import { CamaraAsistenciaComponent } from './camara-asistencia.component';
 import { FormulariosService, FormularioResumen } from './formularios/formularios.service';
 import { FormularioCompartirComponent } from './formularios/formulario-compartir.component';
+import { ProgramaActividadComponent } from '../alabanza/programa-actividad/programa-actividad';
 
 interface FilaMovimientoTesoreria {
   tipo:              'ingreso' | 'egreso';
@@ -27,7 +28,7 @@ interface FilaMovimientoTesoreria {
   fecha:             string;
 }
 
-type TabGestion = 'datos' | 'asistencia' | 'tesoreria' | 'formularios';
+type TabGestion = 'datos' | 'programa' | 'asistencia' | 'tesoreria' | 'formularios';
 
 interface DiaCalendario {
   fecha:        Date;
@@ -70,7 +71,7 @@ interface ReporteActividadDetalle {
 @Component({
   selector:    'app-actividades',
   standalone:  true,
-  imports:     [CommonModule, FormsModule, RouterModule, CamaraAsistenciaComponent, FormularioCompartirComponent],
+  imports:     [CommonModule, FormsModule, RouterModule, CamaraAsistenciaComponent, FormularioCompartirComponent, ProgramaActividadComponent],
   templateUrl: './actividades.component.html',
   styleUrl:    './actividades.component.scss',
 })
@@ -411,7 +412,7 @@ export class ActividadesComponent implements OnInit {
   private iniciarPagina() {
     const id  = Number(this.route.snapshot.paramMap.get('id'));
     const qp  = this.route.snapshot.queryParamMap;
-    const tab = (['datos', 'asistencia', 'tesoreria', 'formularios'].includes(qp.get('tab') || '')
+    const tab = (['datos', 'programa', 'asistencia', 'tesoreria', 'formularios'].includes(qp.get('tab') || '')
       ? qp.get('tab') : 'datos') as TabGestion;
     if (id) {
       this.svc.obtener(id).subscribe({

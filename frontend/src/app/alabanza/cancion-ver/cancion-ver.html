@@ -1,0 +1,152 @@
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else if (error()) {
+  <div class="alert-error">{{ error() }}</div>
+  <button class="btn-back" (click)="volver()">← Volver</button>
+} @else if (cancion(); as c) {
+  <div class="cv-top no-print">
+    <button class="btn-back" (click)="volver()">← {{ idActividad() ? 'Volver al programa' : 'Biblioteca' }}</button>
+    <div class="cv-top-acc">
+      @if (permisos.puede('alabanza', 'E')) { <button class="btn-secondary" (click)="editar()">✏️ Editar</button> }
+      <button class="btn-primary" (click)="abrirEscenario()" title="Pantalla completa para tocar en vivo">🎤 Modo escenario</button>
+    </div>
+  </div>
+
+  <div class="cv-header">
+    <div>
+      <div class="cv-tipo">{{ etiquetaTipo[c.tipo] }}@if (c.categoria) { · {{ c.categoria }} }</div>
+      <h1 class="cv-titulo">{{ c.titulo }}</h1>
+      <div class="cv-autor">{{ c.autor || 'Autor desconocido' }}@if (c.ccli) { · CCLI {{ c.ccli }} }@if (c.dominio_publico) { · Dominio público }</div>
+    </div>
+    <div class="cv-datos">
+      <div class="cv-dato"><span>Tono</span><b>{{ tonalidadActual() || '—' }}</b>
+        @if (semitonos() !== 0 && c.tonalidad) { <small>orig. {{ c.tonalidad }}</small> }</div>
+      <div class="cv-dato"><span>BPM</span><b>{{ c.bpm || '—' }}</b></div>
+      <div class="cv-dato"><span>Compás</span><b>{{ c.compas || '4/4' }}</b></div>
+    </div>
+  </div>
+
+  @if (tonoDelDia()) {
+    <div class="cv-dia no-print">📅 En el programa de la actividad esta canción va en <b>{{ tonoDelDia() }}</b>. Los acordes ya están transpuestos.</div>
+  }
+  @if (aviso()) { <div class="alert alert-info no-print">{{ aviso() }}</div> }
+
+  <div class="cv-layout">
+    <!-- ══ Hoja principal ══ -->
+    <div class="cv-main">
+      @if (c.letra_acordes) {
+        <div class="cv-toolbar no-print">
+          <div class="cv-grupo" title="Cambiar tonalidad">
+            <button class="cv-btn" (click)="bajar()">−½</button>
+            <select class="cv-sel" [ngModel]="tonalidadActual()" (ngModelChange)="irATono($event)" [disabled]="!c.tonalidad">
+              @if (!c.tonalidad) { <option [ngValue]="null">{{ semitonos() > 0 ? '+' : '' }}{{ semitonos() }}</option> }
+              @for (t of tonalidades; track t) {
+                @if (c.tonalidad?.endsWith('m') === t.endsWith('m')) { <option [ngValue]="t">{{ t }}</option> }
+              }
+            </select>
+            <button class="cv-btn" (click)="subir()">+½</button>
+            @if (semitonos() !== 0) { <button class="cv-btn cv-btn--txt" (click)="original()">Original</button> }
+          </div>
+          <button class="cv-btn cv-btn--txt" [class.on]="nashville()" (click)="nashville.set(!nashville())" title="Números Nashville (1-4-5)">1·4·5</button>
+          <button class="cv-btn cv-btn--txt" [class.on]="soloLetra()" (click)="soloLetra.set(!soloLetra())" title="Ocultar acordes (para cantantes)">🎙 Solo letra</button>
+          <button class="cv-btn cv-btn--txt" [class.on]="dosColumnas()" (click)="dosColumnas.set(!dosColumnas())">▥ 2 columnas</button>
+          <div class="cv-grupo">
+            <button class="cv-btn" (click)="tamano.set(tamano() - 1)" [disabled]="tamano() <= 12">A−</button>
+            <button class="cv-btn" (click)="tamano.set(tamano() + 1)" [disabled]="tamano() >= 32">A+</button>
+          </div>
+          @if (c.bpm) {
+            <button class="cv-btn cv-btn--txt cv-metro" [class.on]="metronomo()" (click)="alternarMetronomo()" title="Metrónomo">
+              <span class="cv-pulso" [class.acento]="pulso() === 1" [class.activo]="pulso() > 0"></span> {{ metronomo() ? pulso() : '♩ ' + c.bpm }}
+            </button>
+          }
+          <span class="cv-sp"></span>
+          <button class="cv-btn cv-btn--txt" (click)="copiar()" title="Copiar como texto (WhatsApp)">📋 Copiar</button>
+          <button class="cv-btn cv-btn--txt" (click)="imprimir()">🖨️</button>
+        </div>
+        @if (capos().length && !nashville()) {
+          <div class="cv-capos no-print">🎸 Guitarra con capo:
+            @for (k of capos(); track k.capo) {
+              <button class="cv-capo" (click)="aplicarCapo(k.capo)" [title]="'Tocar formas de ' + k.forma + ' con capo ' + k.capo">Capo {{ k.capo }} → formas de <b>{{ k.forma }}</b></button>
+            }
+          </div>
+        }
+        <div class="cv-hoja" [class.dos-col]="dosColumnas()">
+          <app-hoja-acordes [texto]="c.letra_acordes" [semitonos]="semitonos()" [bemoles]="bemoles()"
+                            [nashville]="nashville()" [tonalidad]="tonalidadActual()" [tamano]="tamano()"
+                            [mostrarAcordes]="!soloLetra()" />
+        </div>
+      } @else {
+        <div class="cv-vacio">Esta canción aún no tiene letra con acordes.
+          @if (permisos.puede('alabanza', 'E')) { <a (click)="editar()">Agregarla</a> }</div>
+      }
+
+      @if (c.partitura_abc) {
+        <h3 class="cv-sec">🎼 Partitura</h3>
+        <div class="cv-card">
+          <app-partitura-abc [abc]="c.partitura_abc" [semitonos]="semitonos()" />
+        </div>
+      }
+    </div>
+
+    <!-- ══ Lateral ══ -->
+    <aside class="cv-side no-print">
+      @if (pistas().length) {
+        <h3 class="cv-sec">🎧 Pistas</h3>
+        <app-mezclador [pistas]="pistas()" />
+      }
+      @if (youtube()) {
+        <h3 class="cv-sec">▶️ Video de referencia</h3>
+        <div class="cv-video"><iframe [src]="youtube()" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+      }
+      @if (spotify()) {
+        <iframe class="cv-spotify" [src]="spotify()" height="152" allow="encrypted-media"></iframe>
+      }
+      @if (documentos().length) {
+        <h3 class="cv-sec">📄 Partituras y documentos</h3>
+        @for (d of documentos(); track d.idarchivos) {
+          <a class="cv-doc" [href]="urlArchivo(d)" target="_blank" rel="noopener">
+            {{ d.mimetype === 'application/pdf' ? '📄' : '🖼️' }} {{ d.pista && d.pista !== 'Partitura' ? d.pista + ' · ' : '' }}{{ d.nombre_original }}
+          </a>
+        }
+      }
+      @if (c.notas) {
+        <h3 class="cv-sec">📝 Notas</h3>
+        <div class="cv-card cv-notas">{{ c.notas }}</div>
+      }
+      @if (c.historial?.length) {
+        <h3 class="cv-sec">🗓️ Últimas veces</h3>
+        <div class="cv-card">
+          @for (h of c.historial; track h.idactividades) {
+            <div class="cv-hist"><span>{{ h.fecha_inicio | date:'d MMM y' }}</span> {{ h.nombre }} @if (h.tonalidad) { <b>{{ h.tonalidad }}</b> }</div>
+          }
+        </div>
+      }
+    </aside>
+  </div>
+
+  <!-- ══ MODO ESCENARIO ══ -->
+  @if (escenario()) {
+    <div class="esc">
+      <div class="esc-barra">
+        <span class="esc-tit">{{ c.titulo }} · <b>{{ tonalidadActual() || '' }}</b></span>
+        <button class="esc-btn" (click)="bajar()">−½</button>
+        <button class="esc-btn" (click)="subir()">+½</button>
+        <button class="esc-btn" (click)="tamano.set(tamano() - 2)">A−</button>
+        <button class="esc-btn" (click)="tamano.set(tamano() + 2)">A+</button>
+        <button class="esc-btn" [class.on]="autoScroll()" (click)="alternarScroll()">{{ autoScroll() ? '⏸ Pausa' : '⏬ Auto' }}</button>
+        <select class="esc-sel" [ngModel]="velocidad()" (ngModelChange)="velocidad.set($event)">
+          @for (v of [0.5, 0.75, 1, 1.5, 2]; track v) { <option [ngValue]="v">{{ v }}×</option> }
+        </select>
+        @if (c.bpm) { <button class="esc-btn" [class.on]="metronomo()" (click)="alternarMetronomo()"><span class="cv-pulso" [class.acento]="pulso() === 1" [class.activo]="pulso() > 0"></span></button> }
+        <button class="esc-btn esc-cerrar" (click)="cerrarEscenario()">✕</button>
+      </div>
+      <div class="esc-cuerpo" #escenarioScroll>
+        <app-hoja-acordes [texto]="c.letra_acordes" [semitonos]="semitonos()" [bemoles]="bemoles()"
+                          [nashville]="nashville()" [tonalidad]="tonalidadActual()" [tamano]="tamano() + 8"
+                          [mostrarAcordes]="!soloLetra()" [oscuro]="true" />
+        <div class="esc-fin">— fin —</div>
+      </div>
+      <div class="esc-ayuda">Pedal / flechas / Av Pág: avanzar · Espacio: desplazamiento automático · Esc: salir</div>
+    </div>
+  }
+}

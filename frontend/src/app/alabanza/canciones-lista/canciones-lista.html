@@ -1,0 +1,116 @@
+<div class="page-header">
+  <h2>🎵 Alabanza · Biblioteca de canciones</h2>
+  @if (permisos.puede('alabanza', 'A')) {
+    <button class="btn-primary" (click)="nueva()">+ Nueva canción</button>
+  }
+</div>
+
+@if (exito()) { <div class="alert-success">{{ exito() }}</div> }
+@if (error())  { <div class="alert-error">{{ error() }}</div> }
+
+@if (stats(); as s) {
+  <div class="al-stats">
+    <div class="al-stat">
+      <span class="al-stat-num">{{ s.totales.canciones || 0 }}</span>
+      <span class="al-stat-lbl">en el repertorio</span>
+      <span class="al-stat-sub">{{ s.totales.himnos || 0 }} himnos · {{ s.totales.coros || 0 }} coros · {{ s.totales.cantos || 0 }} canciones</span>
+    </div>
+    <div class="al-stat al-stat--lista">
+      <span class="al-stat-tit">🔥 Más tocadas (6 meses)</span>
+      @for (m of s.masTocadas.slice(0, 4); track m.idcanciones) {
+        <a class="al-stat-item" (click)="ver(m)">{{ m.titulo }} <b>{{ m.veces }}×</b></a>
+      } @empty { <span class="al-stat-vacio">Aún no hay programas con canciones.</span> }
+    </div>
+    <div class="al-stat al-stat--lista">
+      <span class="al-stat-tit">💤 Hace tiempo no se cantan</span>
+      @for (m of s.olvidadas.slice(0, 4); track m.idcanciones) {
+        <a class="al-stat-item" (click)="ver(m)">{{ m.titulo }} <small>{{ hace(m.ultima_vez) }}</small></a>
+      } @empty { <span class="al-stat-vacio">¡Todo el repertorio está en uso!</span> }
+    </div>
+  </div>
+}
+
+<div class="al-filtros">
+  <input type="text" class="input-search" placeholder="Buscar por título, autor, categoría o etiqueta..."
+         [ngModel]="busqueda()" (ngModelChange)="buscar($event)" />
+  <div class="al-chips">
+    <button class="al-chip" [class.on]="filtroTipo() === ''" (click)="setTipo('')">Todas</button>
+    <button class="al-chip" [class.on]="filtroTipo() === 'cancion'" (click)="setTipo('cancion')">Canciones</button>
+    <button class="al-chip" [class.on]="filtroTipo() === 'himno'" (click)="setTipo('himno')">Himnos</button>
+    <button class="al-chip" [class.on]="filtroTipo() === 'coro'" (click)="setTipo('coro')">Coros</button>
+    <span class="al-sep"></span>
+    <button class="al-chip" [class.on]="filtroRecurso() === 'acordes'" (click)="setRecurso('acordes')">🎸 Con acordes</button>
+    <button class="al-chip" [class.on]="filtroRecurso() === 'partitura'" (click)="setRecurso('partitura')">🎼 Con partitura</button>
+    <button class="al-chip" [class.on]="filtroRecurso() === 'audio'" (click)="setRecurso('audio')">🎧 Con pistas</button>
+  </div>
+</div>
+
+@if (cargando()) {
+  <div class="loading-state"><span class="spinner"></span> Cargando...</div>
+} @else if (!filtradas().length) {
+  <div class="empty-state">
+    <span class="empty-icon">🎵</span>
+    <p>{{ canciones().length ? 'Ninguna canción coincide con la búsqueda.' : 'La biblioteca está vacía.' }}</p>
+    @if (!canciones().length && permisos.puede('alabanza', 'A')) {
+      <button class="btn-primary" (click)="nueva()">Agregar la primera canción</button>
+    }
+  </div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th class="al-col-sm">Tipo</th>
+          <th class="al-col-sm">Tono</th>
+          <th class="al-col-sm">BPM</th>
+          <th>Recursos</th>
+          <th class="al-col-sm">Última vez</th>
+          <th class="al-col-acc"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of paginadas(); track c.idcanciones) {
+          <tr class="al-fila" [class.inactiva]="!c.activo" (click)="ver(c)">
+            <td>
+              <div class="al-titulo">{{ c.titulo }}</div>
+              <div class="al-autor">
+                {{ c.autor || 'Autor desconocido' }}
+                @if (c.categoria) { · {{ c.categoria }} }
+                @if (c.dominio_publico) { <span class="al-pd" title="Dominio público">DP</span> }
+              </div>
+            </td>
+            <td><span class="al-tipo" [attr.data-tipo]="c.tipo">{{ etiquetaTipo[c.tipo] }}</span></td>
+            <td><span class="al-tono">{{ c.tonalidad || '—' }}</span></td>
+            <td>{{ c.bpm || '—' }}</td>
+            <td class="al-recursos">
+              <span [class.off]="!c.tiene_acordes" title="Letra con acordes">🎸</span>
+              <span [class.off]="!(c.tiene_partitura || c.total_partituras)" title="Partitura">🎼</span>
+              <span [class.off]="!c.total_audios" [title]="c.total_audios + ' pista(s) de audio'">🎧@if (c.total_audios > 1) {<small>{{ c.total_audios }}</small>}</span>
+              <span [class.off]="!c.youtube_url" title="Video de referencia">▶️</span>
+            </td>
+            <td class="al-ultima">{{ hace(c.ultima_vez) }}@if (c.veces) {<small> · {{ c.veces }}×</small>}</td>
+            <td class="al-col-acc">
+              @if (permisos.puede('alabanza', 'E')) {
+                <button class="btn-icon" title="Editar" (click)="editar(c, $event)">✏️</button>
+              }
+              @if (permisos.puede('alabanza', 'D')) {
+                <button class="btn-icon btn-danger" title="Eliminar" (click)="eliminar(c, $event)">🗑️</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="al-pie">
+    <span>{{ filtradas().length }} canción(es)</span>
+    @if (totalPag() > 1) {
+      <span class="al-pag">
+        <button class="btn-icon" [disabled]="pagina() === 1" (click)="pagina.set(pagina() - 1)">‹</button>
+        Página {{ pagina() }} de {{ totalPag() }}
+        <button class="btn-icon" [disabled]="pagina() === totalPag()" (click)="pagina.set(pagina() + 1)">›</button>
+      </span>
+    }
+  </div>
+}

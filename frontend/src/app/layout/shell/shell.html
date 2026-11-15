@@ -45,6 +45,14 @@
         </a>
       }
 
+      <!-- Alabanza -->
+      @if (permisos.puede('alabanza', 'S')) {
+        <a routerLink="/alabanza" class="nav-item" [class.active]="isActive('/alabanza')">
+          <span class="nav-icon">🎵</span>
+          <span class="nav-label">Alabanza</span>
+        </a>
+      }
+
       <!-- Tesorería -->
       @if (tieneTesoreria()) {
         <a routerLink="/tesoreria" class="nav-item" [class.active]="isActive('/tesoreria')">

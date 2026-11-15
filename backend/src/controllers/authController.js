@@ -275,4 +275,80 @@ async function updateMiPerfilPersona(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { login, misPermisos, miPersona, getMiPerfilPersona, updateMiPerfilPersona, forgotPassword, verifyResetToken, resetPassword, completeRegistration, changePassword };
+// ── Mi cuenta (app móvil): usuario + datos de contacto de su ficha ──
+const CAMPOS_MIS_DATOS = [
+  'celular', 'telefono', 'email', 'perfil_social',
+  'zona_domicilio', 'direccion_domicilio',
+  'lugartrabajo', 'puesto_trabajo', 'estado_civil',
+];
+
+async function miCuenta(req, res, next) {
+  try {
+    const [[u]] = await pool.query(
+      'SELECT usuario, nombre_completo, email, telefono, idpersonas, primer_ingreso FROM usuarios WHERE usuario = ?',
+      [req.user.usuario]);
+    if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+    let persona = null;
+    if (u.idpersonas) {
+      const [[p]] = await pool.query(`
+        SELECT p.idpersonas, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido,
+               TRIM(CONCAT_WS(' ', p.primer_nombre, NULLIF(p.segundo_nombre,''), p.primer_apellido,
+                    NULLIF(p.segundo_apellido,''), NULLIF(p.apellidocasada,''))) AS nombre_completo,
+               p.fechanacimiento, p.sexo, p.foto, ${CAMPOS_MIS_DATOS.map(c => 'p.' + c).join(', ')},
+               d.departamento AS departamento_domicilio, m.municipio AS municipio_domicilio
+        FROM personas p
+        LEFT JOIN departamentos d ON d.iddepartamentos = p.iddepartamentos_domicilio
+        LEFT JOIN municipios m    ON m.idmunicipios    = p.idmunicipios_domicilio
+        WHERE p.idpersonas = ?`, [u.idpersonas]);
+      if (p) {
+        const [grupos] = await pool.query(
+          'SELECT g.idgrupos, g.grupo FROM grupos_personas gp JOIN grupos g ON g.idgrupos = gp.idgrupos WHERE gp.idpersonas = ? ORDER BY g.grupo',
+          [u.idpersonas]);
+        p.grupos = grupos;
+        persona = p;
+      }
+    }
+    res.json({ usuario: u.usuario, nombre: u.nombre_completo, email: u.email, telefono: u.telefono,
+               primer_ingreso: u.primer_ingreso, is_superadmin: !!req.user.is_superadmin, persona });
+  } catch (err) { next(err); }
+}
+
+/** Actualiza solo los datos de contacto de la ficha propia (y la foto si se envía). */
+async function actualizarMisDatos(req, res, next) {
+  try {
+    const [[u]] = await pool.query('SELECT idpersonas FROM usuarios WHERE usuario = ?', [req.user.usuario]);
+    if (!u?.idpersonas) return res.status(404).json({ error: 'No tienes una ficha de persona vinculada a tu usuario' });
+
+    const cambios = {};
+    for (const c of CAMPOS_MIS_DATOS) {
+      if (req.body[c] !== undefined) {
+        const v = (req.body[c] ?? '').toString().trim();
+        cambios[c] = v ? v.slice(0, 500) : null;
+      }
+    }
+    if (cambios.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cambios.email)) {
+      return res.status(400).json({ error: 'El correo electrónico no es válido' });
+    }
+    if (cambios.estado_civil === null) delete cambios.estado_civil; // es requerido en la ficha
+
+    const { guardarFotoBase64, eliminarFotoDisco } = require('./personasController');
+    if (req.body.foto !== undefined) {
+      const [[actual]] = await pool.query('SELECT foto FROM personas WHERE idpersonas = ?', [u.idpersonas]);
+      if (req.body.foto === null || req.body.foto === '') {
+        eliminarFotoDisco(actual?.foto);
+        cambios.foto = null;
+      } else if (typeof req.body.foto === 'string' && req.body.foto.startsWith('data:image')) {
+        const nueva = guardarFotoBase64(req.body.foto, u.idpersonas);
+        if (nueva) { eliminarFotoDisco(actual?.foto); cambios.foto = nueva; }
+      }
+    }
+
+    if (!Object.keys(cambios).length) return res.status(400).json({ error: 'No se recibió ningún cambio' });
+    cambios.usuario = req.user.usuario;
+    await pool.query('UPDATE personas SET ? WHERE idpersonas = ?', [cambios, u.idpersonas]);
+    req.params = {};
+    return miCuenta(req, res, next);
+  } catch (err) { next(err); }
+}
+
+module.exports = { miCuenta, actualizarMisDatos, login, misPermisos, miPersona, getMiPerfilPersona, updateMiPerfilPersona, forgotPassword, verifyResetToken, resetPassword, completeRegistration, changePassword };

@@ -1,0 +1,34 @@
+{
+  "name": "mqv-mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "expo": "56.0.14",
+    "expo-asset": "~56.0.25",
+    "expo-audio": "~56.0.13",
+    "expo-build-properties": "~56.0.27",
+    "expo-constants": "~56.0.26",
+    "expo-image-picker": "~56.0.25",
+    "expo-keep-awake": "~56.0.3",
+    "expo-local-authentication": "~56.0.5",
+    "expo-secure-store": "~56.0.4",
+    "expo-status-bar": "~56.0.4",
+    "expo-web-browser": "~56.0.6",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-webview": "13.16.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "typecheck": "tsc --noEmit"
+  },
+  "private": true
+}

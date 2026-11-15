@@ -30,6 +30,9 @@ const FEATURES = [
   { name: 'actividades',            label: 'Actividades' },
   { name: 'actividades_asistentes', label: 'Actividades: Registro de Asistencia' },
 
+  // Alabanza
+  { name: 'alabanza', label: 'Alabanza: Biblioteca de canciones' },
+
   // Tesorería
   { name: 'tesoreria_movimientos',  label: 'Tesorería: Movimientos' },
   { name: 'tesoreria_tipomov',      label: 'Tesorería: Tipos de Movimiento' },

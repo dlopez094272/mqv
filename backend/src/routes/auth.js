@@ -12,5 +12,7 @@ router.get('/mis-permisos', authMiddleware, ctrl.misPermisos);
 router.get('/mi-persona', authMiddleware, ctrl.miPersona);
 router.get('/mi-perfil-persona', authMiddleware, ctrl.getMiPerfilPersona);
 router.put('/mi-perfil-persona', authMiddleware, ctrl.updateMiPerfilPersona);
+router.get('/mi-cuenta', authMiddleware, ctrl.miCuenta);
+router.put('/mis-datos', authMiddleware, ctrl.actualizarMisDatos);
 
 module.exports = router;

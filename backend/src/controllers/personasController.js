@@ -537,4 +537,5 @@ module.exports = {
   cumpleaneros, exportarExcel, enviarEmailCumpleaneros,
   listarCrecimiento, agregarCrecimiento, eliminarCrecimiento,
   crearUsuarioDesdePersona,
+  guardarFotoBase64, eliminarFotoDisco,
 };

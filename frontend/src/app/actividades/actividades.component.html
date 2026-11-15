@@ -330,6 +330,12 @@
               (click)="seleccionarTab('datos')">
         📋 Datos de la reunión
       </button>
+      <button type="button" class="gestion-tab" [class.active]="tabGestion()==='programa'"
+              [disabled]="!actividadGestion()"
+              [title]="!actividadGestion() ? 'Guarda los datos de la reunión primero' : 'Orden del culto y canciones'"
+              (click)="seleccionarTab('programa')">
+        🎵 Programa
+      </button>
       @if (permisos.puede('actividades_asistentes', 'S')) {
         <button type="button" class="gestion-tab" [class.active]="tabGestion()==='asistencia'"
                 [disabled]="!actividadGestion()"
@@ -892,6 +898,10 @@
             }
           </div>
         }
+      }
+      <!-- ══════════ FICHA: PROGRAMA (orden del culto + alabanza) ══════════ -->
+      @if (tabGestion() === 'programa' && actividadGestion()) {
+        <app-programa-actividad [idactividades]="actividadGestion()!.idactividades" />
       }
       <!-- ══════════ FICHA: FORMULARIOS DE INSCRIPCIÓN ══════════ -->
       @if (tabGestion() === 'formularios') {

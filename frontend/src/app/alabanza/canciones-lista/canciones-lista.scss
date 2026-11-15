@@ -1,0 +1,46 @@
+.al-stats {
+  display: grid; grid-template-columns: 1fr 1.3fr 1.3fr; gap: 14px; margin-bottom: 18px;
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+.al-stat {
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px;
+  display: flex; flex-direction: column; gap: 2px;
+  &:first-child { background: var(--grad-brand); color: #fff; }
+}
+.al-stat-num { font-size: 34px; font-weight: 800; line-height: 1; }
+.al-stat-lbl { font-weight: 700; }
+.al-stat-sub { font-size: 12px; opacity: .85; }
+.al-stat-tit { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 4px; }
+.al-stat-item {
+  font-size: 14px; cursor: pointer; color: var(--text); display: flex; justify-content: space-between; gap: 8px;
+  padding: 2px 0; &:hover { color: var(--primary); }
+  b { color: var(--primary); } small { color: var(--text-muted); }
+}
+.al-stat-vacio { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+.al-filtros { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.al-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.al-chip {
+  border: 1px solid var(--border); background: var(--card); border-radius: 20px; padding: 5px 12px;
+  font-size: 13px; cursor: pointer; font-family: inherit; color: var(--text);
+  &.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+}
+.al-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+.al-fila { cursor: pointer; &.inactiva { opacity: .55; } }
+.al-titulo { font-weight: 700; color: var(--primary); }
+.al-autor { font-size: 12px; color: var(--text-muted); }
+.al-pd { margin-left: 4px; font-size: 10px; font-weight: 800; background: #e8f5f0; color: var(--success); padding: 1px 5px; border-radius: 4px; }
+.al-tipo {
+  font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 10px; background: #efeaf5; color: var(--primary);
+  &[data-tipo="himno"] { background: #e3f1f6; color: var(--blue-dark); }
+  &[data-tipo="coro"]  { background: #fff3e0; color: #b45309; }
+}
+.al-tono { font-weight: 800; font-family: monospace; font-size: 15px; }
+.al-recursos span { margin-right: 6px; font-size: 16px; small { font-size: 10px; font-weight: 800; } }
+.al-recursos .off { filter: grayscale(1); opacity: .25; }
+.al-ultima { font-size: 13px; white-space: nowrap; small { color: var(--text-muted); } }
+.al-col-sm { width: 1%; white-space: nowrap; }
+.al-col-acc { width: 1%; white-space: nowrap; text-align: right; button { margin-left: 4px; } }
+.al-pie { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; font-size: 13px; color: var(--text-muted); }
+.al-pag { display: inline-flex; align-items: center; gap: 8px; }

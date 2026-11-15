@@ -202,6 +202,27 @@ export const routes: Routes = [
         canActivate: [permissionGuard('actividades', 'S')],
         loadComponent: () => import('./actividades/formularios/formulario-respuestas/formulario-respuestas').then(m => m.FormularioRespuestasComponent),
       },
+      // Alabanza (biblioteca de canciones)
+      {
+        path: 'alabanza',
+        canActivate: [permissionGuard('alabanza', 'S')],
+        loadComponent: () => import('./alabanza/canciones-lista/canciones-lista').then(m => m.CancionesListaComponent),
+      },
+      {
+        path: 'alabanza/nueva',
+        canActivate: [permissionGuard('alabanza', 'A')],
+        loadComponent: () => import('./alabanza/cancion-form/cancion-form').then(m => m.CancionFormComponent),
+      },
+      {
+        path: 'alabanza/:id/editar',
+        canActivate: [permissionGuard('alabanza', 'E')],
+        loadComponent: () => import('./alabanza/cancion-form/cancion-form').then(m => m.CancionFormComponent),
+      },
+      {
+        // Sin guard de permiso: un músico asignado a una actividad puede ver sus canciones (lo valida el backend)
+        path: 'alabanza/:id',
+        loadComponent: () => import('./alabanza/cancion-ver/cancion-ver').then(m => m.CancionVerComponent),
+      },
       // Tesorería
       {
         path: 'tesoreria',

@@ -43,13 +43,15 @@
             "styles": [
               "node_modules/leaflet/dist/leaflet.css",
               "node_modules/quill/dist/quill.snow.css",
+              "node_modules/abcjs/abcjs-audio.css",
               "src/styles.scss"
             ],
             "allowedCommonJsDependencies": [
               "sweetalert2",
               "leaflet",
               "@vladmandic/face-api",
-              "quill-delta"
+              "quill-delta",
+              "abcjs"
             ]
           },
           "configurations": {

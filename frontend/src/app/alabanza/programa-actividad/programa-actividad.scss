@@ -1,0 +1,49 @@
+.pg-resumen { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 14px; color: var(--text-muted); margin-bottom: 14px;
+  b { color: var(--primary); } }
+.pg-sp { flex: 1; }
+.pg-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 18px; @media (max-width: 900px) { grid-template-columns: 1fr; } }
+.pg-tit { margin: 0 0 10px; color: var(--primary); font-size: 15px; }
+.pg-item { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--purple-lighter); border-radius: 10px; margin-bottom: 8px; transition: box-shadow .15s;
+  &.cancion { border-left-color: var(--blue-light); background: #f7fbfd; }
+  &.abierto { box-shadow: var(--shadow-lg); }
+  &[draggable=true] { cursor: grab; } }
+.pg-fila { display: flex; align-items: center; gap: 8px; padding: 9px 10px; cursor: pointer; }
+.pg-grip { color: var(--gray-light); font-size: 12px; letter-spacing: -2px; }
+.pg-hora { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--primary); font-size: 13px; min-width: 42px;
+  &.estimada { color: var(--gray); font-weight: 600; } }
+.pg-ico { font-size: 20px; }
+.pg-info { flex: 1; min-width: 0; }
+.pg-nombre { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.pg-meta { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-tono { font-family: monospace; font-weight: 800; font-size: 12px; background: var(--primary); color: #fff; border-radius: 5px; padding: 1px 6px;
+  &.cambiado { background: var(--warning); } }
+.pg-dur { font-size: 12px; color: var(--text-muted); font-weight: 700; }
+.pg-mini { border: none; background: none; cursor: pointer; padding: 4px 6px; border-radius: 5px; color: var(--gray); font-size: 13px;
+  &:hover:not(:disabled) { background: var(--hover); color: var(--primary); } &:disabled { opacity: .25; cursor: default; } }
+.pg-del:hover:not(:disabled) { color: var(--danger) !important; background: #ffebee !important; }
+.pg-edit { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 4px 12px 12px; border-top: 1px dashed var(--border);
+  label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: flex; flex-direction: column; gap: 4px; }
+  @media (max-width: 700px) { grid-template-columns: 1fr 1fr; } }
+.pg-edit-full { grid-column: 1 / -1; }
+.pg-vacio { text-align: center; padding: 26px; color: var(--text-muted); border: 2px dashed var(--border); border-radius: 12px; button { margin-top: 10px; } }
+.pg-agregar { margin-top: 14px; background: #faf8fc; border-radius: 12px; padding: 12px 14px; }
+.pg-agregar-tit { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin: 10px 0 6px; &:first-child { margin-top: 0; } }
+.pg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pg-chip { border: 1px solid var(--border); background: #fff; border-radius: 16px; padding: 5px 11px; font-size: 13px; cursor: pointer; font-family: inherit;
+  &:hover { border-color: var(--primary-light); background: #f3eff8; } }
+.pg-chip--otro { border-style: dashed; }
+.pg-resultados { max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px; margin-top: 6px; }
+.pg-res { display: flex; justify-content: space-between; align-items: center; width: 100%; border: none; background: none; text-align: left; padding: 8px 10px;
+  cursor: pointer; font-family: inherit; border-bottom: 1px solid #f0f0f0; font-size: 14px;
+  small { color: var(--text-muted); } &:hover { background: #f3eff8; } }
+.pg-res-der { display: flex; gap: 6px; align-items: center; }
+.pg-col--equipo { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px; align-self: start; }
+.pg-ayuda { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.pg-musico { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f2f2f2; }
+.pg-musico-info { flex: 1; display: flex; flex-direction: column; small { color: var(--text-muted); font-size: 12px; } }
+.pg-nuevo-musico { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.pg-autocomp { position: relative; }
+.pg-autocomp-lista { position: absolute; z-index: 10; left: 0; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto;
+  button { display: block; width: 100%; text-align: left; border: none; background: none; padding: 8px 10px; cursor: pointer; font-family: inherit; &:hover { background: #f3eff8; } } }
+.pg-guardar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 12px 0 2px; background: linear-gradient(transparent, var(--card) 30%);
+  &.sucio span:first-child { color: var(--warning); font-weight: 700; font-size: 13px; } }
