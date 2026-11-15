@@ -7,6 +7,7 @@ import { Cargando, MensajeError, Tarjeta, TituloSeccion } from '../components/ui
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../navigation/Navigator';
 import { getPrograma } from '../api/alabanza';
+import { olvidarRepertorio } from './CancionScreen';
 import { ElementoPrograma, ProgramaServicio } from '../types';
 import { cuandoEs, fechaLarga, iniciales } from '../utils/formato';
 import { colors, radius, shadow } from '../theme';
@@ -32,6 +33,7 @@ export default function ServicioScreen({ id }: { id: number }) {
     setError(null);
     try {
       setDatos(await getPrograma(api, id));
+      olvidarRepertorio(id);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -57,7 +59,10 @@ export default function ServicioScreen({ id }: { id: number }) {
 
   function abrir(it: ElementoPrograma) {
     if (it.tipo === 'cancion' && it.idcanciones) {
-      navigate({ name: 'cancion', id: it.idcanciones, tono: it.tonalidad, titulo: it.cancion_titulo ?? undefined });
+      navigate({
+        name: 'cancion', id: it.idcanciones, tono: it.tonalidad, titulo: it.cancion_titulo ?? undefined,
+        servicio: id, pos: canciones.indexOf(it),
+      });
     }
   }
 

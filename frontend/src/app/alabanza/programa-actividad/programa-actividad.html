@@ -10,6 +10,10 @@
     @if (duracionTotal()) { <span>⏱ <b>{{ duracionTotal() }}</b> min</span> }
     <span>🎸 <b>{{ musicos().length }}</b> en el equipo</span>
     <span class="pg-sp"></span>
+    @if (totalCanciones()) {
+      <button class="btn btn-outline btn-sm" (click)="ensayar()" [disabled]="sucio()"
+              [title]="sucio() ? 'Guarda el programa primero' : 'Recorre todas las canciones en su tono del día'">▶ Ensayar repertorio</button>
+    }
     @if (items().length) { <button class="btn btn-outline-blue btn-sm" (click)="imprimir()">🖨️ Imprimir programa</button> }
   </div>
 

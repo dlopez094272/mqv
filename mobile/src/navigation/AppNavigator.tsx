@@ -22,7 +22,10 @@ export default function AppNavigator() {
     case 'canciones':
       return <CancionesScreen key={screenKey} />;
     case 'cancion':
-      return <CancionScreen key={screenKey} id={screen.id} tono={screen.tono} titulo={screen.titulo} />;
+      return (
+        <CancionScreen key={screenKey} id={screen.id} tono={screen.tono} titulo={screen.titulo}
+                       servicio={screen.servicio} pos={screen.pos} escenarioInicial={screen.escenario} />
+      );
     case 'servicios':
       return <ServiciosScreen key={screenKey} />;
     case 'servicio':

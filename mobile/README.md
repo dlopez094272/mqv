@@ -30,10 +30,15 @@ No se conecta a la base de datos: todo pasa por la API del backend de MQV
     y *S* deja sola una pista; velocidad 50–100 % sin cambiar el tono; repetir;
     sigue sonando con la pantalla apagada.
   - **Partitura interactiva** (notación ABC con abcjs en un WebView): se dibuja,
-    se reproduce y resalta la nota que suena. PDFs e imágenes se abren en el visor.
+    se reproduce y resalta la nota que suena. Las partituras **MusicXML / MXL**
+    (exportadas de MuseScore, Finale…) se dibujan con OpenSheetMusicDisplay.
+    PDFs e imágenes se abren en el visor.
   - **Metrónomo** con acento en el primer tiempo.
   - **Modo escenario**: pantalla completa oscura, letra grande, desplazamiento
     automático según el BPM, pantalla siempre encendida, funciona en horizontal.
+  - **Repertorio del servicio**: al abrir una canción desde el programa, se pasa a
+    la anterior / siguiente (cada una en su tono del día), también dentro del modo
+    escenario, que sigue abierto al cambiar de canción.
   - Compartir la canción como texto (acordes arriba de la letra) por WhatsApp.
 - **Biblioteca** (permiso *Alabanza*): buscar canciones, himnos y coros.
 
@@ -78,4 +83,4 @@ o local: `npx expo prebuild -p android` y `cd android; .\gradlew assembleRelease
 ## Notas
 
 - `src/utils/chordpro.ts` es copia de `frontend/src/app/alabanza/chordpro.ts`.
-- La partitura descarga abcjs del CDN (jsdelivr) la primera vez que se abre.
+- Las partituras descargan abcjs / OpenSheetMusicDisplay del CDN (jsdelivr) la primera vez que se abren.

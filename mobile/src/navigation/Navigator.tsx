@@ -9,7 +9,8 @@ export type Screen =
   | { name: 'misDatos' }
   | { name: 'cambiarPassword' }
   | { name: 'canciones' }
-  | { name: 'cancion'; id: number; tono?: string | null; titulo?: string }
+  /** `servicio` + `pos`: canción dentro del repertorio de una actividad (permite ir a la anterior/siguiente). */
+  | { name: 'cancion'; id: number; tono?: string | null; titulo?: string; servicio?: number; pos?: number; escenario?: boolean }
   | { name: 'servicios' }
   | { name: 'servicio'; id: number };
 

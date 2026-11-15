@@ -26,6 +26,26 @@
     </div>
   </div>
 
+  @if (repertorio().length > 1 && posicion() >= 0) {
+    <div class="cv-rep no-print">
+      <button class="cv-rep-btn" [disabled]="!anterior()" (click)="irA(anterior(), -1)">
+        ← @if (anterior(); as a) { <span>{{ a.cancion_titulo }}</span> }
+      </button>
+      <div class="cv-rep-centro">
+        <small>{{ nombreActividad() }}</small>
+        <b>Canción {{ posicion() + 1 }} de {{ repertorio().length }}</b>
+        <div class="cv-rep-puntos">
+          @for (r of repertorio(); track $index) {
+            <span [class.on]="$index === posicion()" [title]="r.cancion_titulo" (click)="irA(r, $index - posicion())"></span>
+          }
+        </div>
+      </div>
+      <button class="cv-rep-btn cv-rep-btn--der" [disabled]="!siguiente()" (click)="irA(siguiente(), 1)">
+        @if (siguiente(); as n) { <span>{{ n.cancion_titulo }}</span> } →
+      </button>
+    </div>
+  }
+
   @if (tonoDelDia()) {
     <div class="cv-dia no-print">📅 En el programa de la actividad esta canción va en <b>{{ tonoDelDia() }}</b>. Los acordes ya están transpuestos.</div>
   }
@@ -86,13 +106,19 @@
           <app-partitura-abc [abc]="c.partitura_abc" [semitonos]="semitonos()" />
         </div>
       }
+      @for (x of musicXml(); track x.idarchivos) {
+        <h3 class="cv-sec">🎼 {{ x.pista && x.pista !== 'Partitura' ? x.pista : 'Partitura' }} <small class="cv-sec-sub">{{ x.nombre_original }} · tono original</small></h3>
+        <div class="cv-card">
+          <app-partitura-musicxml [url]="urlArchivo(x)" />
+        </div>
+      }
     </div>
 
     <!-- ══ Lateral ══ -->
     <aside class="cv-side no-print">
       @if (pistas().length) {
         <h3 class="cv-sec">🎧 Pistas</h3>
-        <app-mezclador [pistas]="pistas()" />
+        @for (k of [c.idcanciones]; track k) { <app-mezclador [pistas]="pistas()" /> }
       }
       @if (youtube()) {
         <h3 class="cv-sec">▶️ Video de referencia</h3>
@@ -128,6 +154,11 @@
   @if (escenario()) {
     <div class="esc">
       <div class="esc-barra">
+        @if (repertorio().length > 1 && posicion() >= 0) {
+          <button class="esc-btn" [disabled]="!anterior()" (click)="irA(anterior(), -1)" title="Canción anterior (P)">⏮</button>
+          <span class="esc-pos">{{ posicion() + 1 }}/{{ repertorio().length }}</span>
+          <button class="esc-btn" [disabled]="!siguiente()" (click)="irA(siguiente(), 1)" title="Siguiente canción (N)">⏭</button>
+        }
         <span class="esc-tit">{{ c.titulo }} · <b>{{ tonalidadActual() || '' }}</b></span>
         <button class="esc-btn" (click)="bajar()">−½</button>
         <button class="esc-btn" (click)="subir()">+½</button>
@@ -144,9 +175,17 @@
         <app-hoja-acordes [texto]="c.letra_acordes" [semitonos]="semitonos()" [bemoles]="bemoles()"
                           [nashville]="nashville()" [tonalidad]="tonalidadActual()" [tamano]="tamano() + 8"
                           [mostrarAcordes]="!soloLetra()" [oscuro]="true" />
-        <div class="esc-fin">— fin —</div>
+        @if (siguiente(); as n) {
+          <button class="esc-sig" (click)="irA(n, 1)">
+            <small>Siguiente</small>
+            <span>{{ n.cancion_titulo }} @if (n.tonalidad) { <b>{{ n.tonalidad }}</b> }</span>
+            <small>pedal ⏬ o toca aquí</small>
+          </button>
+        } @else {
+          <div class="esc-fin">— fin{{ repertorio().length > 1 ? ' del repertorio' : '' }} —</div>
+        }
       </div>
-      <div class="esc-ayuda">Pedal / flechas / Av Pág: avanzar · Espacio: desplazamiento automático · Esc: salir</div>
+      <div class="esc-ayuda">Pedal / flechas / Av Pág: avanzar (al final pasa a la siguiente canción) · N / P: siguiente / anterior · Espacio: desplazamiento automático · Esc: salir</div>
     </div>
   }
 }

@@ -10,12 +10,14 @@ import { useKeepAwake } from 'expo-keep-awake';
 import ScreenHeader from '../components/ScreenHeader';
 import HojaAcordes from '../components/HojaAcordes';
 import Partitura from '../components/Partitura';
+import PartituraMusicXml from '../components/PartituraMusicXml';
 import Reproductor, { Pista } from '../components/Reproductor';
 import Metronomo from '../components/Metronomo';
 import { Cargando, MensajeError, Tarjeta } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
-import { ETIQUETA_TIPO, getCancion, rutaArchivo, youtubeId } from '../api/alabanza';
-import { Cancion } from '../types';
+import { ETIQUETA_TIPO, getCancion, getPrograma, rutaArchivo, youtubeId } from '../api/alabanza';
+import { useNavigation } from '../navigation/Navigator';
+import { ArchivoCancion, Cancion, ElementoPrograma } from '../types';
 import {
   OpcionesVista, aTextoPlano, parsearChordPro, semitonosEntre, sugerenciasCapo, transponerTonalidad, usaBemoles,
 } from '../utils/chordpro';
@@ -25,9 +27,54 @@ type Pestana = 'acordes' | 'pistas' | 'partitura' | 'mas';
 
 const normalizarSemi = (n: number) => (n > 6 ? n - 12 : n < -5 ? n + 12 : n);
 
-export default function CancionScreen({ id, tono, titulo }: { id: number; tono?: string | null; titulo?: string }) {
-  const { api, urlConToken } = useAuth();
+const esMusicXml = (a: ArchivoCancion) =>
+  /\.(musicxml|mxl|xml)$/i.test(a.nombre_original) || /musicxml|recordare/i.test(a.mimetype || '');
+
+/** Repertorio de cada actividad en memoria, para no pedirlo de nuevo al pasar de canción. */
+const repertorios = new Map<number, { nombre: string; canciones: ElementoPrograma[] }>();
+
+/** El programa se volvió a cargar (pudo cambiar): la próxima canción vuelve a pedir el repertorio. */
+export const olvidarRepertorio = (idactividad: number) => repertorios.delete(idactividad);
+
+interface Props {
+  id: number;
+  tono?: string | null;
+  titulo?: string;
+  servicio?: number;
+  pos?: number;
+  escenarioInicial?: boolean;
+}
+
+export default function CancionScreen({ id, tono, titulo, servicio, pos, escenarioInicial }: Props) {
+  const { api, urlConToken, filesUrl } = useAuth();
+  const { replace } = useNavigation();
   const insets = useSafeAreaInsets();
+  const [repertorio, setRepertorio] = useState(servicio ? repertorios.get(servicio) ?? null : null);
+
+  useEffect(() => {
+    if (!servicio || repertorio) return;
+    getPrograma(api, servicio)
+      .then(p => {
+        const r = { nombre: p.actividad.nombre, canciones: p.programa.filter(i => i.tipo === 'cancion' && i.idcanciones) };
+        repertorios.set(servicio, r);
+        setRepertorio(r);
+      })
+      .catch(() => {});
+  }, [api, servicio, repertorio]);
+
+  const lista = repertorio?.canciones ?? [];
+  const posicion = pos !== undefined && lista[pos]?.idcanciones === id ? pos : lista.findIndex(i => i.idcanciones === id);
+  const anterior = posicion > 0 ? lista[posicion - 1] : null;
+  const siguiente = posicion >= 0 ? lista[posicion + 1] ?? null : null;
+
+  /** Pasa a otra canción del repertorio; si el modo escenario está abierto, sigue abierto. */
+  const irA = useCallback((it: ElementoPrograma | null, delta: number, enEscenario: boolean) => {
+    if (!it?.idcanciones || !servicio) return;
+    replace({
+      name: 'cancion', id: it.idcanciones, tono: it.tonalidad, titulo: it.cancion_titulo ?? undefined,
+      servicio, pos: posicion + delta, escenario: enEscenario,
+    });
+  }, [replace, servicio, posicion]);
 
   const [cancion, setCancion] = useState<Cancion | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +83,7 @@ export default function CancionScreen({ id, tono, titulo }: { id: number; tono?:
   const [nashville, setNashville] = useState(false);
   const [soloLetra, setSoloLetra] = useState(false);
   const [tamano, setTamano] = useState(18);
-  const [escenario, setEscenario] = useState(false);
+  const [escenario, setEscenario] = useState(!!escenarioInicial);
   const [capoAviso, setCapoAviso] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
@@ -63,13 +110,14 @@ export default function CancionScreen({ id, tono, titulo }: { id: number; tono?:
       .map(a => ({ id: a.idarchivos, nombre: a.pista || a.nombre_original, url: urlConToken(rutaArchivo(a.idarchivos)) })),
     [cancion, urlConToken]
   );
-  const documentos = (cancion?.archivos ?? []).filter(a => a.tipo !== 'audio');
+  const documentos = (cancion?.archivos ?? []).filter(a => a.tipo !== 'audio' && !esMusicXml(a));
+  const musicXml = (cancion?.archivos ?? []).filter(a => a.tipo !== 'audio' && esMusicXml(a));
   const yt = youtubeId(cancion?.youtube_url);
 
   const pestanas: { clave: Pestana; texto: string; icono: string; visible: boolean }[] = [
     { clave: 'acordes', texto: 'Acordes', icono: 'musical-notes', visible: true },
     { clave: 'pistas', texto: `Pistas${pistas.length ? ` (${pistas.length})` : ''}`, icono: 'headset', visible: pistas.length > 0 },
-    { clave: 'partitura', texto: 'Partitura', icono: 'document-text', visible: !!cancion?.partitura_abc || documentos.length > 0 },
+    { clave: 'partitura', texto: 'Partitura', icono: 'document-text', visible: !!cancion?.partitura_abc || documentos.length > 0 || musicXml.length > 0 },
     { clave: 'mas', texto: 'Más', icono: 'ellipsis-horizontal-circle', visible: !!yt || !!cancion?.notas || !!cancion?.spotify_url },
   ];
 
@@ -135,6 +183,25 @@ export default function CancionScreen({ id, tono, titulo }: { id: number; tono?:
           </TouchableOpacity>
         ))}
       </View>
+
+      {lista.length > 1 && posicion >= 0 && (
+        <View style={styles.rep}>
+          <TouchableOpacity style={styles.repBtn} disabled={!anterior} onPress={() => irA(anterior, -1, false)}>
+            <Ionicons name="chevron-back" size={20} color={anterior ? colors.primary : colors.border} />
+            <Text style={[styles.repNombre, !anterior && { opacity: 0 }]} numberOfLines={1}>{anterior?.cancion_titulo}</Text>
+          </TouchableOpacity>
+          <View style={styles.repCentro}>
+            <Text style={styles.repPos}>{posicion + 1} / {lista.length}</Text>
+            <View style={styles.repPuntos}>
+              {lista.map((_, i) => <View key={i} style={[styles.repPunto, i === posicion && styles.repPuntoOn]} />)}
+            </View>
+          </View>
+          <TouchableOpacity style={[styles.repBtn, { justifyContent: 'flex-end' }]} disabled={!siguiente} onPress={() => irA(siguiente, 1, false)}>
+            <Text style={[styles.repNombre, { textAlign: 'right' }, !siguiente && { opacity: 0 }]} numberOfLines={1}>{siguiente?.cancion_titulo}</Text>
+            <Ionicons name="chevron-forward" size={20} color={siguiente ? colors.primary : colors.border} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 + insets.bottom }}>
         {!!tono && (
@@ -209,6 +276,12 @@ export default function CancionScreen({ id, tono, titulo }: { id: number; tono?:
                 <Text style={styles.ayuda}>▶ reproduce la melodía y resalta cada nota. La partitura sigue la transposición elegida en Acordes.</Text>
               </>
             )}
+            {musicXml.map(x => (
+              <View key={x.idarchivos} style={{ marginTop: 6 }}>
+                <Text style={styles.mxTit}>🎼 {x.pista && x.pista !== 'Partitura' ? x.pista : 'Partitura'} <Text style={styles.mxSub}>· tono original</Text></Text>
+                <PartituraMusicXml url={urlConToken(rutaArchivo(x.idarchivos))} origen={filesUrl} />
+              </View>
+            ))}
             {documentos.map(d => (
               <TouchableOpacity key={d.idarchivos} style={styles.doc}
                                 onPress={() => WebBrowser.openBrowserAsync(urlConToken(rutaArchivo(d.idarchivos)))}>
@@ -260,6 +333,10 @@ export default function CancionScreen({ id, tono, titulo }: { id: number; tono?:
         tonalidad={tonalidad}
         soloLetra={soloLetra}
         onTransponer={d => setSemitonos(s => normalizarSemi(s + d))}
+        repertorio={lista.length > 1 && posicion >= 0 ? {
+          posicion, total: lista.length, anterior, siguiente,
+          ir: (it, delta) => irA(it, delta, true),
+        } : null}
       />
     </View>
   );
@@ -275,17 +352,24 @@ interface EscenarioProps {
   tonalidad: string | null;
   soloLetra: boolean;
   onTransponer: (delta: number) => void;
+  repertorio: {
+    posicion: number;
+    total: number;
+    anterior: ElementoPrograma | null;
+    siguiente: ElementoPrograma | null;
+    ir: (it: ElementoPrograma | null, delta: number) => void;
+  } | null;
 }
 
 const VELOCIDADES = [0.5, 0.75, 1, 1.5, 2];
 
 /** Pantalla completa oscura para tocar en vivo: letra grande, desplazamiento automático y pantalla siempre encendida. */
-function ModoEscenario({ visible, onClose, cancion, opciones, tonalidad, soloLetra, onTransponer }: EscenarioProps) {
-  if (!visible) return null;
-  return <ModoEscenarioActivo {...{ visible, onClose, cancion, opciones, tonalidad, soloLetra, onTransponer }} />;
+function ModoEscenario(props: EscenarioProps) {
+  if (!props.visible) return null;
+  return <ModoEscenarioActivo {...props} />;
 }
 
-function ModoEscenarioActivo({ onClose, cancion, opciones, tonalidad, soloLetra, onTransponer }: EscenarioProps) {
+function ModoEscenarioActivo({ onClose, cancion, opciones, tonalidad, soloLetra, onTransponer, repertorio }: EscenarioProps) {
   useKeepAwake();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -318,6 +402,19 @@ function ModoEscenarioActivo({ onClose, cancion, opciones, tonalidad, soloLetra,
       <StatusBar hidden />
       <View style={[styles.esc, { paddingTop: insets.top }]}>
         <View style={styles.escBarra}>
+          {!!repertorio && (
+            <>
+              <TouchableOpacity style={[styles.escBtn, !repertorio.anterior && { opacity: 0.3 }]} disabled={!repertorio.anterior}
+                                onPress={() => repertorio.ir(repertorio.anterior, -1)}>
+                <Ionicons name="play-skip-back" size={18} color={colors.white} />
+              </TouchableOpacity>
+              <Text style={styles.escPos}>{repertorio.posicion + 1}/{repertorio.total}</Text>
+              <TouchableOpacity style={[styles.escBtn, !repertorio.siguiente && { opacity: 0.3 }]} disabled={!repertorio.siguiente}
+                                onPress={() => repertorio.ir(repertorio.siguiente, 1)}>
+                <Ionicons name="play-skip-forward" size={18} color={colors.white} />
+              </TouchableOpacity>
+            </>
+          )}
           <Text style={styles.escTit} numberOfLines={1}>{cancion.titulo} · <Text style={{ color: colors.gold }}>{tonalidad ?? ''}</Text></Text>
           <TouchableOpacity style={styles.escBtn} onPress={onClose}><Ionicons name="close" size={22} color={colors.white} /></TouchableOpacity>
         </View>
@@ -342,7 +439,18 @@ function ModoEscenarioActivo({ onClose, cancion, opciones, tonalidad, soloLetra,
           onContentSizeChange={(_, h) => { altoContenido.current = h; }}
         >
           <HojaAcordes texto={cancion.letra_acordes} opciones={opciones} tamano={tamano} oscuro mostrarAcordes={!soloLetra} />
-          <Text style={styles.escFin}>— fin —</Text>
+          {repertorio?.siguiente ? (
+            <TouchableOpacity style={styles.escSig} onPress={() => repertorio.ir(repertorio.siguiente, 1)}>
+              <Text style={styles.escSigLbl}>Siguiente</Text>
+              <Text style={styles.escSigTit}>
+                {repertorio.siguiente.cancion_titulo}
+                {!!repertorio.siguiente.tonalidad && <Text style={{ color: colors.gold }}>  {repertorio.siguiente.tonalidad}</Text>}
+              </Text>
+              <Text style={styles.escSigLbl}>toca para continuar</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.escFin}>— fin{repertorio ? ' del repertorio' : ''} —</Text>
+          )}
         </ScrollView>
         {/* Zonas para pasar página con un toque (arriba / abajo) */}
         <View style={[styles.escZonas, { bottom: insets.bottom }]} pointerEvents="box-none">
@@ -395,6 +503,21 @@ const styles = StyleSheet.create({
   escBtn: { backgroundColor: '#2A2F38', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, minWidth: 40, alignItems: 'center' },
   escBtnText: { color: colors.white, fontWeight: '800', fontSize: 14 },
   escFin: { color: '#555', textAlign: 'center', marginTop: 30 },
+  escPos: { color: '#AAA', fontWeight: '800', fontVariant: ['tabular-nums'] },
+  escSig: { alignSelf: 'center', alignItems: 'center', gap: 4, marginTop: 40, backgroundColor: '#1F232B', borderWidth: 2, borderStyle: 'dashed',
+    borderColor: '#3A404B', borderRadius: 14, paddingVertical: 18, paddingHorizontal: 28 },
+  escSigLbl: { color: '#888', fontSize: 12 },
+  escSigTit: { color: colors.white, fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  rep: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 6, paddingVertical: 6 },
+  repBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2, padding: 6, minWidth: 0 },
+  repNombre: { flex: 1, fontSize: 12, color: colors.text, fontWeight: '600' },
+  repCentro: { alignItems: 'center', paddingHorizontal: 6 },
+  repPos: { fontSize: 13, fontWeight: '800', color: colors.primary },
+  repPuntos: { flexDirection: 'row', gap: 3, marginTop: 3 },
+  repPunto: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  repPuntoOn: { width: 14, backgroundColor: colors.primary },
+  mxTit: { fontSize: 14, fontWeight: '800', color: colors.primary, marginTop: 10 },
+  mxSub: { fontWeight: '500', color: colors.textMuted, fontSize: 12 },
   escZonas: { position: 'absolute', right: 10, gap: 10, paddingBottom: 14 },
   escZona: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
 });

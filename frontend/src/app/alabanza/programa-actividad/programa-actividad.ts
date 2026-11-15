@@ -225,9 +225,16 @@ export class ProgramaActividadComponent implements OnInit {
 
   verCancion(it: ElementoPrograma) {
     if (!it.idcanciones) return;
-    const qp: any = { act: this.idactividades() };
+    const canciones = this.items().filter(i => i.tipo === 'cancion' && i.idcanciones);
+    const qp: any = { act: this.idactividades(), pos: canciones.indexOf(it) };
     if (it.tonalidad) qp.tono = it.tonalidad;
     this.router.navigate(['/alabanza', it.idcanciones], { queryParams: qp });
+  }
+
+  /** Abre la primera canción; desde allí se recorre todo el repertorio (también en modo escenario). */
+  ensayar() {
+    const primera = this.items().find(i => i.tipo === 'cancion' && i.idcanciones);
+    if (primera) this.verCancion(primera);
   }
 
   /* ── Imprimir ─────────────────────────────────── */

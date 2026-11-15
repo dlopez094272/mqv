@@ -168,7 +168,7 @@ export class CancionFormComponent implements OnInit {
 
   private adivinarPista(nombre: string) {
     const n = nombre.toLowerCase();
-    if (/\.(pdf|png|jpe?g|webp)$/.test(n)) return 'Partitura';
+    if (/\.(pdf|png|jpe?g|webp|musicxml|mxl|xml)$/.test(n)) return 'Partitura';
     const mapa: [RegExp, string][] = [
       [/click|metr/, 'Click'], [/gu[ií]a|cue/, 'Guía'], [/coro|bgv|backing/, 'Coros'], [/voz|vocal|lead/, 'Voz'],
       [/bajo|bass/, 'Bajo'], [/bater|drum/, 'Batería'], [/guitar/, 'Guitarra'], [/tecla|key|synth|pad/, 'Teclado'],

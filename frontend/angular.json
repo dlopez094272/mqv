@@ -51,7 +51,8 @@
               "leaflet",
               "@vladmandic/face-api",
               "quill-delta",
-              "abcjs"
+              "abcjs",
+              "opensheetmusicdisplay"
             ]
           },
           "configurations": {

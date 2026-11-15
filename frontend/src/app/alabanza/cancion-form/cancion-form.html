@@ -156,7 +156,7 @@
     <div class="cf-card">
       <div class="cf-drop" (dragover)="$event.preventDefault()" (drop)="soltar($event)">
         <div class="cf-drop-ico">🎧 🎼</div>
-        <div>Arrastra aquí las pistas de audio (MP3, M4A, WAV) o partituras (PDF, imagen)</div>
+        <div>Arrastra aquí las pistas de audio (MP3, M4A, WAV) o partituras (PDF, imagen, MusicXML de MuseScore)</div>
         <label class="btn-secondary cf-drop-btn">
           Elegir archivos
           <input type="file" multiple hidden accept="audio/*,.pdf,image/*,.musicxml,.mxl,.mid,.midi" (change)="elegirArchivos($event)" />
