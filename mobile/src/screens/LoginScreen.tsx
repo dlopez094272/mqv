@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -12,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { ApiError, request } from '../api/client';
 import { resolveApiBaseUrl } from '../config';
@@ -121,9 +123,9 @@ export default function LoginScreen({ listo = true }: { listo?: boolean }) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" bounces={false}>
         <View style={styles.header}>
-          <Text style={[styles.notaDeco, { left: 24, top: 30 }]}>♪</Text>
-          <Text style={[styles.notaDeco, { right: 30, top: 54, fontSize: 40 }]}>♫</Text>
-          <Text style={[styles.notaDeco, { left: '62%', bottom: 60, fontSize: 26 }]}>♩</Text>
+          <Paloma size={30} style={{ left: 24, top: 30 }} retraso={0} />
+          <Paloma size={40} style={{ right: 28, top: 50 }} retraso={900} espejo />
+          <Paloma size={22} style={{ left: '60%', bottom: 58 }} retraso={1700} espejo />
           <Image source={require('../../assets/logo-blanco.png')} style={styles.logo} resizeMode="contain" />
         </View>
 
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingBottom: 30,
   },
-  notaDeco: { position: 'absolute', fontSize: 34, color: 'rgba(255,255,255,0.18)' },
+  paloma: { position: 'absolute' },
   logo: { width: 240, height: 240 * (432 / 799) },
   card: { backgroundColor: colors.white, marginHorizontal: 20, marginTop: -34, borderRadius: radius.xl, padding: 22, ...shadow, shadowOpacity: 0.14 },
   bienvenida: { fontSize: 24, fontWeight: '800', color: colors.primary },
@@ -304,3 +306,24 @@ const styles = StyleSheet.create({
   },
   servidorHint: { color: colors.textLight, fontSize: 12, marginTop: 6 },
 });
+
+/** Paloma del Espíritu Santo que "flota" suavemente sobre el encabezado. */
+function Paloma({ size, style, retraso, espejo }: { size: number; style: object; retraso: number; espejo?: boolean }) {
+  const vuelo = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.loop(Animated.sequence([
+      Animated.delay(retraso),
+      Animated.timing(vuelo, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(vuelo, { toValue: 0, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, [vuelo, retraso]);
+  const translateY = vuelo.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
+  const rotate = vuelo.interpolate({ inputRange: [0, 1], outputRange: ['-4deg', '4deg'] });
+  return (
+    <Animated.View style={[styles.paloma, style, { transform: [{ translateY }, { rotate }, { scaleX: espejo ? -1 : 1 }] }]}>
+      <FontAwesome5 name="dove" size={size} color="rgba(255,255,255,0.22)" solid />
+    </Animated.View>
+  );
+}

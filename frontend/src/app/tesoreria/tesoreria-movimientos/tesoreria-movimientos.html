@@ -83,7 +83,7 @@
                   <span class="adjuntos-tag">
                     📎
                     @for (adj of getAdjuntos(m); track adj.filename) {
-                      <button type="button" (click)="descargarAdjunto(adj)"
+                      <button type="button" (click)="descargarAdjunto(adj, getAdjuntos(m))"
                          class="adj-link" [title]="adj.originalname || adj.filename">
                         {{ (adj.originalname || adj.filename) | slice:0:20 }}{{ (adj.originalname || adj.filename || '').length > 20 ? '…' : '' }}
                       </button>
@@ -238,7 +238,7 @@
         @if (adjuntosActuales.length > 0) {
           <div class="adjuntos-existentes">
             @for (adj of adjuntosActuales; track adj.filename) {
-              <button type="button" (click)="descargarAdjunto(adj)" class="adjunto-link">
+              <button type="button" (click)="descargarAdjunto(adj, adjuntosActuales)" class="adjunto-link">
                 📎 {{ adj.originalname }}
               </button>
             }

@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../navigation/Navigator';
 import { eliminarCorreo, getCorreo, rutaAdjuntoCorreo } from '../../api/correo';
 import { CorreoCompleto } from '../../types';
-import { descargarYCompartir, iconoArchivo, tamanoLegible } from '../../utils/archivos';
+import { iconoArchivo, tamanoLegible } from '../../utils/archivos';
 import { iniciales } from '../../utils/formato';
 import { colors, radius } from '../../theme';
 
@@ -41,7 +41,6 @@ export default function CorreoLeerScreen({ uid, carpeta }: { uid: number; carpet
   const insets = useSafeAreaInsets();
   const [correo, setCorreo] = useState<CorreoCompleto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [descargando, setDescargando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -66,15 +65,13 @@ export default function CorreoLeerScreen({ uid, carpeta }: { uid: number; carpet
     ]);
   };
 
-  const adjunto = async (a: CorreoCompleto['adjuntos'][number]) => {
-    setDescargando(a.filename);
-    try {
-      await descargarYCompartir(`${baseUrl}${rutaAdjuntoCorreo(uid, carpeta, a.filename)}`, a.filename, token, a.contentType);
-    } catch (err) {
-      Alert.alert('Adjunto', (err as Error).message);
-    } finally {
-      setDescargando(null);
-    }
+  const adjunto = (a: CorreoCompleto['adjuntos'][number]) => {
+    if (!correo) return;
+    navigate({
+      name: 'visor',
+      archivos: correo.adjuntos.map(x => ({ nombre: x.filename, mime: x.contentType, url: `${baseUrl}${rutaAdjuntoCorreo(uid, carpeta, x.filename)}` })),
+      indice: Math.max(0, correo.adjuntos.indexOf(a)),
+    });
   };
 
   const responder = () => correo && replace({
@@ -119,8 +116,8 @@ export default function CorreoLeerScreen({ uid, carpeta }: { uid: number; carpet
             {correo.adjuntos.length > 0 && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 10 }}>
                 {correo.adjuntos.map(a => (
-                  <TouchableOpacity key={a.filename} style={styles.adjunto} onPress={() => adjunto(a)} disabled={!!descargando}>
-                    <Ionicons name={(descargando === a.filename ? 'hourglass-outline' : iconoArchivo(a.contentType)) as any} size={20} color={colors.primary} />
+                  <TouchableOpacity key={a.filename} style={styles.adjunto} onPress={() => adjunto(a)}>
+                    <Ionicons name={iconoArchivo(a.contentType) as any} size={20} color={colors.primary} />
                     <View style={{ maxWidth: 160 }}>
                       <Text style={styles.adjuntoNombre} numberOfLines={1}>{a.filename}</Text>
                       <Text style={styles.sub}>{tamanoLegible(a.size)}</Text>

@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
 import { useKeepAwake } from 'expo-keep-awake';
 import ScreenHeader from '../components/ScreenHeader';
 import HojaAcordes from '../components/HojaAcordes';
@@ -47,7 +46,7 @@ interface Props {
 
 export default function CancionScreen({ id, tono, titulo, servicio, pos, escenarioInicial }: Props) {
   const { api, urlConToken, filesUrl } = useAuth();
-  const { replace } = useNavigation();
+  const { replace, navigate } = useNavigation();
   const insets = useSafeAreaInsets();
   const [repertorio, setRepertorio] = useState(servicio ? repertorios.get(servicio) ?? null : null);
 
@@ -284,13 +283,17 @@ export default function CancionScreen({ id, tono, titulo, servicio, pos, escenar
             ))}
             {documentos.map(d => (
               <TouchableOpacity key={d.idarchivos} style={styles.doc}
-                                onPress={() => WebBrowser.openBrowserAsync(urlConToken(rutaArchivo(d.idarchivos)))}>
+                                onPress={() => navigate({
+                                  name: 'visor',
+                                  archivos: documentos.map(x => ({ nombre: x.nombre_original, mime: x.mimetype, url: urlConToken(rutaArchivo(x.idarchivos)) })),
+                                  indice: documentos.indexOf(d),
+                                })}>
                 <Ionicons name={d.mimetype === 'application/pdf' ? 'document-text' : 'image'} size={24} color={colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.docTit} numberOfLines={1}>{d.pista && d.pista !== 'Partitura' ? d.pista : d.nombre_original}</Text>
                   <Text style={styles.docSub} numberOfLines={1}>{d.nombre_original}</Text>
                 </View>
-                <Ionicons name="open-outline" size={20} color={colors.textLight} />
+                <Ionicons name="eye-outline" size={20} color={colors.textLight} />
               </TouchableOpacity>
             ))}
           </>

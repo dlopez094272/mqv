@@ -142,6 +142,10 @@ export class ActividadesService {
     return `${environment.apiUrl}/uploads/personas/${filename}`;
   }
 
+  obtenerAdjunto(filename: string) {
+    return this.http.get(`${this.base}/adjuntos/${filename}`, { responseType: 'blob' });
+  }
+
   descargarAdjunto(filename: string, originalname: string) {
     this.http.get(`${this.base}/adjuntos/${filename}`, { responseType: 'blob' }).subscribe({
       next: blob => {

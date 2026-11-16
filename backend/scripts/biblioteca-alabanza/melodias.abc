@@ -1,0 +1,298 @@
+X:1
+T:NICAEA
+M:4/4
+L:1/4
+Q:1/4=110
+K:D
+D D F F | A2 A2 | B.- B B B | A2 F2 | A3/2 A/ A A |
+d.- d c A | E A B3/2 A/ | A4 | D D F F | A.- A A2 |
+B3/2 B/ B B | A2 A2 | d2 A A | B2 F2 | G E E3/2 D/ | D4 |]
+
+X:2
+T:EIN FESTE BURG (isorritmica)
+M:4/4
+L:1/4
+Q:1/4=110
+K:D
+d | d d A/B/ c | d/c/ B !fermata!A d | c B A B | (G/F/ E) !fermata!D
+d | d d A/B/ c | d/c/ B !fermata!A d | c B A B | (G/F/ E) !fermata!D
+D | F A B ^G | !fermata!A D A A | B c !fermata!d c | d c B B | !fermata!A
+B B A | B G !fermata!F d | c B A B | (G/F/ E) !fermata!D |]
+
+X:3
+T:ERIE (CONVERSE)
+M:4/4
+L:1/4
+Q:1/4=98
+K:F
+c3/2 c/ d/ c/ A/ F/ | F2 D2 | C3/2 F/ A/ F/ c/ A/ | G4 |
+c3/2 c/ d/ c/ A/ F/ | F2 D2 | C3/2 F/ A/ G/ F/ E/ | F4 |
+G3/2 ^F/ G/ A/ B/ G/ | A2 c2 | d3/2 d/ c/ A/ B/ A/ | G4 |
+c3/2 c/ d/ c/ A/ F/ | F2 D2 | C3/2 F/ A/ G/ F/ E/ | F4 |]
+
+X:4
+T:TOPLADY
+M:3/2
+L:1/4
+Q:1/4=145
+K:Bb
+F3/2 G/ | F2 D2 B3/2 G/ | F4 B c | d3 c B A | B4
+A3/2 B/ | c3 c A F | B4 A3/2 B/ | c3 c A F | B4
+F3/2 G/ | F2 D2 B3/2 G/ | F4 B c | d3 c B A | B4 |]
+
+X:5
+T:ST. GERTRUDE
+M:4/4
+L:1/4
+Q:1/4=112
+K:Eb
+B B B B | (B3/2 c/) B2 | F F E F | G4 |
+E G B e | e2 d2 | c c G =A | B4 |
+F F B F | (G3/2 A/) G2 | B B e B | c4 |
+c B A B | (c B) (A B) | c B A G | F4 |
+E E E E | (E D/C/) (D E) | F F F (E/F/) | G4 |
+B B e d | e2 B2 | A G F3/2 E/ | E4 |]
+
+X:6
+T:WOODWORTH
+M:3/4
+L:1/4
+Q:1/4=120
+K:D
+(D/E/) | F2 F | (A3/2 G/) F | (E3/2 F/) G | F2
+A | (A E) F | G2 B | B2 A | F2
+(D/E/) | F2 F | (A3/2 G/) F | B2 B | (d3/2 c/)
+B | A2 A | (A3/2 G/) F | E3 | A3 | F3- | F2 |]
+
+X:7
+T:OLD 100TH
+M:4/4
+L:1/4
+Q:1/4=112
+K:G
+G2 | G F E D | G2 A2 | B2 B2 | B B A G | c2 B2 | A2 G2 | A B A G | E2 F2 | G2 d2 | B G A c | B2 A2 | G2 |]
+
+X:8
+T:JESUS LOVES ME
+M:4/4
+L:1/4
+Q:1/4=120
+K:C
+G E E D | E G G2 | A A c A | A G G2 |
+G E E D | E G G2 | A A G C | E D C2 ||
+G2 E G | A c3 | G2 E C | E D3 |
+G2 E G | A c2 A | G C E D | C4 |]
+
+X:9
+T:STILLE NACHT
+M:6/8
+L:1/8
+Q:1/4=60
+K:Bb
+(F3/2G/) F D3 | (F3/2G/) F D3 | c2 c A3 | B2 B F3 |
+G2 G (B3/2A/) G | F3/2 G/ F D3 | G2 G B3/2 A/ G | F3/2 G/ F D3 |
+c2 c e3/2 c/ A | (B3 d3) | (B3/2F/) D F3/2 E/ C | B,6 |]
+
+X:10
+T:ANTIOCH
+M:2/4
+L:1/4
+Q:1/4=80
+K:D
+d c3/4B// | A3/2 G/ | F E | D3/2 A/ | B3/2 B/ | c3/2 c/ | d3/2 d/ |
+d/c/ B/A/ | A3/4G//F/ d/ | d/c/ B/A/ | A3/4G//F/ F/ | F/F/ F/F//G// | A3/2 G//F// |
+E/E/ E/E//F// | G3/2 F//E// | (D/ d) B/ | A3/4G//F/ G/ | F E | D2 |]
+
+X:11
+T:ADESTE FIDELES
+M:4/4
+L:1/4
+Q:1/4=115
+K:G
+G | G2 D G | A2 D D | B A B c | B2 A
+G | G2 F E | F G A B | F2 E3/2 D/ | D3
+D | d2 c B | c2 B B | A B G A | (F3/2 E/) D
+G | G F G A | G2 D B | B A B c | B2 A
+B | c B A G | F2 G c | B2 A3/2 G/ | G3 |]
+
+X:12
+T:GLORIA (French carol)
+M:4/4
+L:1/4
+Q:1/4=115
+K:F
+A A A c | c3/2 B/ A2 | A G A c | A3/2 G/ F2 |
+A A A c | c3/2 B/ A2 | A G A c | A3/2 G/ F2 ||
+c2 (d/c/B/A/ | B2) (c/B/A/G/ | A2) (B/A/G/F/ | G3/2) C/ C2 |
+F G A B | A2 G2 |
+c2 (d/c/B/A/ | B2) (c/B/A/G/ | A2) (B/A/G/F/ | G3/2) C/ C2 |
+F G A B | (A2 G2) | F4 |]
+
+X:13
+T:MENDELSSOHN
+M:4/4
+L:1/4
+Q:1/4=112
+K:F
+C F F3/2 E/ | F A (A G) | c c c3/2 B/ | A G A2 |
+C F F3/2 E/ | F A (A G) | c G G3/2 E/ | E D C2 |
+c c c F | B A (A G) | c c c F | B A (A G) |
+d d d c | B A B2 | G (A/B/) c3/2 F/ | F G A2 |
+d3/2 d/ d c | B A B2 | G (A/B/) c3/2 F/ | F G F2 |]
+
+X:14
+T:WEBB
+M:4/4
+L:1/4
+Q:1/4=117
+K:Bb
+F | B3/2 B/ d B | B2 G
+B | F B c d | c3
+F | B3/2 B/ d B | B2 G
+B | F B d c | B3
+F | c3/2 c/ B c | d2 d
+d | e d G c | (B2 A)
+F | B3/2 B/ d B | B2 G
+B | F B d c | B3 |]
+
+X:15
+T:HUDSON
+M:4/4
+L:1/4
+Q:1/4=115
+K:Eb
+E | G3/2 F/ E G | B3/2 A/ G
+B | c B A G | F3
+E | G3/2 F/ E G | B3/2 c/ B
+E | F A G F | E3 ||
+E3/4 F/4 | G G3/4 G/4 G
+A/ G/ | (G/F/) F3/4 E/4 F
+F/ G/ | A/ A/ A/ A/ A B3/4 A/4 | G3
+G/ G/ | A A C A/ A/ | G (G/F/) E
+G | F F/ E/ D/ A/ G3/4 F/4 | E3 |]
+
+X:16
+T:SWEET BY AND BY
+M:4/4
+L:1/4
+Q:1/4=100
+K:G
+G3/4 A/4 | B A/ G/ A G3/4 E/4 | D3
+G3/4 A/4 | B B/ B/ d d3/4 B/4 | A3
+G3/4 A/4 | B A/ G/ A G3/4 E/4 | D3
+G3/4 A/4 | B A/ G/ A G/ F/ | G3 ||
+B3/4 c/4 | d3 d3/4 B/4 | A3
+A/ B/ | c c/ c/ c B/ A/ | B3
+B3/4 c/4 | d3 B3/4 A/4 | G3
+F/ E/ | D G/ B/ A G/ F/ | G3 |]
+
+X:17
+T:ANGEL'S STORY
+M:4/4
+L:1/4
+Q:1/4=110
+K:G
+B | B3/2 B/ A G | G2 F D | c3/2 c/ B A | B3 B | d3/2 d/ c B | B2 c B | A3/2 G/ F G | A3 ^A |
+B3/2 B/ A G | G2 F D | c3/2 c/ B A | B3 B | e3/2 d/ c B | d2 c E | G3/2 F/ E F | G3 |]
+
+X:18
+T:OLIVET
+M:4/4
+L:1/4
+Q:1/4=108
+K:Eb
+E2 G B | B3/2 A/ G2 | F2 F A | A3/2 G/ F2 | G2 F c | B4 |
+B2 G A | B3/2 c/ B2 | B2 G A | B3/2 c/ B2 | e2 d c | B3/2 A/ G
+E | F2 B2 | E4 |]
+
+X:19
+T:MARTYN
+M:3/4
+L:1/4
+Q:1/4=95
+K:F
+A A/ A F/ | G G/ G3/2 | A A/ c B/ | A3/2 G3/2 | F3 |
+A A/ A F/ | G G/ G3/2 | A A/ c B/ | A3/2 G3/2 | F3 |
+c c/ c c/ | d3/2 d3/2 | c3 | c c/ c c/ | d3/2 d3/2 | c3 |
+A A/ A F/ | G G/ G3/2 | A A/ c B/ | A3/2 G3/2 | F3 |]
+
+X:20
+T:BETHANY
+M:4/4
+L:1/4
+Q:1/4=110
+K:F
+A2 G F | F3/2 D/ D2 | C2 F A | G4 |
+A2 G F | F3/2 D/ D2 | (C F) E G | F4 |
+c2 d c | c3/2 A/ c2 | c2 d c | c3/2 A/ G2 |
+A2 G F | F3/2 D/ D2 | (C F) E G | F4 |]
+
+X:21
+T:SAFE IN THE ARMS OF JESUS
+M:4/4
+L:1/4
+Q:1/4=110
+K:G
+B A3/4 G/4 D G | (B3/2 c/) B2 | d e3/4 d/4 B G | A4 | B A3/4 G/4 D G | (B3/2 c/) d2 | (d/c/) B/ A/ G F | G4 |
+A A3/4 B/4 A A | A2 d2 | ^c c3/4 c/4 B A | (A2 d2) | A A3/4 B/4 A d | d2 B2 | A ^c3/4 d/4 e c | d2 c2 ||
+B A3/4 G/4 D G | (B3/2 c/) B2 | d e3/4 d/4 B G | A4 | B A3/4 G/4 D G | (B3/2 c/) d2 | (d/c/) B/ A/ G F | G4 |]
+
+X:22
+T:PASS ME NOT
+M:4/4
+L:1/4
+Q:1/4=107
+K:Ab
+c3/2 B/ A3/4 G/4 A3/4 F/4 | E2 A2 | B3/2 B/ A B | c4 |
+c3/2 B/ A3/4 G/4 A3/4 F/4 | E2 A2 | B3/2 A/ c B | A4 ||
+e2 c2 | (B3/2 A/) F2 | E A c A | B4 |
+c3/2 B/ A3/4 G/4 A3/4 F/4 | E2 A2 | B3/2 A/ c B | A4 |]
+
+X:23
+T:TELL ME THE OLD, OLD STORY
+M:4/4
+L:1/4
+Q:1/4=112
+K:C
+E E3/4 F/4 G G | A2 G
+G | c c c (E3/4^F/4) | G3
+G | c c (c/B/) (A/G/) | (A B) c
+A | G (F/E/) D (G/F/) | E4 |
+(D3/4C/4) D3/4 E/4 F F | (E3/4F/4) G2
+G | (^F/G/) (A/B/) c F | G3
+G | c c (c/B/) (A/G/) | (A B) c
+A | G (F/E/) D (G/F/) | E4 ||
+E E3/4 F/4 G G | A2 G2 |
+B B3/4 c/4 d d | d2 c2 |
+e e3/4 d/4 c c | c2 A
+A | G c (B/c/) d | c4 |]
+
+X:24
+T:SWEET HOUR
+M:6/8
+L:1/8
+Q:1/4=78
+K:D
+D | F2 G A2 A | B2 c d2
+B | A2 F (FE) D | E2 F E2
+D | F2 G A2 A | B2 c d2
+B | A2 F (FE) D | F2 E D2
+A | d2 c d2 B | A2 F A2
+A | d2 c d2 B | A2 F E2
+D | F2 G A2 A | B2 c d2
+B | A2 F (FE) D | F2 E D2 |]
+
+X:25
+T:GOD BE WITH YOU (Tomer)
+M:4/4
+L:1/4
+Q:1/4=105
+K:C
+E3/2 E/ E/E/ E/E/ | G D E2 |
+A3/2 A/ A/A/ A/A/ | A2 G2 |
+G3/2 G/ G/G/ G/G/ | G2 E2 |
+E3/2 E/ A/G/ C/D/ | E D C |
+E3/4 F/4 | (G c e) d3/4c/4 | (A c2)
+B3/4 A/4 | G3/2 A/ (G/E/) (C/E/) | D3
+E3/4 F/4 | (G c e) d3/4c/4 | (A c2)
+c3/4A/4 | G/E/ C/D/ E D | C3 |]

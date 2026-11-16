@@ -8,19 +8,19 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../navigation/Navigator';
 import { adjuntosDe, eliminarActividad, getActividad, rutaAdjuntoActividad, urlLogoActividad } from '../../api/actividades';
 import { Actividad } from '../../types';
-import { descargarYCompartir, iconoArchivo, tamanoLegible } from '../../utils/archivos';
+import { iconoArchivo, tamanoLegible } from '../../utils/archivos';
+import { esVisualizable } from '../../utils/visor';
 import { cuandoEs, fechaLarga } from '../../utils/formato';
 import { horario } from './ActividadesScreen';
 import { colors, radius, shadow } from '../../theme';
 
 export default function ActividadScreen({ id }: { id: number }) {
-  const { api, baseUrl, token, puede } = useAuth();
+  const { api, baseUrl, puede } = useAuth();
   const { navigate, goBack } = useNavigation();
   const insets = useSafeAreaInsets();
   const [act, setAct] = useState<Actividad | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [descargando, setDescargando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -64,15 +64,13 @@ export default function ActividadScreen({ id }: { id: number }) {
     Share.share({ message: lineas.join('\n') });
   };
 
-  const adjunto = async (filename: string, nombre: string, mime: string) => {
-    setDescargando(filename);
-    try {
-      await descargarYCompartir(`${baseUrl}${rutaAdjuntoActividad(filename)}`, nombre, token, mime);
-    } catch (err) {
-      Alert.alert('Adjunto', (err as Error).message);
-    } finally {
-      setDescargando(null);
-    }
+  const adjunto = (filename: string) => {
+    const lista = act ? adjuntosDe(act) : [];
+    navigate({
+      name: 'visor',
+      archivos: lista.map(x => ({ nombre: x.originalname || x.filename, mime: x.mimetype, url: `${baseUrl}${rutaAdjuntoActividad(x.filename)}` })),
+      indice: Math.max(0, lista.findIndex(x => x.filename === filename)),
+    });
   };
 
   const acciones = act ? [
@@ -158,14 +156,14 @@ export default function ActividadScreen({ id }: { id: number }) {
             <>
               <TituloSeccion>{`Archivos adjuntos (${adjuntos.length})`}</TituloSeccion>
               {adjuntos.map(a => (
-                <TouchableOpacity key={a.filename} style={styles.archivo} disabled={!!descargando}
-                                  onPress={() => adjunto(a.filename, a.originalname, a.mimetype)}>
+                <TouchableOpacity key={a.filename} style={styles.archivo}
+                                  onPress={() => adjunto(a.filename)}>
                   <Ionicons name={iconoArchivo(a.mimetype) as any} size={22} color={colors.primary} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.archivoNombre} numberOfLines={2}>{a.originalname}</Text>
                     <Text style={styles.archivoSub}>{tamanoLegible(a.size)}</Text>
                   </View>
-                  <Ionicons name={descargando === a.filename ? 'hourglass-outline' : 'download-outline'} size={20} color={colors.textMuted} />
+                  <Ionicons name={esVisualizable(a.originalname, a.mimetype) ? 'eye-outline' : 'open-outline'} size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               ))}
             </>

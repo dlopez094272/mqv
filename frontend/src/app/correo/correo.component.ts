@@ -1,4 +1,5 @@
-import { Component, OnInit, signal, ViewChild, ElementRef } from '@angular/core';
+import { VisorArchivosService } from '../shared/visor-archivos/visor-archivos.service';
+import { Component, OnInit, signal, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule }  from '@angular/common';
 import { FormsModule }   from '@angular/forms';
 import { CorreoService, CorreoResumen, CorreoDetalle } from './correo.service';
@@ -57,6 +58,8 @@ export class CorreoComponent implements OnInit {
   mostrandoSug     = signal(false);
   sugCampo: 'para' | 'cc' = 'para';
   private sugTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private visor = inject(VisorArchivosService);
 
   constructor(private svc: CorreoService) {}
 
@@ -270,26 +273,14 @@ export class CorreoComponent implements OnInit {
 
   // ── Descarga de adjuntos ─────────────────────────────────────────
   descargarAdjunto(a: { filename: string; contentType: string; size: number }) {
-    if (this.descargando()) return;
-    this.descargando.set(a.filename);
-    const correo = this.correoAbierto()!;
-    this.svc.descargarAdjunto(correo.uid, a.filename, this.carpetaActual()).subscribe({
-      next: blob => {
-        this.descargando.set('');
-        const url  = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href     = url;
-        link.download = a.filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      },
-      error: () => {
-        this.descargando.set('');
-        Swal.fire('Error', 'No se pudo descargar el adjunto.', 'error');
-      },
-    });
+    const correo = this.correoAbierto();
+    if (!correo) return;
+    const carpeta = this.carpetaActual();
+    const lista = correo.adjuntos;
+    this.visor.abrir(lista.map(x => ({
+      nombre: x.filename, mime: x.contentType,
+      obtener: () => this.svc.descargarAdjunto(correo.uid, x.filename, carpeta),
+    })), Math.max(0, lista.indexOf(a)));
   }
 
   // ── Configuración ───────────────────────────────────────────────

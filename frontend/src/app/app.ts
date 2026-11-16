@@ -2,12 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
 import { PermisosService } from './core/services/permisos.service';
+import { VisorArchivosComponent } from './shared/visor-archivos/visor-archivos.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  template: '<router-outlet />',
+  imports: [RouterOutlet, VisorArchivosComponent],
+  template: '<router-outlet /><app-visor-archivos />',
 })
 export class App implements OnInit {
   constructor(private auth: AuthService, private permisos: PermisosService) {}

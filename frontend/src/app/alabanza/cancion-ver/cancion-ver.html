@@ -130,7 +130,7 @@
       @if (documentos().length) {
         <h3 class="cv-sec">📄 Partituras y documentos</h3>
         @for (d of documentos(); track d.idarchivos) {
-          <a class="cv-doc" [href]="urlArchivo(d)" target="_blank" rel="noopener">
+          <a class="cv-doc" [href]="urlArchivo(d)" (click)="$event.preventDefault(); verArchivo(documentos(), d)">
             {{ d.mimetype === 'application/pdf' ? '📄' : '🖼️' }} {{ d.pista && d.pista !== 'Partitura' ? d.pista + ' · ' : '' }}{{ d.nombre_original }}
           </a>
         }

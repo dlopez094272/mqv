@@ -1,5 +1,6 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { APP_VERSION } from '../version';
 
 /** Nombre de archivo seguro para el sistema de archivos. */
 const nombreSeguro = (n: string) => (n || 'archivo').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 120);
@@ -15,7 +16,7 @@ export async function descargarYCompartir(url: string, nombre: string, token: st
   if (destino.exists) destino.delete();
 
   const archivo = await File.downloadFileAsync(url, destino, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: { 'X-App-Version': APP_VERSION, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     idempotent: true,
   });
 

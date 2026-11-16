@@ -10,6 +10,7 @@ import { useNavigation } from '../../navigation/Navigator';
 import { getCertificado, getMiCurso, rutaArchivoCurso, rutaVideoCurso, urlLogoCurso } from '../../api/crecimiento';
 import { CursoDetalle } from '../../types';
 import { descargarYCompartir, iconoArchivo, tamanoLegible } from '../../utils/archivos';
+import { esVisualizable } from '../../utils/visor';
 import { descargarCertificado } from '../../utils/certificado';
 import { colors, radius, shadow } from '../../theme';
 
@@ -62,15 +63,12 @@ export default function CursoScreen({ id }: { id: number }) {
     }
   };
 
-  const archivo = async (filename: string, nombre: string, mime: string) => {
-    setDescargando(filename);
-    try {
-      await descargarYCompartir(`${baseUrl}${rutaArchivoCurso(filename)}`, nombre, token, mime);
-    } catch (err) {
-      Alert.alert('Archivo', (err as Error).message);
-    } finally {
-      setDescargando(null);
-    }
+  const archivo = (lista: { filename: string; nombre_original: string; mimetype: string }[], filename: string) => {
+    navigate({
+      name: 'visor',
+      archivos: lista.map(x => ({ nombre: x.nombre_original || x.filename, mime: x.mimetype, url: `${baseUrl}${rutaArchivoCurso(x.filename)}` })),
+      indice: Math.max(0, lista.findIndex(x => x.filename === filename)),
+    });
   };
 
   if (cargando && !curso) {
@@ -150,14 +148,13 @@ export default function CursoScreen({ id }: { id: number }) {
                       </View>
                     )}
                     {b.archivos.map(a => (
-                      <TouchableOpacity key={a.idarchivo} style={styles.archivo} onPress={() => archivo(a.filename, a.nombre_original, a.mimetype)}
-                                        disabled={!!descargando}>
+                      <TouchableOpacity key={a.idarchivo} style={styles.archivo} onPress={() => archivo(b.archivos, a.filename)}>
                         <Ionicons name={iconoArchivo(a.mimetype) as any} size={22} color={colors.primary} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.archivoNombre} numberOfLines={2}>{a.nombre_original}</Text>
                           <Text style={styles.archivoSub}>{tamanoLegible(a.tamanio)}</Text>
                         </View>
-                        <Ionicons name={descargando === a.filename ? 'hourglass-outline' : 'download-outline'} size={20} color={colors.textMuted} />
+                        <Ionicons name={esVisualizable(a.nombre_original, a.mimetype) ? 'eye-outline' : 'open-outline'} size={20} color={colors.textMuted} />
                       </TouchableOpacity>
                     ))}
                     {!b.descripcion && !b.video_filename && !b.archivos.length && <Text style={styles.vacio}>Sin contenido en este bloque.</Text>}

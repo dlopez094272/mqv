@@ -45,6 +45,15 @@ app.use('/api/uploads', express.static(uploadsDir, { maxAge: '1h' }));
 app.use('/api/files/actividades/logos', express.static(actLogosDir, { maxAge: '1h' }));
 // Logo de marca para la página de "compartir" (copia propia dentro de backend/
 // para no depender de LANDING_URL ni de que landing/ esté desplegada junto al backend)
+// Instalador de la app móvil (APK) y su version.json
+const appDir = path.join(__dirname, '..', 'files', 'app');
+fs.mkdirSync(appDir, { recursive: true });
+app.use('/api/files/app', express.static(appDir, {
+  maxAge: 0,
+  setHeaders: (res, ruta) => {
+    if (ruta.endsWith('.apk')) res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+  },
+}));
 app.use('/api/brand', express.static(path.join(__dirname, '..', 'assets', 'brand'), { maxAge: '1d' }));
 
 app.use('/api', indexRouter);

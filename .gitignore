@@ -8,3 +8,8 @@ frontend/node_modules/
 *.zip
 *.mwb
 *.mwb.bak
+
+# App móvil
+backend/firebase-service-account.json
+backend/files/app/*.apk
+mobile/google-services.json

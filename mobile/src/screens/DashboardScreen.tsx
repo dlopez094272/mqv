@@ -7,6 +7,7 @@ import { useNavigation, Screen } from '../navigation/Navigator';
 import { MensajeError, TituloSeccion } from '../components/ui';
 import { getMiCuenta, getMisServicios } from '../api/alabanza';
 import { getNoLeidos } from '../api/correo';
+import { contarNoLeidas } from '../api/notificaciones';
 import { MiCuenta, Servicio } from '../types';
 import { cuandoEs, fechaLarga, iniciales, primerNombre } from '../utils/formato';
 import { colors, radius, shadow } from '../theme';
@@ -28,13 +29,16 @@ export default function DashboardScreen() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [noLeidos, setNoLeidos] = useState(0);
+  const [avisos, setAvisos] = useState(0);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const [s, c] = await Promise.all([getMisServicios(api), getMiCuenta(api).catch(() => null)]);
-      setServicios(s);
+      // "Mis servicios" depende del módulo Alabanza: si el servidor aún no lo tiene, el inicio sigue funcionando.
+      const [s, c] = await Promise.all([getMisServicios(api).catch(() => [] as Servicio[]), getMiCuenta(api).catch(() => null)]);
+      setServicios(Array.isArray(s) ? s : []);
       setCuenta(c);
+      contarNoLeidas(api).then(r => setAvisos(r.no_leidas || 0)).catch(() => {});
       if (puede('correo')) getNoLeidos(api).then(r => setNoLeidos(r.total || 0)).catch(() => {});
     } catch (err) {
       setError((err as Error).message);
@@ -55,6 +59,7 @@ export default function DashboardScreen() {
     { titulo: 'Actividades', descripcion: 'Calendario de la iglesia', icono: 'today-outline', screen: { name: 'actividades' }, visible: puede('actividades') },
     { titulo: 'Mis cursos', descripcion: 'Crecimiento y certificados', icono: 'school-outline', screen: { name: 'misCursos' }, visible: puede('mis_cursos') },
     { titulo: 'Correo', descripcion: noLeidos ? `${noLeidos} sin leer` : 'Tu correo de la iglesia', icono: 'mail-outline', screen: { name: 'correo' }, visible: puede('correo'), badge: noLeidos },
+    { titulo: 'Tesorería', descripcion: 'Saldos y movimientos', icono: 'wallet-outline', screen: { name: 'tesorerias' }, visible: puede('tesoreria') },
     { titulo: 'Biblioteca', descripcion: 'Canciones, himnos y coros', icono: 'musical-notes-outline', screen: { name: 'canciones' }, visible: puede('alabanza') },
     { titulo: 'Mis datos', descripcion: 'Actualiza tu información', icono: 'person-circle-outline', screen: { name: 'misDatos' }, visible: true },
     { titulo: 'Contraseña', descripcion: 'Cámbiala cuando quieras', icono: 'key-outline', screen: { name: 'cambiarPassword' }, visible: true },
@@ -70,6 +75,11 @@ export default function DashboardScreen() {
           <Text style={styles.saludo}>{saludo()},</Text>
           <Text style={styles.nombre} numberOfLines={1}>{nombre}</Text>
         </View>
+        <TouchableOpacity onPress={() => navigate({ name: 'notificaciones' })} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityLabel={avisos ? `${avisos} notificaciones sin leer` : 'Notificaciones'} style={{ marginRight: 14 }}>
+          <Ionicons name={avisos ? 'notifications' : 'notifications-outline'} size={25} color={colors.white} />
+          {!!avisos && <View style={[styles.badge, styles.badgeCampana]}><Text style={styles.badgeText}>{avisos > 99 ? '99+' : avisos}</Text></View>}
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigate({ name: 'perfil' })} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="settings-outline" size={24} color={colors.white} />
         </TouchableOpacity>
@@ -201,6 +211,7 @@ const styles = StyleSheet.create({
   accesoIcono: { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   badge: { position: 'absolute', top: -6, right: -8, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   badgeText: { color: colors.white, fontSize: 11, fontWeight: '800' },
+  badgeCampana: { top: -7, right: -9, borderWidth: 2, borderColor: colors.primary },
   accesoTitulo: { fontSize: 15, fontWeight: '800', color: colors.text },
   accesoDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   versiculo: { textAlign: 'center', color: colors.textMuted, fontStyle: 'italic', fontSize: 13, marginTop: 26, paddingHorizontal: 10, lineHeight: 19 },

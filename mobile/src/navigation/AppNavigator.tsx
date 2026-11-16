@@ -18,11 +18,26 @@ import AsistenciaScreen from '../screens/actividades/AsistenciaScreen';
 import CorreoScreen from '../screens/correo/CorreoScreen';
 import CorreoLeerScreen from '../screens/correo/CorreoLeerScreen';
 import CorreoRedactarScreen from '../screens/correo/CorreoRedactarScreen';
+import VisorArchivoScreen from '../screens/VisorArchivoScreen';
+import NotificacionesScreen from '../screens/NotificacionesScreen';
+import TesoreriasScreen from '../screens/tesoreria/TesoreriasScreen';
+import TesoreriaScreen from '../screens/tesoreria/TesoreriaScreen';
+import MovimientoFormScreen from '../screens/tesoreria/MovimientoFormScreen';
 
 export default function AppNavigator() {
   const { screen, screenKey } = useNavigation();
 
   switch (screen.name) {
+    case 'notificaciones':
+      return <NotificacionesScreen key={screenKey} />;
+    case 'tesorerias':
+      return <TesoreriasScreen key={screenKey} />;
+    case 'tesoreria':
+      return <TesoreriaScreen key={screenKey} id={screen.id} />;
+    case 'movimientoForm':
+      return <MovimientoFormScreen key={screenKey} idtesoreria={screen.idtesoreria} movimiento={screen.movimiento} />;
+    case 'visor':
+      return <VisorArchivoScreen key={screenKey} archivos={screen.archivos} indice={screen.indice} />;
     case 'perfil':
       return <PerfilScreen key={screenKey} />;
     case 'misDatos':

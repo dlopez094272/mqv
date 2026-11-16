@@ -14,6 +14,110 @@ async function esSuperadmin(usuario) {
   return rows.length > 0;
 }
 
+function firmarToken(u, is_superadmin) {
+  return jwt.sign(
+    {
+      usuario: u.usuario,
+      nombre: u.nombre_completo,
+      primer_ingreso: u.primer_ingreso,
+      is_superadmin,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+  );
+}
+
+const hashRefresh = t => crypto.createHash('sha256').update(String(t)).digest('hex');
+
+async function crearSesionDispositivo(usuario, d) {
+  const refresh = crypto.randomBytes(48).toString('base64url');
+  await pool.query(
+    `INSERT INTO usuarios_dispositivos (usuario, refresh_hash, plataforma, modelo, app_version)
+     VALUES (?, ?, ?, ?, ?)`,
+    [usuario, hashRefresh(refresh),
+     String(d.plataforma || '').slice(0, 20) || null,
+     String(d.modelo || '').slice(0, 120) || null,
+     String(d.app_version || '').slice(0, 20) || null]
+  );
+  return refresh;
+}
+
+/**
+ * POST /auth/renovar { refresh_token, app_version? }
+ * Entrega un token nuevo a un dispositivo con sesión iniciada. La sesión solo
+ * termina si el usuario la cierra, se desactiva su usuario o se elimina el dispositivo.
+ */
+async function renovar(req, res, next) {
+  try {
+    const { refresh_token, app_version } = req.body || {};
+    if (!refresh_token) return res.status(400).json({ error: 'Falta el token de renovación' });
+    const [[d]] = await pool.query(
+      `SELECT d.iddispositivo, u.usuario, u.nombre_completo, u.activo, u.primer_ingreso
+       FROM usuarios_dispositivos d JOIN usuarios u ON u.usuario = d.usuario
+       WHERE d.refresh_hash = ?`,
+      [hashRefresh(refresh_token)]
+    );
+    if (!d) return res.status(401).json({ error: 'La sesión de este dispositivo fue cerrada. Ingresa de nuevo.', code: 'SESION_CERRADA' });
+    if (!d.activo) return res.status(403).json({ error: 'Usuario desactivado. Contacte al administrador.', code: 'SESION_CERRADA' });
+
+    await pool.query(
+      'UPDATE usuarios_dispositivos SET ultimo_uso = NOW(), app_version = COALESCE(?, app_version) WHERE iddispositivo = ?',
+      [app_version ? String(app_version).slice(0, 20) : null, d.iddispositivo]
+    );
+    const is_superadmin = await esSuperadmin(d.usuario);
+    res.json({
+      token: firmarToken(d, is_superadmin),
+      usuario: d.usuario,
+      nombre: d.nombre_completo,
+      primer_ingreso: d.primer_ingreso,
+      is_superadmin,
+    });
+  } catch (err) { next(err); }
+}
+
+/** POST /auth/cerrar-sesion { refresh_token } — el usuario cierra la sesión en su teléfono. */
+async function cerrarSesion(req, res, next) {
+  try {
+    const { refresh_token } = req.body || {};
+    if (refresh_token) {
+      await pool.query('DELETE FROM usuarios_dispositivos WHERE refresh_hash = ?', [hashRefresh(refresh_token)]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+}
+
+/** PUT /auth/push-token { refresh_token, push_token } — registra el token de notificaciones del teléfono. */
+async function registrarPushToken(req, res, next) {
+  try {
+    const { refresh_token, push_token } = req.body || {};
+    if (!refresh_token) return res.status(400).json({ error: 'Falta el token de renovación' });
+    const token = push_token ? String(push_token).slice(0, 512) : null;
+    if (token) {
+      // Un teléfono pertenece a una sola sesión: si otro usuario lo usaba, se le quita
+      await pool.query('UPDATE usuarios_dispositivos SET push_token = NULL WHERE push_token = ? AND refresh_hash <> ?',
+        [token, hashRefresh(refresh_token)]);
+    }
+    const [r] = await pool.query(
+      'UPDATE usuarios_dispositivos SET push_token = ?, ultimo_uso = NOW() WHERE refresh_hash = ? AND usuario = ?',
+      [token, hashRefresh(refresh_token), req.user.usuario]
+    );
+    if (!r.affectedRows) return res.status(404).json({ error: 'Dispositivo no encontrado' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+}
+
+/**
+ * POST /auth/dispositivo { dispositivo } (con sesión) — convierte una sesión
+ * existente de la app en sesión de dispositivo con token de renovación
+ * (para teléfonos que actualizan desde una versión anterior).
+ */
+async function registrarDispositivo(req, res, next) {
+  try {
+    const refresh_token = await crearSesionDispositivo(req.user.usuario, req.body?.dispositivo || {});
+    res.status(201).json({ refresh_token });
+  } catch (err) { next(err); }
+}
+
 async function login(req, res, next) {
   try {
     const { usuario, password } = req.body;
@@ -48,19 +152,17 @@ async function login(req, res, next) {
 
     const is_superadmin = await esSuperadmin(u.usuario);
 
-    const token = jwt.sign(
-      {
-        usuario: u.usuario,
-        nombre: u.nombre_completo,
-        primer_ingreso: u.primer_ingreso,
-        is_superadmin,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
-    );
+    const token = firmarToken(u, is_superadmin);
+
+    // App móvil: sesión por dispositivo que no se cierra sola (ver /auth/renovar)
+    let refresh_token;
+    if (req.body.dispositivo && typeof req.body.dispositivo === 'object') {
+      refresh_token = await crearSesionDispositivo(u.usuario, req.body.dispositivo);
+    }
 
     res.json({
       token,
+      refresh_token,
       usuario: u.usuario,
       nombre: u.nombre_completo,
       primer_ingreso: u.primer_ingreso,
@@ -351,4 +453,4 @@ async function actualizarMisDatos(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { miCuenta, actualizarMisDatos, login, misPermisos, miPersona, getMiPerfilPersona, updateMiPerfilPersona, forgotPassword, verifyResetToken, resetPassword, completeRegistration, changePassword };
+module.exports = { registrarDispositivo, renovar, cerrarSesion, registrarPushToken, miCuenta, actualizarMisDatos, login, misPermisos, miPersona, getMiPerfilPersona, updateMiPerfilPersona, forgotPassword, verifyResetToken, resetPassword, completeRegistration, changePassword };

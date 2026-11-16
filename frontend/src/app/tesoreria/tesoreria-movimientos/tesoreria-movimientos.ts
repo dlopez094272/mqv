@@ -1,3 +1,4 @@
+import { VisorArchivosService } from '../../shared/visor-archivos/visor-archivos.service';
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,6 +25,7 @@ interface MovRow extends Movimiento {
 })
 export class TesoreriaMovimientosComponent implements OnInit {
   private svc     = inject(TesoreriaService);
+  private visor   = inject(VisorArchivosService);
   public  permisos = inject(PermisosService);
   public  auth    = inject(AuthService);
   private route   = inject(ActivatedRoute);
@@ -290,8 +292,11 @@ export class TesoreriaMovimientosComponent implements OnInit {
     });
   }
 
-  descargarAdjunto(adj: { filename: string; originalname: string }) {
-    this.svc.descargarAdjunto(adj.filename, adj.originalname);
+  descargarAdjunto(adj: { filename: string; originalname: string }, lista: { filename: string; originalname: string }[] = [adj]) {
+    this.visor.abrir(lista.map(a => ({
+      nombre: a.originalname || a.filename,
+      obtener: () => this.svc.obtenerAdjunto(a.filename),
+    })), Math.max(0, lista.indexOf(adj)));
   }
 
   // ── Exportar Excel ────────────────────────────────────────────

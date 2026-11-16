@@ -1,3 +1,4 @@
+import { VisorArchivosService } from '../shared/visor-archivos/visor-archivos.service';
 import { Component, OnInit, signal, computed, inject, NgZone } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule }    from '@angular/forms';
@@ -77,6 +78,7 @@ interface ReporteActividadDetalle {
 })
 export class ActividadesComponent implements OnInit {
   private svc    = inject(ActividadesService);
+  private visor  = inject(VisorArchivosService);
   private tesoreriaSvc = inject(TesoreriaService);
   private http   = inject(HttpClient);
   public permisos = inject(PermisosService);
@@ -678,7 +680,11 @@ export class ActividadesComponent implements OnInit {
   }
 
   descargar(adj: AdjuntoInfo) {
-    this.svc.descargarAdjunto(adj.filename, adj.originalname);
+    const lista = this.adjuntosActuales.includes(adj) ? this.adjuntosActuales : [adj];
+    this.visor.abrir(lista.map(a => ({
+      nombre: a.originalname || a.filename, mime: a.mimetype,
+      obtener: () => this.svc.obtenerAdjunto(a.filename),
+    })), lista.indexOf(adj));
   }
 
   // ── Gestión unificada de actividad (fichas: datos / asistencia / tesorería) ──

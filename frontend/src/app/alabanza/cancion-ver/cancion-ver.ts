@@ -1,3 +1,4 @@
+import { VisorArchivosService } from '../../shared/visor-archivos/visor-archivos.service';
 import { Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
@@ -28,6 +29,7 @@ import { PermisosService } from '../../core/services/permisos.service';
 })
 export class CancionVerComponent implements OnInit, OnDestroy {
   private svc       = inject(AlabanzaService);
+  private visor     = inject(VisorArchivosService);
   private route     = inject(ActivatedRoute);
   private router    = inject(Router);
   private sanitizer = inject(DomSanitizer);
@@ -177,6 +179,13 @@ export class CancionVerComponent implements OnInit, OnDestroy {
     else this.router.navigate(['/alabanza']);
   }
   urlArchivo(a: ArchivoCancion) { return this.svc.urlArchivo(a.idarchivos); }
+
+  /** Abre un archivo de la canción en el visor (PDF, imagen o audio), con navegación entre los del mismo grupo. */
+  verArchivo(lista: ArchivoCancion[], a: ArchivoCancion) {
+    this.visor.abrir(lista.map(x => ({
+      nombre: x.nombre_original, mime: x.mimetype, url: this.svc.urlArchivo(x.idarchivos),
+    })), lista.indexOf(a));
+  }
 
   /* ── Metrónomo (click con Web Audio) ───────────── */
   alternarMetronomo() { this.metronomo() ? this.pararMetronomo() : this.iniciarMetronomo(); }

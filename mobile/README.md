@@ -8,7 +8,7 @@ No se conecta a la base de datos: todo pasa por la API del backend de MQV
 
 ## Qué incluye
 
-- **Intro animada**: notas musicales que suben alrededor del logo.
+- **Intro animada**: el logotipo entra con un rebote suave, anillos de luz y el lema.
 - **Ingreso** con usuario o correo, **recuperar contraseña** (envía el correo de
   restablecimiento) y **huella / rostro** (`expo-local-authentication`). Si el token
   vence con la app abierta, se pide la huella y se vuelve a entrar sin perder la pantalla.
@@ -91,6 +91,44 @@ npx eas-cli build -p android --profile preview   # en la nube, genera un APK
 ```
 
 o local: `npx expo prebuild -p android` y `cd android; .\gradlew assembleRelease`.
+
+## Publicar una versión nueva (actualización obligatoria)
+
+1. Sube `version` en `app.json` (p. ej. `1.1.0` → `1.2.0`) y `android.versionCode` (+1).
+2. Genera el APK (`npx expo prebuild -p android` + `gradlew assembleRelease`).
+3. Súbelo al servidor como `backend/files/app/mqv.apk` (administrador de archivos de cPanel).
+4. Edita `backend/files/app/version.json`: `version_actual` y, para obligar a todos a
+   actualizar, `version_minima` con la misma versión. No hace falta reiniciar el backend.
+
+Las apps con versión menor a `version_minima` quedan bloqueadas en la pantalla
+"Actualización obligatoria" con el botón para descargar el APK (también la 1.0.0,
+que no enviaba su versión: el servidor la reconoce y le responde que actualice).
+
+## Sesión
+
+La sesión de la app no se cierra sola: al iniciar sesión el teléfono recibe un
+token de renovación (tabla `usuarios_dispositivos`) y la app renueva su JWT cuando
+vence. Solo termina si el usuario toca "Cerrar sesión", si se desactiva su usuario o
+si se borra su fila en `usuarios_dispositivos` (sirve para cerrar la sesión de un
+teléfono perdido).
+
+## Notificaciones push (Firebase)
+
+Las notificaciones se guardan siempre en la bandeja de la app (🔔 en el inicio). Para
+que además lleguen como push con la app cerrada hace falta un proyecto de Firebase
+(gratis):
+
+1. En https://console.firebase.google.com crea un proyecto y agrega una app Android
+   con el paquete `org.iglesiamqv.app`.
+2. Descarga `google-services.json` y ponlo en `mobile/` (está en `.gitignore`).
+   `app.config.js` lo incluye en el APK solo si existe. Luego `npx expo prebuild -p android --clean`.
+3. En Configuración del proyecto → Cuentas de servicio → "Generar nueva clave privada".
+   Sube ese JSON al servidor como `backend/firebase-service-account.json` (o indica la
+   ruta en la variable `FCM_SERVICE_ACCOUNT` del `.env`) y reinicia el backend.
+
+Se notifica: material nuevo en un curso asignado (y asignación de curso), asignación
+en el equipo de un servicio, y movimientos de tesorería (nuevo, editado, anulado) al
+responsable y a los usuarios asignados a esa tesorería. Migración: `backend/migrations/app_notificaciones.sql`.
 
 ## Notas
 

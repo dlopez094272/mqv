@@ -127,7 +127,7 @@
                           [class.descargando]="descargando() === a.filename"
                           (click)="descargarAdjunto(a)"
                           type="button"
-                          [title]="'Descargar ' + a.filename">
+                          [title]="'Ver ' + a.filename">
                     @if (descargando() === a.filename) {
                       <span class="spinner-xs"></span>
                     } @else {
@@ -135,7 +135,7 @@
                     }
                     <span class="adj-nombre">{{ a.filename }}</span>
                     <span class="adj-size">{{ formatFileSize(a.size) }}</span>
-                    <span class="adj-dl">⬇</span>
+                    <span class="adj-dl">👁</span>
                   </button>
                 }
               </span>

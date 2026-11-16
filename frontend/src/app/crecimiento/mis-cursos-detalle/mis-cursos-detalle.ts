@@ -1,7 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { VisorArchivosService, iconoArchivo } from '../../shared/visor-archivos/visor-archivos.service';
 import { CrecimientoService, MiCursoDetalle, ContenidoItem } from '../crecimiento.service';
 
 @Component({
@@ -17,6 +18,8 @@ export class MisCursosDetalleComponent implements OnInit {
   cargando   = signal(false);
   error      = signal('');
   abiertos   = signal<Set<number>>(new Set());
+  private visor = inject(VisorArchivosService);
+  readonly iconoArchivo = iconoArchivo;
 
   constructor(
     private svc:       CrecimientoService,
@@ -66,6 +69,12 @@ export class MisCursosDetalleComponent implements OnInit {
 
   safeVideoUrl(filename: string): SafeUrl {
     return this.sanitizer.bypassSecurityTrustResourceUrl(this.videoUrl(filename));
+  }
+
+  verArchivo(archivos: { filename: string; nombre_original: string; mimetype: string }[], i: number) {
+    this.visor.abrir(archivos.map(a => ({
+      nombre: a.nombre_original || a.filename, mime: a.mimetype, url: this.archivoUrl(a.filename),
+    })), i);
   }
 
   safeArchivoUrl(filename: string): SafeUrl {

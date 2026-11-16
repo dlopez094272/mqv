@@ -5,6 +5,24 @@ const multer  = require('multer');
 const { pool }       = require('../config/database');
 const authMiddleware = require('../middleware/authMiddleware');
 const { recalcularSaldo, verificarAccesoTesoreria } = require('../utils/tesoreriaAccess');
+const { notificar } = require('../utils/notificaciones');
+
+const quetzales = n => 'Q' + Number(n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Notifica al responsable y a los usuarios asignados (seguidores) de una tesorería. */
+async function avisarTesoreria(idtesoreria, autor, armar) {
+  try {
+    const [[t]] = await pool.query('SELECT nombre, responsable FROM tesoreria WHERE idtesoreria = ?', [idtesoreria]);
+    if (!t) return;
+    const [seg] = await pool.query('SELECT usuario FROM tesoreria_usuarios WHERE idtesoreria = ?', [idtesoreria]);
+    const [[a]] = await pool.query('SELECT nombre_completo FROM usuarios WHERE usuario = ?', [autor]);
+    const { titulo, cuerpo } = armar(t.nombre, a?.nombre_completo || autor);
+    notificar([t.responsable, ...seg.map(s => s.usuario)], {
+      tipo: 'tesoreria', titulo, cuerpo,
+      datos: { pantalla: 'tesoreria', id: Number(idtesoreria) },
+    }, { excluir: autor });
+  } catch (e) { console.error('[notificaciones] tesoreria', e.message); }
+}
 
 // ── Directorio de adjuntos ────────────────────────────────────────
 const adjuntosDir = path.join(__dirname, '..', '..', 'files', 'tesoreria', 'adjuntos');
@@ -374,6 +392,10 @@ router.post('/:id/movimientos', upload, async (req, res, next) => {
        req.params.id, idtipo_movimiento || null, usuario, adjuntos]
     );
     await recalcularSaldo(req.params.id);
+    avisarTesoreria(req.params.id, usuario, (nombre, quien) => ({
+      titulo: `${debitoVal > 0 ? '💰 Ingreso' : '💸 Egreso'} de ${quetzales(debitoVal || creditoVal)} · ${nombre}`,
+      cuerpo: `${concepto} — registrado por ${quien}`,
+    }));
     res.status(201).json({ id: r.insertId });
   } catch (err) { next(err); }
 });
@@ -439,6 +461,10 @@ router.put('/:id/movimientos/:movId', upload, async (req, res, next) => {
     );
     if (!r.affectedRows) return res.status(404).json({ error: 'Movimiento no encontrado' });
     await recalcularSaldo(req.params.id);
+    avisarTesoreria(req.params.id, usuario, (nombre, quien) => ({
+      titulo: `✏️ Movimiento modificado · ${nombre}`,
+      cuerpo: `${concepto} (${quetzales(debitoVal || creditoVal)}) — por ${quien}`,
+    }));
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -456,7 +482,7 @@ router.patch('/:id/movimientos/:movId/anular', async (req, res, next) => {
     }
 
     const [[mov]] = await pool.query(
-      'SELECT anulado FROM tesoreria_movimientos WHERE idtesoreria_movimientos = ? AND dtesoreria = ?',
+      'SELECT anulado, concepto, debito, credito FROM tesoreria_movimientos WHERE idtesoreria_movimientos = ? AND dtesoreria = ?',
       [req.params.movId, req.params.id]
     );
     if (!mov)        return res.status(404).json({ error: 'Movimiento no encontrado' });
@@ -469,6 +495,10 @@ router.patch('/:id/movimientos/:movId/anular', async (req, res, next) => {
       [usuario, req.params.movId, req.params.id]
     );
     await recalcularSaldo(req.params.id);
+    avisarTesoreria(req.params.id, usuario, (nombre, quien) => ({
+      titulo: `🚫 Movimiento anulado · ${nombre}`,
+      cuerpo: `${mov.concepto} (${quetzales(Number(mov.debito) || Number(mov.credito))}) — anulado por ${quien}`,
+    }));
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

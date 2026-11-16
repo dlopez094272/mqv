@@ -183,7 +183,7 @@
         <div class="cf-arch">
           <span class="cf-arch-ico">{{ a.tipo === 'audio' ? '🎧' : a.mimetype === 'application/pdf' ? '📄' : '🖼️' }}</span>
           <input class="input cf-arch-pista" [ngModel]="a.pista" (change)="renombrar(a, $any($event.target).value)" list="cf-pistas" />
-          <a class="cf-arch-nom" [href]="url(a)" target="_blank" rel="noopener">{{ a.nombre_original }}</a>
+          <a class="cf-arch-nom" [href]="url(a)" (click)="$event.preventDefault(); ver(a)">{{ a.nombre_original }}</a>
           <small>{{ tamano(a.size) }}</small>
           @if (a.tipo === 'audio') { <audio controls preload="none" [src]="url(a)"></audio> }
           <button class="btn-icon btn-danger" (click)="eliminarArchivo(a)">🗑️</button>

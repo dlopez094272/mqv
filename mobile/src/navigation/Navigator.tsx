@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { BackHandler } from 'react-native';
+import type { ArchivoVisor } from '../utils/visor';
+import type { Movimiento } from '../api/tesoreria';
 
 // Navegación propia y minimalista (pila en memoria), igual que en las apps de
 // smabi y express: evita sumar @react-navigation y sus dependencias nativas.
@@ -25,7 +27,15 @@ export type Screen =
   // Correo
   | { name: 'correo' }
   | { name: 'correoLeer'; uid: number; carpeta: string }
-  | { name: 'correoRedactar'; para?: string; cc?: string; asunto?: string; cuerpo?: string };
+  | { name: 'correoRedactar'; para?: string; cc?: string; asunto?: string; cuerpo?: string }
+  // Notificaciones
+  | { name: 'notificaciones' }
+  // Tesorería
+  | { name: 'tesorerias' }
+  | { name: 'tesoreria'; id: number }
+  | { name: 'movimientoForm'; idtesoreria: number; movimiento?: Movimiento }
+  // Visor de PDF, imágenes y audio
+  | { name: 'visor'; archivos: ArchivoVisor[]; indice?: number };
 
 interface Entrada {
   key: number;

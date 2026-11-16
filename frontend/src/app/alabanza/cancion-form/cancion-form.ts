@@ -9,6 +9,7 @@ import { TONALIDADES, convertirAcordesArriba } from '../chordpro';
 import { HojaAcordesComponent } from '../componentes/hoja-acordes.component';
 import { PartituraAbcComponent } from '../componentes/partitura-abc.component';
 import { confirmar } from '../../shared/confirmar.util';
+import { VisorArchivosService } from '../../shared/visor-archivos/visor-archivos.service';
 
 type Seccion = 'datos' | 'letra' | 'partitura' | 'archivos';
 
@@ -41,6 +42,7 @@ D | G G B d | c B A2 | B c d B | A3 :|`;
 })
 export class CancionFormComponent implements OnInit {
   private svc    = inject(AlabanzaService);
+  private visor  = inject(VisorArchivosService);
   private route  = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -204,5 +206,6 @@ export class CancionFormComponent implements OnInit {
   }
 
   url(a: ArchivoCancion) { return this.svc.urlArchivo(a.idarchivos); }
+  ver(a: ArchivoCancion) { this.visor.abrir({ nombre: a.nombre_original, mime: a.mimetype, url: this.url(a) }); }
   tamano(b: number | null) { return b ? (b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB') : ''; }
 }

@@ -85,10 +85,10 @@
               <div class="archivos-section">
                 <h4>📎 Archivos de soporte</h4>
                 <ul class="archivos-list">
-                  @for (a of bloque.archivos; track a.idarchivo) {
+                  @for (a of bloque.archivos; track a.idarchivo; let ai = $index) {
                     <li>
-                      <a [href]="safeArchivoUrl(a.filename)" target="_blank" download class="archivo-link">
-                        <span class="archivo-icon">{{ a.mimetype.includes('pdf') ? '📄' : a.mimetype.includes('image') ? '🖼️' : '📎' }}</span>
+                      <a [href]="safeArchivoUrl(a.filename)" (click)="$event.preventDefault(); verArchivo(bloque.archivos, ai)" class="archivo-link">
+                        <span class="archivo-icon">{{ iconoArchivo(a.nombre_original, a.mimetype) }}</span>
                         <span>{{ a.nombre_original }}</span>
                         <span class="archivo-size">{{ (a.tamanio / 1024 / 1024).toFixed(1) }} MB</span>
                       </a>

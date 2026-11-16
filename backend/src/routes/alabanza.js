@@ -16,6 +16,7 @@ const fs     = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 const { pool }       = require('../config/database');
+const { notificar } = require('../utils/notificaciones');
 const authMiddleware = require('../middleware/authMiddleware');
 const checkPermission = require('../middleware/permissionsMiddleware');
 const { tienePermiso } = require('../middleware/permissionsMiddleware');
@@ -378,6 +379,33 @@ router.put('/actividades/:id/programa', checkPermission('actividades', 'E'), asy
   } finally { conn.release(); }
 });
 
+/** Notifica a quienes se agregaron al equipo de un servicio (no a los que ya estaban). */
+async function avisarAsignadosServicio(idactividades, personasAntes, filas, autor) {
+  try {
+    const previas = new Set(personasAntes.map(Number));
+    const nuevas = new Map();
+    for (const [, idp, inst] of filas) {
+      if (previas.has(idp)) continue;
+      nuevas.set(idp, [...(nuevas.get(idp) || []), inst].filter(Boolean));
+    }
+    if (!nuevas.size) return;
+    const [[act]] = await pool.query(
+      "SELECT nombre, DATE_FORMAT(fecha_inicio, '%d/%m/%Y') AS fecha FROM actividades WHERE idactividades = ?", [idactividades]);
+    if (!act) return;
+    const [usrs] = await pool.query(
+      'SELECT usuario, idpersonas FROM usuarios WHERE activo = 1 AND idpersonas IN (?)', [[...nuevas.keys()]]);
+    for (const u of usrs) {
+      const inst = nuevas.get(Number(u.idpersonas)) || [];
+      notificar([u.usuario], {
+        tipo: 'servicio',
+        titulo: '🎵 Te asignaron en un servicio',
+        cuerpo: `${act.nombre} · ${act.fecha}${inst.length ? ` · ${inst.join(', ')}` : ''}`,
+        datos: { pantalla: 'servicio', id: idactividades },
+      }, { excluir: autor });
+    }
+  } catch (e) { console.error('[notificaciones] servicio', e.message); }
+}
+
 router.put('/actividades/:id/musicos', checkPermission('actividades', 'E'), async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
@@ -395,12 +423,14 @@ router.put('/actividades/:id/musicos', checkPermission('actividades', 'E'), asyn
       vistos.add(clave);
       filas.push([id, idp, inst]);
     }
+    const [antes] = await conn.query('SELECT idpersonas FROM actividades_musicos WHERE idactividades = ?', [id]);
     await conn.beginTransaction();
     await conn.query('DELETE FROM actividades_musicos WHERE idactividades = ?', [id]);
     if (filas.length) {
       await conn.query('INSERT INTO actividades_musicos (idactividades, idpersonas, instrumento) VALUES ?', [filas]);
     }
     await conn.commit();
+    avisarAsignadosServicio(id, antes.map(a => a.idpersonas), filas, req.user.usuario);
     res.json({ message: 'Músicos guardados', ...(await cargarPrograma(id)) });
   } catch (err) {
     await conn.rollback().catch(() => {});

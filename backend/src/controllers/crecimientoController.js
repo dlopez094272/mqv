@@ -1,4 +1,5 @@
 const { pool } = require('../config/database');
+const { notificar } = require('../utils/notificaciones');
 const path = require('path');
 const fs   = require('fs');
 
@@ -156,6 +157,21 @@ async function toggleCurso(req, res, next) {
 // CONTENIDO DEL CURSO
 // ════════════════════════════════════════════════════════════════
 
+/** Notifica a los usuarios asignados a un curso que tiene material nuevo. */
+async function avisarMaterialNuevo(idcursos, cuerpo, autor) {
+  try {
+    const [[c]] = await pool.query('SELECT nombre, activo FROM cursos WHERE idcursos = ?', [idcursos]);
+    if (!c || c.activo === 0) return;
+    const [asig] = await pool.query('SELECT usuario FROM cursos_asignaciones WHERE idcursos = ?', [idcursos]);
+    notificar(asig.map(a => a.usuario), {
+      tipo: 'curso',
+      titulo: `📚 ${c.nombre}`,
+      cuerpo,
+      datos: { pantalla: 'curso', id: idcursos },
+    }, { excluir: autor });
+  } catch (e) { console.error('[notificaciones] curso', e.message); }
+}
+
 async function crearContenido(req, res, next) {
   try {
     const idcursos = parseInt(req.params.id);
@@ -188,6 +204,7 @@ async function crearContenido(req, res, next) {
       }
     }
 
+    avisarMaterialNuevo(idcursos, `Nuevo material: ${titulo.trim()}`, req.user.usuario);
     res.status(201).json({ message: 'Contenido creado', idcontenido: r.insertId });
   } catch (err) { next(err); }
 }
@@ -227,6 +244,12 @@ async function actualizarContenido(req, res, next) {
       }
     }
 
+    const nArchivos = req.files?.archivos?.length || 0;
+    if (nArchivos || req.files?.video?.[0]) {
+      const que = [req.files?.video?.[0] ? 'un video' : '', nArchivos ? `${nArchivos} archivo${nArchivos > 1 ? 's' : ''}` : '']
+        .filter(Boolean).join(' y ');
+      avisarMaterialNuevo(cont.idcursos, `Se agregó ${que} en «${titulo.trim()}»`, req.user.usuario);
+    }
     res.json({ message: 'Contenido actualizado' });
   } catch (err) { next(err); }
 }
@@ -403,14 +426,25 @@ async function asignarUsuarios(req, res, next) {
       return res.status(400).json({ error: 'Debe seleccionar al menos un usuario' });
 
     let insertados = 0;
+    const nuevos = [];
     for (const u of usuarios) {
       try {
-        await pool.query(
+        const [r] = await pool.query(
           'INSERT IGNORE INTO cursos_asignaciones (idcursos, usuario, asignado_por) VALUES (?, ?, ?)',
           [idcursos, u, req.user.usuario]
         );
         insertados++;
+        if (r.affectedRows) nuevos.push(u);
       } catch (_) {}
+    }
+    if (nuevos.length) {
+      const [[c]] = await pool.query('SELECT nombre FROM cursos WHERE idcursos = ?', [idcursos]);
+      notificar(nuevos, {
+        tipo: 'curso',
+        titulo: '🎓 Te asignaron un curso',
+        cuerpo: c?.nombre || 'Revisa Mis cursos',
+        datos: { pantalla: 'curso', id: idcursos },
+      }, { excluir: req.user.usuario });
     }
     res.status(201).json({ message: `${insertados} usuario(s) asignado(s)` });
   } catch (err) { next(err); }
