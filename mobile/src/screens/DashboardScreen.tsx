@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation, Screen } from '../navigation/Navigator';
 import { MensajeError, TituloSeccion } from '../components/ui';
 import { getMiCuenta, getMisServicios } from '../api/alabanza';
+import { getNoLeidos } from '../api/correo';
 import { MiCuenta, Servicio } from '../types';
 import { cuandoEs, fechaLarga, iniciales, primerNombre } from '../utils/formato';
 import { colors, radius, shadow } from '../theme';
@@ -15,7 +16,7 @@ function saludo() {
   return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
 }
 
-interface Acceso { titulo: string; descripcion: string; icono: string; screen: Screen; visible: boolean; }
+interface Acceso { titulo: string; descripcion: string; icono: string; screen: Screen; visible: boolean; badge?: number; }
 
 export default function DashboardScreen() {
   const { usuario, api, puede, baseUrl } = useAuth();
@@ -26,6 +27,7 @@ export default function DashboardScreen() {
   const [cuenta, setCuenta] = useState<MiCuenta | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noLeidos, setNoLeidos] = useState(0);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -33,12 +35,13 @@ export default function DashboardScreen() {
       const [s, c] = await Promise.all([getMisServicios(api), getMiCuenta(api).catch(() => null)]);
       setServicios(s);
       setCuenta(c);
+      if (puede('correo')) getNoLeidos(api).then(r => setNoLeidos(r.total || 0)).catch(() => {});
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setCargando(false);
     }
-  }, [api]);
+  }, [api, puede]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -49,6 +52,9 @@ export default function DashboardScreen() {
 
   const accesos: Acceso[] = [
     { titulo: 'Mis servicios', descripcion: 'Programas y canciones a tocar', icono: 'calendar-outline', screen: { name: 'servicios' }, visible: true },
+    { titulo: 'Actividades', descripcion: 'Calendario de la iglesia', icono: 'today-outline', screen: { name: 'actividades' }, visible: puede('actividades') },
+    { titulo: 'Mis cursos', descripcion: 'Crecimiento y certificados', icono: 'school-outline', screen: { name: 'misCursos' }, visible: puede('mis_cursos') },
+    { titulo: 'Correo', descripcion: noLeidos ? `${noLeidos} sin leer` : 'Tu correo de la iglesia', icono: 'mail-outline', screen: { name: 'correo' }, visible: puede('correo'), badge: noLeidos },
     { titulo: 'Biblioteca', descripcion: 'Canciones, himnos y coros', icono: 'musical-notes-outline', screen: { name: 'canciones' }, visible: puede('alabanza') },
     { titulo: 'Mis datos', descripcion: 'Actualiza tu información', icono: 'person-circle-outline', screen: { name: 'misDatos' }, visible: true },
     { titulo: 'Contraseña', descripcion: 'Cámbiala cuando quieras', icono: 'key-outline', screen: { name: 'cambiarPassword' }, visible: true },
@@ -147,7 +153,10 @@ export default function DashboardScreen() {
           <View style={styles.grid}>
             {accesos.filter(a => a.visible).map(a => (
               <TouchableOpacity key={a.titulo} style={styles.acceso} activeOpacity={0.85} onPress={() => navigate(a.screen)}>
-                <View style={styles.accesoIcono}><Ionicons name={a.icono as any} size={26} color={colors.primary} /></View>
+                <View style={styles.accesoIcono}>
+                  <Ionicons name={a.icono as any} size={26} color={colors.primary} />
+                  {!!a.badge && <View style={styles.badge}><Text style={styles.badgeText}>{a.badge > 99 ? '99+' : a.badge}</Text></View>}
+                </View>
                 <Text style={styles.accesoTitulo}>{a.titulo}</Text>
                 <Text style={styles.accesoDesc}>{a.descripcion}</Text>
               </TouchableOpacity>
@@ -190,6 +199,8 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   acceso: { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: radius.lg, padding: 14, ...shadow },
   accesoIcono: { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  badge: { position: 'absolute', top: -6, right: -8, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  badgeText: { color: colors.white, fontSize: 11, fontWeight: '800' },
   accesoTitulo: { fontSize: 15, fontWeight: '800', color: colors.text },
   accesoDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   versiculo: { textAlign: 'center', color: colors.textMuted, fontStyle: 'italic', fontSize: 13, marginTop: 26, paddingHorizontal: 10, lineHeight: 19 },

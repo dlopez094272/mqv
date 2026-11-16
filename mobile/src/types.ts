@@ -150,3 +150,148 @@ export interface ProgramaServicio {
   programa: ElementoPrograma[];
   musicos: MusicoActividad[];
 }
+
+/* ── Crecimiento: Mis cursos ─────────────────────────────────────────── */
+
+export interface MiCurso {
+  idcursos: number;
+  nombre: string;
+  descripcion: string | null;
+  logo: string | null;
+  color: string | null;
+  asignado_at: string | null;
+  idevaluacion_aprobada: number | null;
+}
+
+export interface ArchivoCurso {
+  idarchivo: number;
+  nombre_original: string;
+  filename: string;
+  mimetype: string;
+  tamanio: number;
+}
+
+export interface BloqueCurso {
+  idcontenido: number;
+  titulo: string;
+  descripcion: string | null;
+  video_filename: string | null;
+  video_nombre_original: string | null;
+  orden: number;
+  archivos: ArchivoCurso[];
+}
+
+export interface CursoDetalle {
+  idcursos: number;
+  nombre: string;
+  descripcion: string | null;
+  logo: string | null;
+  color: string | null;
+  contenido: BloqueCurso[];
+  total_preguntas: number;
+  evaluacion_aprobada: { idevaluacion: number; puntaje: number; aprobado: number; completado_at: string } | null;
+}
+
+export interface PreguntaCurso {
+  idpregunta: number;
+  pregunta: string;
+  orden: number;
+  opciones: { idopcion: number; texto: string; orden: number }[];
+}
+
+export interface ResultadoEvaluacion {
+  puntaje: number;
+  aprobado: boolean;
+  correctas: number;
+  total: number;
+}
+
+export interface DatosCertificado {
+  idevaluacion: number;
+  puntaje: number;
+  completado_at: string;
+  curso_nombre: string;
+  curso_logo: string | null;
+  curso_color: string | null;
+  nombre_completo: string;
+}
+
+/* ── Actividades ─────────────────────────────────────────────────────── */
+
+export interface AdjuntoActividad {
+  filename: string;
+  originalname: string;
+  mimetype: string;
+  size: number;
+}
+
+export interface Actividad {
+  idactividades: number;
+  idcategorias: number | null;
+  nombre: string;
+  descripcion: string | null;
+  fecha_inicio: string;
+  fecha_fin: string;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  adjuntos: string | AdjuntoActividad[] | null;
+  logo: string | null;
+  idlugares: number | null;
+  serie: string | null;
+  usuario: string | null;
+  categoria: string | null;
+  categoria_color: string;
+  lugar: string | null;
+}
+
+export interface OpcionLookup {
+  id: number;
+  nombre: string;
+  color?: string;
+}
+
+export interface PersonaAsistencia {
+  idpersonas: number;
+  nombre_completo: string;
+  foto: string | null;
+  idactividades_asistentes: number | null;
+  comentarios: string | null;
+  asiste: number;
+  grupos_nombres: string | null;
+}
+
+export interface VisitanteAsistencia {
+  idactividades_asistentes: number;
+  nombre_completo: string;
+  telefono: string | null;
+  comentarios: string | null;
+}
+
+export interface AsistenciaActividad {
+  personas: PersonaAsistencia[];
+  visitantes: VisitanteAsistencia[];
+  contadores: { personas: number; visitantes: number; total: number; porGrupo: { grupo: string; count: number }[] };
+}
+
+/* ── Correo ──────────────────────────────────────────────────────────── */
+
+export interface CorreoResumen {
+  uid: number;
+  asunto: string;
+  de: string;
+  deNombre: string;
+  fecha: string;
+  leido: boolean;
+}
+
+export interface CorreoCompleto extends CorreoResumen {
+  para: string;
+  texto: string;
+  html: string | false;
+  adjuntos: { filename: string; contentType: string; size: number }[];
+}
+
+export interface CarpetaCorreo {
+  path: string;
+  name: string;
+}

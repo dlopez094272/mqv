@@ -12,7 +12,20 @@ export type Screen =
   /** `servicio` + `pos`: canción dentro del repertorio de una actividad (permite ir a la anterior/siguiente). */
   | { name: 'cancion'; id: number; tono?: string | null; titulo?: string; servicio?: number; pos?: number; escenario?: boolean }
   | { name: 'servicios' }
-  | { name: 'servicio'; id: number };
+  | { name: 'servicio'; id: number }
+  // Crecimiento
+  | { name: 'misCursos' }
+  | { name: 'curso'; id: number }
+  | { name: 'evaluacion'; id: number; nombre: string; color?: string | null; logo?: string | null }
+  // Actividades
+  | { name: 'actividades'; fecha?: string }
+  | { name: 'actividad'; id: number }
+  | { name: 'actividadForm'; id?: number; fecha?: string }
+  | { name: 'asistencia'; id: number; nombre: string }
+  // Correo
+  | { name: 'correo' }
+  | { name: 'correoLeer'; uid: number; carpeta: string }
+  | { name: 'correoRedactar'; para?: string; cc?: string; asunto?: string; cuerpo?: string };
 
 interface Entrada {
   key: number;

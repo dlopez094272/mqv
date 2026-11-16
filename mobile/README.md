@@ -41,6 +41,18 @@ No se conecta a la base de datos: todo pasa por la API del backend de MQV
     escenario, que sigue abierto al cambiar de canción.
   - Compartir la canción como texto (acordes arriba de la letra) por WhatsApp.
 - **Biblioteca** (permiso *Alabanza*): buscar canciones, himnos y coros.
+- **Actividades** (permiso *actividades*): calendario mensual con puntos por
+  categoría, agenda del día y del mes, detalle con adjuntos y acceso al programa.
+  Crear / editar (con logo, fechas de varios días y "una por día") / eliminar según
+  los permisos A/E/D. **Asistencia** (permiso *actividades_asistentes*): marcar
+  personas con un toque, buscar por nombre o grupo y registrar visitantes.
+- **Mis cursos** (permiso *mis_cursos*): contenido de cada curso (descripción,
+  video y archivos de soporte), evaluación (80 % para aprobar) y **certificado en
+  PDF** (mismo diseño que la web, se genera en el teléfono con expo-print).
+  La gestión de cursos sigue siendo solo en la web.
+- **Correo** (permiso *correo*): bandeja por carpetas, leer (HTML), adjuntos,
+  responder / reenviar, redactar con contactos sugeridos y archivos adjuntos.
+  Usa la misma cuenta configurada en la web (`/api/correo`).
 
 ## Backend (una sola vez)
 

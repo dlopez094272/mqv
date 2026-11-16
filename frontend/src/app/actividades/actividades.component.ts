@@ -839,6 +839,25 @@ export class ActividadesComponent implements OnInit {
 
   cerrarMenu() { this.menuAct.set(null); }
 
+  /** Clic en una actividad: abre directamente su página (Ctrl/⌘ o clic central → nueva pestaña). */
+  abrirActividad(event: MouseEvent, act: Actividad) {
+    event.stopPropagation();
+    if (event.ctrlKey || event.metaKey || event.button === 1) {
+      window.open(`/actividades/${act.idactividades}/gestion`, '_blank');
+      return;
+    }
+    this.irGestion(act);
+  }
+
+  /** Eliminar desde la página de gestión y regresar al calendario. */
+  async eliminarDesdeGestion(act: Actividad) {
+    if (!await confirmar(`¿Eliminar <b>"${act.nombre}"</b>?<br>Esta acción no se puede deshacer.`, { peligro: true })) return;
+    this.svc.eliminar(act.idactividades).subscribe({
+      next:  () => this.router.navigate(['/actividades']),
+      error: (e: any) => this.errorForm.set(e.message || 'Error al eliminar'),
+    });
+  }
+
   menuEditar()      { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'datos'); }
   menuAsistencia()  { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'asistencia'); }
   menuTesoreria()   { const a = this.menuAct()!.act; this.cerrarMenu(); this.irGestion(a, 'tesoreria'); }

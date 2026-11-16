@@ -69,8 +69,9 @@
                    draggable="true"
                    (dragstart)="onDragStart($event, act)"
                    (dragend)="onDragEnd()"
-                   (click)="$event.stopPropagation(); abrirMenu($event, act)"
-                   [title]="act.nombre">
+                   (click)="$event.stopPropagation(); abrirActividad($event, act)"
+                   (contextmenu)="$event.preventDefault(); abrirMenu($event, act)"
+                   [title]="act.nombre + ' (clic derecho: más opciones)'">
                 @if (act.logo) {
                   <img [src]="urlLogo(act.logo)" class="event-logo" [alt]="act.nombre" />
                 }
@@ -102,7 +103,8 @@
         <div class="gantt-header-cell"></div>
         <div class="gantt-header-cell gantt-header-days-spacer"></div>
         @for (act of actividadesConGantt(); track act.idactividades) {
-          <div class="gantt-name-row" [title]="act.nombre" (click)="abrirMenu($event, act)" style="cursor:pointer">
+          <div class="gantt-name-row" [title]="act.nombre" (click)="abrirActividad($event, act)"
+               (contextmenu)="$event.preventDefault(); abrirMenu($event, act)" style="cursor:pointer">
             @if (act.logo) {
               <img [src]="urlLogo(act.logo)" class="gantt-logo" [alt]="act.nombre" />
             }
@@ -139,7 +141,8 @@
                    [style.left.px]="act.leftPx"
                    [style.width.px]="act.widthPx"
                    [style.background]="act.categoria_color || '#3788d8'"
-                   (click)="abrirMenu($event, act)"
+                   (click)="abrirActividad($event, act)"
+                   (contextmenu)="$event.preventDefault(); abrirMenu($event, act)"
                    [title]="act.nombre + ' (' + formatFecha(act.fecha_inicio) + ' – ' + formatFecha(act.fecha_fin) + ')'">
                 <span class="gantt-bar-label">{{ act.nombre }}</span>
               </div>
@@ -314,6 +317,12 @@
         <span class="asistencia-act-nombre">{{ actividadGestion()?.nombre || form.nombre || 'Sin nombre aún' }}</span>
       </div>
       <div class="asistencia-header-actions">
+        @if (actividadGestion(); as ag) {
+          <button class="btn-camara" (click)="abrirReporte(ag)" title="Reporte de la actividad">📊 Reporte</button>
+          @if (permisos.puede('actividades', 'D')) {
+            <button class="btn-camara" (click)="eliminarDesdeGestion(ag)" title="Eliminar la actividad">🗑️ Eliminar</button>
+          }
+        }
         @if (tabGestion() === 'asistencia' && permisos.puede('actividades_asistentes', 'A')) {
           <button class="btn-camara"
                   [class.btn-camara--activo]="mostrarCamara()"
